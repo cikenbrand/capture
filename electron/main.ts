@@ -1,65 +1,139 @@
 import { app, BrowserWindow } from 'electron'
-import { createRequire } from 'node:module'
-import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { createSplashWindow } from './windows/splashscreen'
+import { createMainWindow } from './windows/main'
+import { openObs } from './obs/openOBS'
+import { exitOBS } from './obs/websocket_functions/exitOBS'
+import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
+import { connectToOBSWebsocket } from './obs/websocket_functions/connectToOBSWebsocket'
+import { SPLASHSCREEN_DURATION_MS } from './settings'
 
-const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-// The built directory structure
-//
-// ├─┬─┬ dist
-// │ │ └── index.html
-// │ │
-// │ ├─┬ dist-electron
-// │ │ ├── main.js
-// │ │ └── preload.mjs
-// │
 process.env.APP_ROOT = path.join(__dirname, '..')
 
-// 🚧 Use ['ENV_NAME'] avoid vite:define plugin - Vite@2.x
+// 🚧 Vite dev/prod paths
 export const VITE_DEV_SERVER_URL = process.env['VITE_DEV_SERVER_URL']
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
 export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
+  ? path.join(process.env.APP_ROOT, 'public')
+  : RENDERER_DIST
 
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
+let win: BrowserWindow | null = null
+let splashWin: BrowserWindow | null = null
 
-let win: BrowserWindow | null
-
-function createWindow() {
-  win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.mjs'),
-    },
+// ——— helpers ———
+function delay(ms: number) {
+  return new Promise<void>(r => setTimeout(r, ms))
+}
+function onceReadyToShow(bw: BrowserWindow) {
+  return new Promise<void>(resolve => {
+    if (bw.isDestroyed()) return resolve()
+    if (bw.isVisible()) return resolve()
+    bw.once('ready-to-show', () => resolve())
   })
-
-  // Test active push message to Renderer-process.
-  win.webContents.on('did-finish-load', () => {
-    win?.webContents.send('main-process-message', (new Date).toLocaleString())
-  })
-
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL)
-  } else {
-    // win.loadFile('dist/index.html')
-    win.loadFile(path.join(RENDERER_DIST, 'index.html'))
-  }
 }
 
-// Quit when all windows are closed, except on macOS. There, it's common
-// for applications and their menu bar to stay active until the user quits
-// explicitly with Cmd + Q.
+async function createWindow() {
+  splashWin = createSplashWindow(SPLASHSCREEN_DURATION_MS)
+  const splashStart = Date.now()
+
+  const updateSplash = async (text: string) => {
+    try {
+      if (splashWin && !splashWin.isDestroyed()) {
+        await splashWin.webContents.executeJavaScript(
+          `window.postMessage({ type: 'status', text: ${JSON.stringify(text)} }, '*')`
+        )
+      }
+    } catch (_) {
+      // ignore
+    }
+  }
+
+  // 1) Check OBS process; launch if not running, then wait until it is
+  await updateSplash('Checking OBS…')
+  let isObsRunning = false
+  try {
+    isObsRunning = checkIfOBSOpenOrNot()
+  } catch (_) {
+    isObsRunning = false
+  }
+
+  let launchedObs = false
+  if (!isObsRunning) {
+    await updateSplash('Launching OBS…')
+    try {
+      openObs()
+      launchedObs = true
+    } catch (err) {
+      console.error('Failed to launch OBS:', err)
+    }
+  }
+
+  // Wait until OBS is confirmed open only if we launched it
+  if (launchedObs) {
+    await updateSplash('Waiting for OBS to start…')
+    while (true) {
+      try {
+        if (checkIfOBSOpenOrNot()) break
+      } catch (_) {
+        // keep waiting
+      }
+      await delay(1000)
+    }
+  }
+
+  // 2) Connect to OBS WebSocket, keep retrying while on splash
+  await updateSplash('Connecting to OBS WebSocket…')
+  while (true) {
+    const ok = await connectToOBSWebsocket(4000)
+    if (ok) break
+    await updateSplash('Failed to connect. Retrying…')
+    await delay(1500)
+  }
+
+  // 3) Create main window only after successful connection
+  win = createMainWindow()
+
+  await onceReadyToShow(win)
+  const elapsed = Date.now() - splashStart
+  const remaining = Math.max(0, SPLASHSCREEN_DURATION_MS - elapsed)
+  if (remaining > 0) await delay(remaining)
+
+  // 4) Close splash, show main
+  if (splashWin && !splashWin.isDestroyed()) splashWin.close()
+  splashWin = null
+  win?.show()
+
+  // Optional: crash/unresponsive guards
+  win.webContents.on('render-process-gone', (_e, details) => {
+    console.error('Renderer crashed:', details)
+  })
+  win.on('unresponsive', () => {
+    console.warn('Window unresponsive')
+  })
+}
+
+// Mac lifecycle
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
     win = null
   }
 })
-
+// Ensure OBS is asked to shutdown cleanly before app quits
+let isQuitting = false
+app.on('before-quit', async (e) => {
+  if (isQuitting) return
+  e.preventDefault()
+  isQuitting = true
+  try {
+    await exitOBS()
+  } catch {}
+  app.quit()
+})
 app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow()
   }
