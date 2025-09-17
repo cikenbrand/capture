@@ -10,17 +10,24 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-menubar": "^1.1.16",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@serialport/list": "^13.0.0",
     "@tailwindcss/vite": "^4.1.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",
+    "motion": "^12.23.13",
     "obs-websocket-js": "^5.0.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-webcam": "^7.2.0",
     "tailwind-merge": "^3.3.1",
-    "tailwindcss": "^4.1.13"
+    "tailwindcss": "^4.1.13",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@types/react": "^18.2.64",

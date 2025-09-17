@@ -1,3 +1,4 @@
+import { ipcMain } from 'electron'
 import { getObsClient } from './connectToOBSWebsocket'
 
 export async function getFileNameFormatting(): Promise<string> {
@@ -15,4 +16,13 @@ export async function getFileNameFormatting(): Promise<string> {
 	}
 }
 
-
+// IPC: get filename formatting from profile parameter
+ipcMain.handle('obs:get-file-name-formatting', async () => {
+	try {
+	  const value = await getFileNameFormatting()
+	  return value
+	} catch {
+	  return ''
+	}
+  })
+  

@@ -1,4 +1,5 @@
 import { getObsClient } from './connectToOBSWebsocket'
+import { ipcMain } from 'electron'
 
 /**
  * Returns the current Program scene name from OBS via obs-websocket-js.
@@ -16,5 +17,14 @@ export async function getCurrentSceneName(): Promise<string> {
     return ''
   }
 }
+
+ipcMain.handle('obs:get-current-scene', async () => {
+  try {
+    const name = await getCurrentSceneName()
+    return name
+  } catch {
+    return ''
+  }
+})
 
 

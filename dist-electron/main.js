@@ -36,6 +36,7 @@ function createMainWindow() {
     width: 1280,
     height: 800,
     show: false,
+    frame: false,
     backgroundColor: "#0f0f0f",
     icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), "electron-vite.svg"),
     webPreferences: {
@@ -157,104 +158,6 @@ function checkIfOBSOpenOrNot() {
     return false;
   }
 }
-async function getCurrentSceneName() {
-  try {
-    const obs = getObsClient();
-    if (!obs) return "";
-    const res = await obs.call("GetCurrentProgramScene");
-    const name = (res == null ? void 0 : res.currentProgramSceneName) ?? "";
-    return typeof name === "string" ? name : "";
-  } catch {
-    return "";
-  }
-}
-async function startRecording(preview, ch1, ch2, ch3, ch4) {
-  const obs = getObsClient();
-  if (!obs) return false;
-  let allOk = true;
-  if (preview) {
-    try {
-      await obs.call("StartRecord");
-    } catch {
-      allOk = false;
-    }
-  }
-  async function triggerCtrlNumber(numberKey) {
-    const keyId = `OBS_KEY_${numberKey}`;
-    try {
-      await obs.call("TriggerHotkeyByKeySequence", {
-        keyId,
-        keyModifiers: { shift: false, control: true, alt: false, command: false }
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  if (ch1) allOk = await triggerCtrlNumber(1) && allOk;
-  if (ch2) allOk = await triggerCtrlNumber(2) && allOk;
-  if (ch3) allOk = await triggerCtrlNumber(3) && allOk;
-  if (ch4) allOk = await triggerCtrlNumber(4) && allOk;
-  return allOk;
-}
-async function stopRecording() {
-  const obs = getObsClient();
-  if (!obs) return false;
-  let ok = true;
-  try {
-    await obs.call("StopRecord");
-  } catch {
-    ok = false;
-  }
-  try {
-    await obs.call("TriggerHotkeyByKeySequence", {
-      keyId: "OBS_KEY_0",
-      keyModifiers: { shift: false, control: true, alt: false, command: false }
-    });
-  } catch {
-    ok = false;
-  }
-  return ok;
-}
-async function getRecordingDirectory() {
-  const obs = getObsClient();
-  if (!obs) return "";
-  try {
-    const { recordDirectory } = await obs.call("GetRecordDirectory");
-    return typeof recordDirectory === "string" ? recordDirectory : "";
-  } catch {
-    return "";
-  }
-}
-async function setRecordingDirectory(targetPath) {
-  const obs = getObsClient();
-  if (!obs) return false;
-  let allOk = true;
-  try {
-    await obs.call("SetRecordDirectory", { recordDirectory: targetPath });
-  } catch {
-    allOk = false;
-  }
-  const sources = [
-    "channel 1",
-    "channel 2",
-    "channel 3",
-    "channel 4"
-  ];
-  for (const sourceName of sources) {
-    try {
-      await obs.call("SetSourceFilterSettings", {
-        sourceName,
-        filterName: "source record",
-        filterSettings: { path: targetPath },
-        overlay: true
-      });
-    } catch {
-      allOk = false;
-    }
-  }
-  return allOk;
-}
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -358,43 +261,18 @@ app.on("activate", () => {
   }
 });
 app.whenReady().then(createWindow);
-ipcMain.handle("obs:get-current-scene", async () => {
+ipcMain.handle("window:minimize", async () => {
   try {
-    const name = await getCurrentSceneName();
-    return name;
-  } catch {
-    return "";
-  }
-});
-ipcMain.handle("obs:start-recording", async (_e, args) => {
-  try {
-    const { preview, ch1, ch2, ch3, ch4 } = args || {};
-    const ok = await startRecording(!!preview, !!ch1, !!ch2, !!ch3, !!ch4);
-    return ok;
+    win == null ? void 0 : win.minimize();
+    return true;
   } catch {
     return false;
   }
 });
-ipcMain.handle("obs:stop-recording", async () => {
+ipcMain.handle("window:close", async () => {
   try {
-    const ok = await stopRecording();
-    return ok;
-  } catch {
-    return false;
-  }
-});
-ipcMain.handle("obs:get-recording-directory", async () => {
-  try {
-    const dir = await getRecordingDirectory();
-    return dir;
-  } catch {
-    return "";
-  }
-});
-ipcMain.handle("obs:set-recording-directory", async (_e, targetPath) => {
-  try {
-    const ok = await setRecordingDirectory(targetPath);
-    return ok;
+    win == null ? void 0 : win.close();
+    return true;
   } catch {
     return false;
   }

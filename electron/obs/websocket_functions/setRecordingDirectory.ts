@@ -1,3 +1,4 @@
+import { ipcMain } from 'electron'
 import { getObsClient } from './connectToOBSWebsocket'
 
 export async function setRecordingDirectory(targetPath: string): Promise<boolean> {
@@ -35,4 +36,12 @@ export async function setRecordingDirectory(targetPath: string): Promise<boolean
   return allOk
 }
 
-
+// IPC: set recording directory in basic.ini
+ipcMain.handle('obs:set-recording-directory', async (_e, targetPath: string) => {
+  try {
+    const ok = await setRecordingDirectory(targetPath)
+    return ok
+  } catch {
+    return false
+  }
+})

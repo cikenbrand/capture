@@ -18,6 +18,7 @@ export function createMainWindow() {
     width: 1280,
     height: 800,
     show: false,
+    frame: false,
     backgroundColor: '#0f0f0f',
     icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), 'electron-vite.svg'),
     webPreferences: {

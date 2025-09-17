@@ -1,4 +1,5 @@
 import { getObsClient } from './connectToOBSWebsocket'
+import { ipcMain } from 'electron'
 
 /**
  * Stops recording in OBS and triggers Ctrl+0 hotkey.
@@ -28,4 +29,11 @@ export async function stopRecording(): Promise<boolean> {
 	return ok
 }
 
-
+ipcMain.handle('obs:stop-recording', async () => {
+	try {
+	  const ok = await stopRecording()
+	  return ok
+	} catch {
+	  return false
+	}
+  })

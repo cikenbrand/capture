@@ -1,5 +1,5 @@
 import { getObsClient } from './connectToOBSWebsocket'
-
+import { ipcMain } from 'electron'
 /**
  * Starts recording in OBS and optionally triggers channel hotkeys.
  *
@@ -52,4 +52,13 @@ export async function startRecording(
 	return allOk
 }
 
-
+// IPC: start/stop recording
+ipcMain.handle('obs:start-recording', async (_e, args: { preview: boolean, ch1: boolean, ch2: boolean, ch3: boolean, ch4: boolean }) => {
+	try {
+	  const { preview, ch1, ch2, ch3, ch4 } = args || ({} as any)
+	  const ok = await startRecording(!!preview, !!ch1, !!ch2, !!ch3, !!ch4)
+	  return ok
+	} catch {
+	  return false
+	}
+  })
