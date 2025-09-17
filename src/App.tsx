@@ -1,13 +1,26 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/electron-vite.animate.svg'
+import { useEffect, useState } from 'react'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [fileNameFormatting, setFileNameFormatting] = useState('')
+
+  useEffect(() => {
+    let isMounted = true
+    ;(async () => {
+      try {
+        const value = await window.ipcRenderer.invoke('obs:get-file-name-formatting')
+        if (isMounted) setFileNameFormatting(typeof value === 'string' ? value : '')
+      } catch {
+        if (isMounted) setFileNameFormatting('')
+      }
+    })()
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   return (
-    <div className='h-screen bg-red-300'>
-
+    <div className='h-screen bg-red-300 p-6 space-y-4'>
+      <span>{fileNameFormatting || '—'}</span>
     </div>
   )
 }

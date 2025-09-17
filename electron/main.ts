@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createSplashWindow } from './windows/splashscreen'
@@ -7,7 +7,13 @@ import { openObs } from './obs/openOBS'
 import { exitOBS } from './obs/websocket_functions/exitOBS'
 import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
 import { connectToOBSWebsocket } from './obs/websocket_functions/connectToOBSWebsocket'
+import { getCurrentSceneName } from './obs/websocket_functions/selectedScene'
 import { SPLASHSCREEN_DURATION_MS } from './settings'
+import { startRecording } from './obs/websocket_functions/startRecording'
+import { stopRecording } from './obs/websocket_functions/stopRecording'
+import { getRecordingDirectory } from './obs/websocket_functions/getRecordingDirectory'
+import { setRecordingDirectory } from './obs/websocket_functions/setRecordingDirectory'
+import { getFileNameFormatting } from './obs/websocket_functions/getFileNameFormatting'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -140,3 +146,63 @@ app.on('activate', () => {
 })
 
 app.whenReady().then(createWindow)
+
+// IPC: provide current scene to renderer
+ipcMain.handle('obs:get-current-scene', async () => {
+  try {
+    const name = await getCurrentSceneName()
+    return name
+  } catch {
+    return ''
+  }
+})
+
+// IPC: start/stop recording
+ipcMain.handle('obs:start-recording', async (_e, args: { preview: boolean, ch1: boolean, ch2: boolean, ch3: boolean, ch4: boolean }) => {
+  try {
+    const { preview, ch1, ch2, ch3, ch4 } = args || ({} as any)
+    const ok = await startRecording(!!preview, !!ch1, !!ch2, !!ch3, !!ch4)
+    return ok
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('obs:stop-recording', async () => {
+  try {
+    const ok = await stopRecording()
+    return ok
+  } catch {
+    return false
+  }
+})
+
+// IPC: get recording directory from basic.ini
+ipcMain.handle('obs:get-recording-directory', async () => {
+  try {
+    const dir = await getRecordingDirectory()
+    return dir
+  } catch {
+    return ''
+  }
+})
+
+// IPC: set recording directory in basic.ini
+ipcMain.handle('obs:set-recording-directory', async (_e, targetPath: string) => {
+  try {
+    const ok = await setRecordingDirectory(targetPath)
+    return ok
+  } catch {
+    return false
+  }
+})
+
+// IPC: get filename formatting from profile parameter
+ipcMain.handle('obs:get-file-name-formatting', async () => {
+  try {
+    const value = await getFileNameFormatting()
+    return value
+  } catch {
+    return ''
+  }
+})
