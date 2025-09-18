@@ -5,6 +5,7 @@ export interface NewNode {
   projectId: string
   name: string
   parentId?: string
+  remarks?: string
 }
 
 export interface NodeDoc {
@@ -13,6 +14,7 @@ export interface NodeDoc {
   name: string
   parentId?: ObjectId
   level: number
+  remarks?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -54,10 +56,12 @@ export async function createNode(input: NewNode): Promise<NodeDoc> {
     level = (parent.level ?? 0) + 1
   }
 
-  const doc: Omit<NodeDoc, '_id'> & Partial<Pick<NodeDoc, 'parentId'>> = {
+  const remarks = typeof input.remarks === 'string' ? input.remarks.trim() : undefined
+  const doc: Omit<NodeDoc, '_id'> & Partial<Pick<NodeDoc, 'parentId' | 'remarks'>> = {
     projectId: projectObjectId,
     name: input.name.trim(),
     ...(parentObjectId ? { parentId: parentObjectId } : {}),
+    ...(remarks ? { remarks } : {}),
     level,
     createdAt: now,
     updatedAt: now,

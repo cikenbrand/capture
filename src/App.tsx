@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Menubar,
   MenubarContent,
@@ -26,10 +26,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "./components/ui/input"
+import NodesTree from "./NodesTree"
+import ProjectList from "./ProjectList"
 
 function App() {
   const [isNewProjectOpen, setIsNewProjectOpen] = useState(false)
   const [isOpenProjectOpen, setIsOpenProjectOpen] = useState(false)
+  const [selectedProjectId, setSelectedProjectIdState] = useState<string | null>(null)
   const [projectName, setProjectName] = useState("")
   const [client, setClient] = useState("")
   const [contractor, setContractor] = useState("")
@@ -56,6 +59,7 @@ function App() {
   const [nodeProjectId, setNodeProjectId] = useState("")
   const [nodeName, setNodeName] = useState("")
   const [nodeParentId, setNodeParentId] = useState("")
+  const [nodeRemarks, setNodeRemarks] = useState("")
 
   async function handleCreateProject() {
     if (!projectName || !client || !contractor || !vessel || !location || !projectType) {
@@ -162,12 +166,14 @@ function App() {
       projectId: nodeProjectId,
       name: nodeName,
       parentId: nodeParentId || undefined,
+      remarks: nodeRemarks || undefined,
     }
     const res = await window.ipcRenderer.invoke('db:createNode', payload)
     if (res?.ok) {
       setNodeProjectId("")
       setNodeName("")
       setNodeParentId("")
+      setNodeRemarks("")
       setIsNewNodeOpen(false)
     } else {
       console.error('Failed to create node:', res?.error)
@@ -242,16 +248,23 @@ function App() {
         </DialogContent>
       </Dialog>
       {/* open project dialog */}
-      <Dialog open={isOpenProjectOpen} onOpenChange={setIsOpenProjectOpen}>
+      <Dialog open={isOpenProjectOpen} onOpenChange={(open) => setIsOpenProjectOpen(open)}>
         <DialogContent>
           <DialogHeader className='-m-6 mb-2 p-4 border-b'>
             <DialogTitle>Open Project</DialogTitle>
             <DialogDescription>Select a project to open.</DialogDescription>
           </DialogHeader>
-          <Input placeholder='Project path or name' />
+          <ProjectList
+            selectedId={selectedProjectId}
+            onChange={setSelectedProjectIdState}
+            isOpen={isOpenProjectOpen}
+          />
           <DialogFooter>
             <DialogClose>Cancel</DialogClose>
-            <Button onClick={() => setIsOpenProjectOpen(false)}>Open</Button>
+            <Button onClick={async () => {
+              await window.ipcRenderer.invoke('app:setSelectedProjectId', selectedProjectId || null)
+              setIsOpenProjectOpen(false)
+            }} disabled={!selectedProjectId}>Open</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -383,6 +396,7 @@ function App() {
                     <Input placeholder='Project ID' value={nodeProjectId} onChange={(e) => setNodeProjectId(e.target.value)} />
                     <Input placeholder='Node name' value={nodeName} onChange={(e) => setNodeName(e.target.value)} />
                     <Input placeholder='Parent node ID (optional)' value={nodeParentId} onChange={(e) => setNodeParentId(e.target.value)} />
+                    <Input placeholder='Remarks (optional)' value={nodeRemarks} onChange={(e) => setNodeRemarks(e.target.value)} />
                     <DialogFooter>
                       <DialogClose>Cancel</DialogClose>
                       <Button onClick={handleCreateNode}>Create</Button>
@@ -406,7 +420,7 @@ function App() {
           </div>
         </div>
         <div className="h-full w-74 border-l">
-
+          <NodesTree projectId={selectedProjectId!}/>
         </div>
       </div>
     </div>

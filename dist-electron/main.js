@@ -160,9 +160,9 @@ function checkIfOBSOpenOrNot() {
     return false;
   }
 }
-let cachedClient$5 = null;
-async function getClient$5() {
-  if (cachedClient$5) return cachedClient$5;
+let cachedClient$7 = null;
+async function getClient$7() {
+  if (cachedClient$7) return cachedClient$7;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -171,11 +171,11 @@ async function getClient$5() {
     }
   });
   await client.connect();
-  cachedClient$5 = client;
+  cachedClient$7 = client;
   return client;
 }
 async function createProject(input) {
-  const client = await getClient$5();
+  const client = await getClient$7();
   const db = client.db("capture");
   const projects = db.collection("projects");
   const now = /* @__PURE__ */ new Date();
@@ -192,9 +192,9 @@ async function createProject(input) {
   const result = await projects.insertOne(doc);
   return { _id: result.insertedId, ...doc };
 }
-let cachedClient$4 = null;
-async function getClient$4() {
-  if (cachedClient$4) return cachedClient$4;
+let cachedClient$6 = null;
+async function getClient$6() {
+  if (cachedClient$6) return cachedClient$6;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -203,11 +203,11 @@ async function getClient$4() {
     }
   });
   await client.connect();
-  cachedClient$4 = client;
+  cachedClient$6 = client;
   return client;
 }
 async function createTask(input) {
-  const client = await getClient$4();
+  const client = await getClient$6();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const now = /* @__PURE__ */ new Date();
@@ -222,9 +222,9 @@ async function createTask(input) {
   const result = await tasks.insertOne(doc);
   return { _id: result.insertedId, ...doc };
 }
-let cachedClient$3 = null;
-async function getClient$3() {
-  if (cachedClient$3) return cachedClient$3;
+let cachedClient$5 = null;
+async function getClient$5() {
+  if (cachedClient$5) return cachedClient$5;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -233,11 +233,11 @@ async function getClient$3() {
     }
   });
   await client.connect();
-  cachedClient$3 = client;
+  cachedClient$5 = client;
   return client;
 }
 async function editTask(taskId, updates) {
-  const client = await getClient$3();
+  const client = await getClient$5();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const _id = new ObjectId(taskId);
@@ -255,9 +255,9 @@ async function editTask(taskId, updates) {
   }
   return updated;
 }
-let cachedClient$2 = null;
-async function getClient$2() {
-  if (cachedClient$2) return cachedClient$2;
+let cachedClient$4 = null;
+async function getClient$4() {
+  if (cachedClient$4) return cachedClient$4;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -266,11 +266,11 @@ async function getClient$2() {
     }
   });
   await client.connect();
-  cachedClient$2 = client;
+  cachedClient$4 = client;
   return client;
 }
 async function createDive(input) {
-  const client = await getClient$2();
+  const client = await getClient$4();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const now = /* @__PURE__ */ new Date();
@@ -285,9 +285,9 @@ async function createDive(input) {
   const result = await dives.insertOne(doc);
   return { _id: result.insertedId, ...doc };
 }
-let cachedClient$1 = null;
-async function getClient$1() {
-  if (cachedClient$1) return cachedClient$1;
+let cachedClient$3 = null;
+async function getClient$3() {
+  if (cachedClient$3) return cachedClient$3;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -296,11 +296,11 @@ async function getClient$1() {
     }
   });
   await client.connect();
-  cachedClient$1 = client;
+  cachedClient$3 = client;
   return client;
 }
 async function editDive(diveId, updates) {
-  const client = await getClient$1();
+  const client = await getClient$3();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const _id = new ObjectId(diveId);
@@ -318,9 +318,9 @@ async function editDive(diveId, updates) {
   }
   return updated;
 }
-let cachedClient = null;
-async function getClient() {
-  if (cachedClient) return cachedClient;
+let cachedClient$2 = null;
+async function getClient$2() {
+  if (cachedClient$2) return cachedClient$2;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -329,11 +329,11 @@ async function getClient() {
     }
   });
   await client.connect();
-  cachedClient = client;
+  cachedClient$2 = client;
   return client;
 }
 async function createNode(input) {
-  const client = await getClient();
+  const client = await getClient$2();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
   const now = /* @__PURE__ */ new Date();
@@ -349,16 +349,78 @@ async function createNode(input) {
     }
     level = (parent.level ?? 0) + 1;
   }
+  const remarks = typeof input.remarks === "string" ? input.remarks.trim() : void 0;
   const doc = {
     projectId: projectObjectId,
     name: input.name.trim(),
     ...parentObjectId ? { parentId: parentObjectId } : {},
+    ...remarks ? { remarks } : {},
     level,
     createdAt: now,
     updatedAt: now
   };
   const result = await nodes.insertOne(doc);
   return { _id: result.insertedId, ...doc };
+}
+let cachedClient$1 = null;
+async function getClient$1() {
+  if (cachedClient$1) return cachedClient$1;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$1 = client;
+  return client;
+}
+async function getAllNodes(projectId) {
+  const client = await getClient$1();
+  const db = client.db("capture");
+  const nodesCol = db.collection("nodes");
+  const projectObjectId = new ObjectId(projectId);
+  const nodes = await nodesCol.find({ projectId: projectObjectId }).sort({ level: 1, createdAt: 1 }).toArray();
+  const idToNode = /* @__PURE__ */ new Map();
+  const roots = [];
+  for (const n of nodes) {
+    idToNode.set(n._id.toHexString(), { ...n, children: [] });
+  }
+  for (const n of nodes) {
+    const current = idToNode.get(n._id.toHexString());
+    if (n.parentId) {
+      const parent = idToNode.get(n.parentId.toHexString());
+      if (parent) parent.children.push(current);
+      else roots.push(current);
+    } else {
+      roots.push(current);
+    }
+  }
+  return roots;
+}
+let cachedClient = null;
+async function getClient() {
+  if (cachedClient) return cachedClient;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient = client;
+  return client;
+}
+async function getAllProjects() {
+  const client = await getClient();
+  const db = client.db("capture");
+  const projects = db.collection("projects");
+  return projects.find({}).sort({ createdAt: -1 }).toArray();
+}
+function setSelectedProjectId(id) {
+  id ? id.trim() || null : null;
 }
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
@@ -528,6 +590,57 @@ ipcMain.handle("db:createNode", async (_event, input) => {
   try {
     const created = await createNode(input);
     return { ok: true, data: created };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("db:getAllNodes", async (_event, projectId) => {
+  try {
+    const roots = await getAllNodes(projectId);
+    const toPlain = (n) => {
+      var _a, _b, _c, _d, _e, _f;
+      return {
+        _id: ((_b = (_a = n._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? n._id,
+        projectId: ((_d = (_c = n.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? n.projectId,
+        parentId: n.parentId ? ((_f = (_e = n.parentId).toString) == null ? void 0 : _f.call(_e)) ?? n.parentId : void 0,
+        name: n.name,
+        level: n.level,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt,
+        children: Array.isArray(n.children) ? n.children.map(toPlain) : []
+      };
+    };
+    return { ok: true, data: roots.map(toPlain) };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("db:getAllProjects", async () => {
+  try {
+    const projects = await getAllProjects();
+    const plain = projects.map((p) => ({
+      _id: p._id.toString(),
+      name: p.name,
+      client: p.client,
+      contractor: p.contractor,
+      vessel: p.vessel,
+      location: p.location,
+      projectType: p.projectType,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt
+    }));
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("app:setSelectedProjectId", async (_event, id) => {
+  try {
+    setSelectedProjectId(id);
+    return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };
