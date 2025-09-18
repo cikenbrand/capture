@@ -19,7 +19,21 @@ export default defineConfig({
         vite: {
           build: {
             rollupOptions: {
-              external: ['obs-websocket-js', 'ws', 'bufferutil', 'utf-8-validate'],
+              external: [
+                'obs-websocket-js',
+                'ws',
+                'bufferutil',
+                'utf-8-validate',
+                // Keep MongoDB and its optional deps external to avoid bundling issues
+                'mongodb',
+                'kerberos',
+                'saslprep',
+                '@mongodb-js/saslprep',
+                'snappy',
+                'gcp-metadata',
+                '@aws-sdk/credential-providers',
+                'mongodb-client-encryption',
+              ],
             },
           },
         },

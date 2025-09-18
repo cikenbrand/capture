@@ -8,6 +8,12 @@ import { exitOBS } from './obs/websocket_functions/exitOBS'
 import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
 import { connectToOBSWebsocket } from './obs/websocket_functions/connectToOBSWebsocket'
 import { SPLASHSCREEN_DURATION_MS } from './settings'
+import { createProject } from './db/createProject'
+import { createTask } from './db/createTask'
+import { editTask } from './db/editTask'
+import { createDive } from './db/createDive'
+import { editDive } from './db/editDive'
+import { createNode } from './db/createNode'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -157,5 +163,66 @@ ipcMain.handle('window:close', async () => {
     return true
   } catch {
     return false
+  }
+})
+
+// IPC: database
+ipcMain.handle('db:createProject', async (_event, input) => {
+  try {
+    const created = await createProject(input)
+    return { ok: true, data: created }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
+
+ipcMain.handle('db:createTask', async (_event, input) => {
+  try {
+    const created = await createTask(input)
+    return { ok: true, data: created }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
+
+ipcMain.handle('db:editTask', async (_event, taskId, updates) => {
+  try {
+    const updated = await editTask(taskId, updates)
+    return { ok: true, data: updated }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
+
+ipcMain.handle('db:createDive', async (_event, input) => {
+  try {
+    const created = await createDive(input)
+    return { ok: true, data: created }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
+
+ipcMain.handle('db:editDive', async (_event, diveId, updates) => {
+  try {
+    const updated = await editDive(diveId, updates)
+    return { ok: true, data: updated }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
+
+ipcMain.handle('db:createNode', async (_event, input) => {
+  try {
+    const created = await createNode(input)
+    return { ok: true, data: created }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
 })
