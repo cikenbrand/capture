@@ -1,27 +1,26 @@
+import { SerialPort } from 'serialport'
+
 export async function getCOMPorts(): Promise<string[]> {
   try {
-    const mod: unknown = await import('@serialport/list')
-    const listFn = (mod as any).list ?? (mod as any).default ?? mod
-    const ports: Array<{ path?: string | null }> = await (listFn as () => Promise<Array<{ path?: string | null }>>)()
-    const names: string[] = ports
-      .map((p) => p.path)
-      .filter((v): v is string => typeof v === 'string' && v.length > 0)
+    const ports = await SerialPort.list()
+    const comPaths = ports
+      .map(p => p.path)
+      .filter((p): p is string => Boolean(p))
+      .filter(p => /^COM\d+$/i.test(p))
 
-    // Deduplicate and sort naturally by COM number when possible
-    const unique: string[] = Array.from(new Set(names))
-    unique.sort((a: string, b: string) => {
-      const aMatch = /^COM(\d+)$/i.exec(a)
-      const bMatch = /^COM(\d+)$/i.exec(b)
-      if (aMatch && bMatch) {
-        return Number(aMatch[1]) - Number(bMatch[1])
-      }
-      return a.localeCompare(b)
+    // Ensure unique and sort by numeric suffix (COM3, COM10, ...)
+    const unique = Array.from(new Set(comPaths))
+    unique.sort((a, b) => {
+      const an = parseInt(a.replace(/^[^0-9]*/, ''), 10)
+      const bn = parseInt(b.replace(/^[^0-9]*/, ''), 10)
+      if (Number.isNaN(an) || Number.isNaN(bn)) return a.localeCompare(b)
+      return an - bn || a.localeCompare(b)
     })
     return unique
-  } catch {
+  } catch (error) {
+    console.error('Failed to list COM ports:', error)
     return []
   }
 }
 
-export default getCOMPorts
 
