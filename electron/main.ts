@@ -8,15 +8,15 @@ import { exitOBS } from './obs/websocket_functions/exitOBS'
 import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
 import { connectToOBSWebsocket } from './obs/websocket_functions/connectToOBSWebsocket'
 import { SPLASHSCREEN_DURATION_MS } from './settings'
-import { createProject } from './db/createProject'
-import { createTask } from './db/createTask'
-import { editTask } from './db/editTask'
-import { createDive } from './db/createDive'
-import { editDive } from './db/editDive'
-import { createNode } from './db/createNode'
-import { getAllNodes } from './db/getAllNodes'
-import { getAllProjects } from './db/getAllProjects'
-import { setSelectedProjectId } from './getter-setter/selectedProject'
+import './db/createProject'
+import './db/createTask'
+import './db/editTask'
+import './db/createDive'
+import './db/editDive'
+import './db/createNode'
+import './db/getAllNodes'
+import './db/getAllProjects'
+import './getter-setter/selectedProject'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -166,119 +166,5 @@ ipcMain.handle('window:close', async () => {
     return true
   } catch {
     return false
-  }
-})
-
-// IPC: database
-ipcMain.handle('db:createProject', async (_event, input) => {
-  try {
-    const created = await createProject(input)
-    return { ok: true, data: created }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return { ok: false, error: message }
-  }
-})
-
-ipcMain.handle('db:createTask', async (_event, input) => {
-  try {
-    const created = await createTask(input)
-    return { ok: true, data: created }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return { ok: false, error: message }
-  }
-})
-
-ipcMain.handle('db:editTask', async (_event, taskId, updates) => {
-  try {
-    const updated = await editTask(taskId, updates)
-    return { ok: true, data: updated }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return { ok: false, error: message }
-  }
-})
-
-ipcMain.handle('db:createDive', async (_event, input) => {
-  try {
-    const created = await createDive(input)
-    return { ok: true, data: created }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return { ok: false, error: message }
-  }
-})
-
-ipcMain.handle('db:editDive', async (_event, diveId, updates) => {
-  try {
-    const updated = await editDive(diveId, updates)
-    return { ok: true, data: updated }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return { ok: false, error: message }
-  }
-})
-
-ipcMain.handle('db:createNode', async (_event, input) => {
-  try {
-    const created = await createNode(input)
-    return { ok: true, data: created }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return { ok: false, error: message }
-  }
-})
-
-ipcMain.handle('db:getAllNodes', async (_event, projectId: string) => {
-  try {
-    const roots = await getAllNodes(projectId)
-    const toPlain = (n: any): any => ({
-      _id: n._id?.toString?.() ?? n._id,
-      projectId: n.projectId?.toString?.() ?? n.projectId,
-      parentId: n.parentId ? (n.parentId.toString?.() ?? n.parentId) : undefined,
-      name: n.name,
-      level: n.level,
-      createdAt: n.createdAt,
-      updatedAt: n.updatedAt,
-      children: Array.isArray(n.children) ? n.children.map(toPlain) : [],
-    })
-    return { ok: true, data: roots.map(toPlain) }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return { ok: false, error: message }
-  }
-})
-
-// IPC: projects
-ipcMain.handle('db:getAllProjects', async () => {
-  try {
-    const projects = await getAllProjects()
-    // Convert ObjectIds to strings for renderer
-    const plain = projects.map(p => ({
-      _id: p._id.toString(),
-      name: p.name,
-      client: p.client,
-      contractor: p.contractor,
-      vessel: p.vessel,
-      location: p.location,
-      projectType: p.projectType,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-    }))
-    return { ok: true, data: plain }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return { ok: false, error: message }
-  }
-})
-
-ipcMain.handle('app:setSelectedProjectId', async (_event, id: string | null) => {
-  try {
-    setSelectedProjectId(id)
-    return { ok: true }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error'
-    return { ok: false, error: message }
   }
 })

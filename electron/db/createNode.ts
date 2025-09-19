@@ -1,5 +1,6 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
+import { ipcMain } from 'electron'
 
 export interface NewNode {
   projectId: string
@@ -71,13 +72,12 @@ export async function createNode(input: NewNode): Promise<NodeDoc> {
   return { _id: result.insertedId, ...(doc as any) }
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
+ipcMain.handle('db:createNode', async (_event, input) => {
   try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
+    const created = await createNode(input)
+    return { ok: true, data: created }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
-}
-
-
+})

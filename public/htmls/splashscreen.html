@@ -8,20 +8,30 @@
     />
     <title>Loading…</title>
     <style>
-      html, body { margin:0; padding:0; height:100%; background:#121212; color:#fff; font-family:system-ui, sans-serif; }
-      .wrap { height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:12px;}
-      .logo { width:96px; height:96px; border-radius:16px; background:#222; display:flex; align-items:center; justify-content:center; font-weight:700; }
-      .bar { width:200px; height:6px; background:#262626; border-radius:3px; overflow:hidden }
+      html, body { margin:0; padding:0; height:100%; background:#000; color:#fff; font-family:system-ui, sans-serif; }
+      .bg {
+        position:fixed; inset:0; background:#000 url('../rov.jpg') center/cover no-repeat;
+        filter:brightness(0.7);
+      }
+      .wrap { position:relative; z-index:1; height:100%; }
+      .status {
+        position:fixed; left:0; right:0; bottom:0; margin:0; padding:0; border-radius:0;
+        background:rgba(0,0,0,.55); backdrop-filter: blur(4px);
+        display:flex; align-items:center; gap:12px;
+      }
+      .bar { flex:1; height:6px; background:rgba(255,255,255,.2); border-radius:0; overflow:hidden }
       .bar>i { display:block; width:40%; height:100%; background:#4caf50; animation:load 1.2s infinite ease-in-out }
       @keyframes load { 0%{ transform:translateX(-100%);} 50%{ transform:translateX(150%);} 100%{ transform:translateX(250%);} }
-      .hint { opacity:.7; font-size:.9rem }
+      .hint { opacity:.9; font-size:.95rem }
     </style>
   </head>
   <body>
+    <div class="bg"></div>
     <div class="wrap">
-      <div class="logo">APP</div>
-      <div class="bar"><i></i></div>
-      <div id="status" class="hint">Starting…</div>
+      <div class="status">
+        <div class="bar"><i></i></div>
+        <div id="status" class="hint"></div>
+      </div>
     </div>
     <script>
       window.addEventListener('message', (e)=>{

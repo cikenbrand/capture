@@ -1,6 +1,7 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
 import type { TaskDoc } from './createTask'
+import { ipcMain } from 'electron'
 
 export interface EditTaskInput {
   name?: string
@@ -49,13 +50,12 @@ export async function editTask(taskId: string, updates: EditTaskInput): Promise<
   return updated
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
+ipcMain.handle('db:editTask', async (_event, taskId, updates) => {
   try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
+    const updated = await editTask(taskId, updates)
+    return { ok: true, data: updated }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
-}
-
-
+})

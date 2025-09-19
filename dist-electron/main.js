@@ -1,4 +1,4 @@
-import { BrowserWindow, app, ipcMain } from "electron";
+import { BrowserWindow, ipcMain, app } from "electron";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
@@ -192,6 +192,15 @@ async function createProject(input) {
   const result = await projects.insertOne(doc);
   return { _id: result.insertedId, ...doc };
 }
+ipcMain.handle("db:createProject", async (_event, input) => {
+  try {
+    const created = await createProject(input);
+    return { ok: true, data: created };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 let cachedClient$6 = null;
 async function getClient$6() {
   if (cachedClient$6) return cachedClient$6;
@@ -222,6 +231,15 @@ async function createTask(input) {
   const result = await tasks.insertOne(doc);
   return { _id: result.insertedId, ...doc };
 }
+ipcMain.handle("db:createTask", async (_event, input) => {
+  try {
+    const created = await createTask(input);
+    return { ok: true, data: created };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 let cachedClient$5 = null;
 async function getClient$5() {
   if (cachedClient$5) return cachedClient$5;
@@ -255,6 +273,15 @@ async function editTask(taskId, updates) {
   }
   return updated;
 }
+ipcMain.handle("db:editTask", async (_event, taskId, updates) => {
+  try {
+    const updated = await editTask(taskId, updates);
+    return { ok: true, data: updated };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 let cachedClient$4 = null;
 async function getClient$4() {
   if (cachedClient$4) return cachedClient$4;
@@ -285,6 +312,15 @@ async function createDive(input) {
   const result = await dives.insertOne(doc);
   return { _id: result.insertedId, ...doc };
 }
+ipcMain.handle("db:createDive", async (_event, input) => {
+  try {
+    const created = await createDive(input);
+    return { ok: true, data: created };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 let cachedClient$3 = null;
 async function getClient$3() {
   if (cachedClient$3) return cachedClient$3;
@@ -318,6 +354,15 @@ async function editDive(diveId, updates) {
   }
   return updated;
 }
+ipcMain.handle("db:editDive", async (_event, diveId, updates) => {
+  try {
+    const updated = await editDive(diveId, updates);
+    return { ok: true, data: updated };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 let cachedClient$2 = null;
 async function getClient$2() {
   if (cachedClient$2) return cachedClient$2;
@@ -362,6 +407,15 @@ async function createNode(input) {
   const result = await nodes.insertOne(doc);
   return { _id: result.insertedId, ...doc };
 }
+ipcMain.handle("db:createNode", async (_event, input) => {
+  try {
+    const created = await createNode(input);
+    return { ok: true, data: created };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 let cachedClient$1 = null;
 async function getClient$1() {
   if (cachedClient$1) return cachedClient$1;
@@ -399,6 +453,28 @@ async function getAllNodes(projectId) {
   }
   return roots;
 }
+ipcMain.handle("db:getAllNodes", async (_event, projectId) => {
+  try {
+    const roots = await getAllNodes(projectId);
+    const toPlain = (n) => {
+      var _a, _b, _c, _d, _e, _f;
+      return {
+        _id: ((_b = (_a = n._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? n._id,
+        projectId: ((_d = (_c = n.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? n.projectId,
+        parentId: n.parentId ? ((_f = (_e = n.parentId).toString) == null ? void 0 : _f.call(_e)) ?? n.parentId : void 0,
+        name: n.name,
+        level: n.level,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt,
+        children: Array.isArray(n.children) ? n.children.map(toPlain) : []
+      };
+    };
+    return { ok: true, data: roots.map(toPlain) };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 let cachedClient = null;
 async function getClient() {
   if (cachedClient) return cachedClient;
@@ -419,9 +495,26 @@ async function getAllProjects() {
   const projects = db.collection("projects");
   return projects.find({}).sort({ createdAt: -1 }).toArray();
 }
-function setSelectedProjectId(id) {
-  id ? id.trim() || null : null;
-}
+ipcMain.handle("db:getAllProjects", async () => {
+  try {
+    const projects = await getAllProjects();
+    const plain = projects.map((p) => ({
+      _id: p._id.toString(),
+      name: p.name,
+      client: p.client,
+      contractor: p.contractor,
+      vessel: p.vessel,
+      location: p.location,
+      projectType: p.projectType,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt
+    }));
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -539,111 +632,6 @@ ipcMain.handle("window:close", async () => {
     return true;
   } catch {
     return false;
-  }
-});
-ipcMain.handle("db:createProject", async (_event, input) => {
-  try {
-    const created = await createProject(input);
-    return { ok: true, data: created };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
-  }
-});
-ipcMain.handle("db:createTask", async (_event, input) => {
-  try {
-    const created = await createTask(input);
-    return { ok: true, data: created };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
-  }
-});
-ipcMain.handle("db:editTask", async (_event, taskId, updates) => {
-  try {
-    const updated = await editTask(taskId, updates);
-    return { ok: true, data: updated };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
-  }
-});
-ipcMain.handle("db:createDive", async (_event, input) => {
-  try {
-    const created = await createDive(input);
-    return { ok: true, data: created };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
-  }
-});
-ipcMain.handle("db:editDive", async (_event, diveId, updates) => {
-  try {
-    const updated = await editDive(diveId, updates);
-    return { ok: true, data: updated };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
-  }
-});
-ipcMain.handle("db:createNode", async (_event, input) => {
-  try {
-    const created = await createNode(input);
-    return { ok: true, data: created };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
-  }
-});
-ipcMain.handle("db:getAllNodes", async (_event, projectId) => {
-  try {
-    const roots = await getAllNodes(projectId);
-    const toPlain = (n) => {
-      var _a, _b, _c, _d, _e, _f;
-      return {
-        _id: ((_b = (_a = n._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? n._id,
-        projectId: ((_d = (_c = n.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? n.projectId,
-        parentId: n.parentId ? ((_f = (_e = n.parentId).toString) == null ? void 0 : _f.call(_e)) ?? n.parentId : void 0,
-        name: n.name,
-        level: n.level,
-        createdAt: n.createdAt,
-        updatedAt: n.updatedAt,
-        children: Array.isArray(n.children) ? n.children.map(toPlain) : []
-      };
-    };
-    return { ok: true, data: roots.map(toPlain) };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
-  }
-});
-ipcMain.handle("db:getAllProjects", async () => {
-  try {
-    const projects = await getAllProjects();
-    const plain = projects.map((p) => ({
-      _id: p._id.toString(),
-      name: p.name,
-      client: p.client,
-      contractor: p.contractor,
-      vessel: p.vessel,
-      location: p.location,
-      projectType: p.projectType,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt
-    }));
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
-  }
-});
-ipcMain.handle("app:setSelectedProjectId", async (_event, id) => {
-  try {
-    setSelectedProjectId(id);
-    return { ok: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
   }
 });
 export {

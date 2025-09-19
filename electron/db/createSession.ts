@@ -81,14 +81,3 @@ export async function createSession(input: NewSession): Promise<SessionDoc> {
   const result = await sessions.insertOne(doc as any)
   return { _id: result.insertedId, ...(doc as any) }
 }
-
-export async function closeMongo() {
-  if (!cachedClient) return
-  try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
-  }
-}
-
-

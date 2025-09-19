@@ -1,5 +1,6 @@
 import { MongoClient, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
+import { ipcMain } from 'electron'
 
 export type ProjectType = 'platform' | 'pipeline'
 
@@ -49,13 +50,13 @@ export async function createProject(input: NewProject) {
   return { _id: result.insertedId, ...doc }
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
+ipcMain.handle('db:createProject', async (_event, input) => {
   try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
+    const created = await createProject(input)
+    const id = (created as any)?._id?.toString?.() ?? created
+    return { ok: true, data: id }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
-}
-
-
+})

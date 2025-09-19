@@ -1,5 +1,6 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
+import { ipcMain } from 'electron'
 
 export type ProjectType = 'platform' | 'pipeline'
 
@@ -38,13 +39,24 @@ export async function getAllProjects(): Promise<ProjectDoc[]> {
   return projects.find({}).sort({ createdAt: -1 }).toArray()
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
+ipcMain.handle('db:getAllProjects', async () => {
   try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
+    const projects = await getAllProjects()
+    // Convert ObjectIds to strings for renderer
+    const plain = projects.map(p => ({
+      _id: p._id.toString(),
+      name: p.name,
+      client: p.client,
+      contractor: p.contractor,
+      vessel: p.vessel,
+      location: p.location,
+      projectType: p.projectType,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    }))
+    return { ok: true, data: plain }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
-}
-
-
+})

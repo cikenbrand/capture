@@ -27,13 +27,3 @@ export async function deleteNode(nodeId: string): Promise<boolean> {
   return result.deletedCount === 1
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
-  try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
-  }
-}
-
-

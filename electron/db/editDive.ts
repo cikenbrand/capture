@@ -1,6 +1,7 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
 import type { DiveDoc } from './createDive'
+import { ipcMain } from 'electron'
 
 export interface EditDiveInput {
   name?: string
@@ -49,13 +50,12 @@ export async function editDive(diveId: string, updates: EditDiveInput): Promise<
   return updated
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
+ipcMain.handle('db:editDive', async (_event, diveId, updates) => {
   try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
+    const updated = await editDive(diveId, updates)
+    return { ok: true, data: updated }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
-}
-
-
+})

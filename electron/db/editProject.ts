@@ -68,13 +68,3 @@ export async function editProject(projectId: string, updates: EditProjectInput):
   return updated
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
-  try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
-  }
-}
-
-

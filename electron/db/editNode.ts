@@ -49,13 +49,4 @@ export async function editNode(nodeId: string, updates: EditNodeInput): Promise<
   return updated
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
-  try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
-  }
-}
-
 

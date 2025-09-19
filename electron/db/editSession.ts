@@ -96,13 +96,3 @@ export async function editSession(sessionId: string, snapshots: SessionSnapshots
   return updated
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
-  try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
-  }
-}
-
-

@@ -1,6 +1,7 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
 import type { NodeDoc } from './createNode'
+import { ipcMain } from 'electron'
 
 export interface TreeNode extends Omit<NodeDoc, 'parentId'> {
   parentId?: ObjectId
@@ -55,13 +56,22 @@ export async function getAllNodes(projectId: string): Promise<TreeNode[]> {
   return roots
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
+ipcMain.handle('db:getAllNodes', async (_event, projectId: string) => {
   try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
+    const roots = await getAllNodes(projectId)
+    const toPlain = (n: any): any => ({
+      _id: n._id?.toString?.() ?? n._id,
+      projectId: n.projectId?.toString?.() ?? n.projectId,
+      parentId: n.parentId ? (n.parentId.toString?.() ?? n.parentId) : undefined,
+      name: n.name,
+      level: n.level,
+      createdAt: n.createdAt,
+      updatedAt: n.updatedAt,
+      children: Array.isArray(n.children) ? n.children.map(toPlain) : [],
+    })
+    return { ok: true, data: roots.map(toPlain) }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
-}
-
-
+})

@@ -1,5 +1,6 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
+import { ipcMain } from 'electron'
 
 export interface NewDive {
   projectId: string
@@ -51,13 +52,12 @@ export async function createDive(input: NewDive): Promise<DiveDoc> {
   return { _id: result.insertedId, ...doc } as DiveDoc
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
+ipcMain.handle('db:createDive', async (_event, input) => {
   try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
+    const created = await createDive(input)
+    return { ok: true, data: created }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
-}
-
-
+})

@@ -1,5 +1,6 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
+import { ipcMain } from 'electron'
 
 export interface NewTask {
   projectId: string
@@ -52,13 +53,12 @@ export async function createTask(input: NewTask): Promise<TaskDoc> {
   return { _id: result.insertedId, ...doc } as TaskDoc
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
+ipcMain.handle('db:createTask', async (_event, input) => {
   try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
+    const created = await createTask(input)
+    return { ok: true, data: created }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
-}
-
-
+})
