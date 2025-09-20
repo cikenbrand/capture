@@ -4,7 +4,7 @@ import { DraggableDialog } from "@/components/ui/draggable-dialog"
 import AddNewDive from "./components/main-window/AddNewDiveForm"
 import { useEffect, useState } from "react"
 import { BiPlus } from "react-icons/bi";
-import { MdEdit } from "react-icons/md";
+import { MdDelete, MdEdit } from "react-icons/md";
 import DiveSelection from "./components/main-window/DiveSelection"
 import EditDiveForm from "./components/main-window/EditDiveForm"
 import ShowDiveRemarks from "./components/main-window/ShowDiveRemarks"
@@ -14,6 +14,9 @@ import CreateTaskForm from "./components/main-window/CreateTaskForm"
 import TaskSelection from "./components/main-window/TaskSelection"
 import EditTaskForm from "./components/main-window/EditTaskForm"
 import ShowTaskRemarks from "./components/main-window/ShowTaskRemarks"
+import NodesTree from "./components/main-window/NodesTree"
+import AddNewNodeForm from "./components/main-window/AddNewNodeForm"
+import EditNodeDetailsForm from "./components/main-window/EditNodeDetailsForm"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -24,6 +27,9 @@ function App() {
   const [isCreateTaskDialogOpen, setIsCreateTaskDialogOpen] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false)
+  const [isCreateNodeDialogOpen, setIsCreateNodeDialogOpen] = useState(false)
+  const [isEditNodeDialogOpen, setIsEditNodeDialogOpen] = useState(false)
+  const [isDeleteNodeDialogOpen, setIsDeleteNodeDialogOpen] = useState(false)
 
   useEffect(() => {
     let done = false
@@ -125,8 +131,29 @@ function App() {
                   <MdEdit className="h-4.5 w-4.5" />
                 </button>
               </div>
-              <TaskSelection/>
-              <ShowTaskRemarks/>
+              <TaskSelection />
+              <ShowTaskRemarks />
+            </TabsContent>
+          </Tabs>
+          <Tabs defaultValue="workpack" className="h-full">
+            <TabsList>
+              <TabsTrigger value="workpack">Workpack</TabsTrigger>
+            </TabsList>
+            <TabsContent value="workpack" className="flex flex-col gap-1">
+              <div className="flex gap-1">
+                <button title="New Node" disabled={!selectedProjectId} onMouseDown={(e) => e.preventDefault()} onClick={() => setIsCreateNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <BiPlus className="h-6 w-6" />
+                </button>
+                <button title="Edit Node" disabled={!selectedProjectId} onClick={() => setIsEditNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <MdEdit className="h-4.5 w-4.5" />
+                </button>
+                <button title="Delete Node" disabled={!selectedProjectId} onClick={() => setIsDeleteNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <MdDelete className="h-4.5 w-4.5" />
+                </button>
+              </div>
+              <div className="bg-[#21262E] p-1 h-full">
+                <NodesTree/>
+              </div>
             </TabsContent>
           </Tabs>
         </div>
@@ -148,6 +175,14 @@ function App() {
       </DraggableDialog>
       <DraggableDialog open={isEditTaskDialogOpen} onOpenChange={setIsEditTaskDialogOpen} title="Edit Task">
         <EditTaskForm onClose={() => setIsEditTaskDialogOpen(false)} />
+      </DraggableDialog>
+      <DraggableDialog open={isCreateNodeDialogOpen} onOpenChange={setIsCreateNodeDialogOpen} title="New Node">
+        <AddNewNodeForm onClose={() => setIsCreateNodeDialogOpen(false)} />
+      </DraggableDialog>
+      <DraggableDialog open={isEditNodeDialogOpen} onOpenChange={setIsEditNodeDialogOpen} title="Edit Node">
+        <EditNodeDetailsForm onClose={() => setIsEditNodeDialogOpen(false)} />
+      </DraggableDialog>
+      <DraggableDialog open={isDeleteNodeDialogOpen} onOpenChange={setIsDeleteNodeDialogOpen} title="Delete Node">
       </DraggableDialog>
     </div>
   )

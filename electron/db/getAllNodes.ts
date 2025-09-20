@@ -32,7 +32,7 @@ export async function getAllNodes(projectId: string): Promise<TreeNode[]> {
   const projectObjectId = new ObjectId(projectId)
   const nodes = await nodesCol
     .find({ projectId: projectObjectId })
-    .sort({ level: 1, createdAt: 1 })
+    .sort({ level: 1, createdAt: 1, name: 1 })
     .toArray()
 
   const idToNode = new Map<string, TreeNode>()

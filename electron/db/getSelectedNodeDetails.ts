@@ -1,12 +1,7 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
+import { ipcMain } from 'electron'
 import { MONGODB_URI } from '../settings'
 import type { NodeDoc } from './createNode'
-import { ipcMain } from 'electron'
-
-export interface EditNodeInput {
-  name?: string
-  remarks?: string
-}
 
 let cachedClient: MongoClient | null = null
 
@@ -24,39 +19,38 @@ async function getClient(): Promise<MongoClient> {
   return client
 }
 
-export async function editNode(nodeId: string, updates: EditNodeInput): Promise<NodeDoc> {
+export async function getSelectedNodeDetails(nodeId: string) {
   const client = await getClient()
   const db = client.db('capture')
   const nodes = db.collection<NodeDoc>('nodes')
 
   const _id = new ObjectId(nodeId)
-
-  const now = new Date()
-  const set: Partial<NodeDoc> = { updatedAt: now }
-
-  if (typeof updates.name === 'string') set.name = updates.name.trim()
-  if (typeof updates.remarks === 'string') set.remarks = updates.remarks.trim()
-
-  const updated = await nodes.findOneAndUpdate(
-    { _id },
-    { $set: set },
-    { returnDocument: 'after', includeResultMetadata: false }
-  )
-
-  if (!updated) {
-    throw new Error('Node not found')
-  }
-
-  return updated
+  const doc = await nodes.findOne({ _id })
+  return doc
 }
 
-ipcMain.handle('db:editNode', async (_event, nodeId, updates) => {
+ipcMain.handle('db:getSelectedNodeDetails', async (_event, nodeId: string) => {
   try {
-    const updated = await editNode(nodeId, updates)
-    return { ok: true, data: updated }
+    if (!nodeId || typeof nodeId !== 'string') {
+      return { ok: false, error: 'Invalid nodeId' }
+    }
+    const doc = await getSelectedNodeDetails(nodeId)
+    if (!doc) return { ok: true, data: null }
+    const plain = {
+      _id: doc._id.toString(),
+      projectId: doc.projectId.toString(),
+      parentId: doc.parentId ? doc.parentId.toString() : undefined,
+      name: doc.name,
+      remarks: doc.remarks ?? undefined,
+      level: doc.level,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt,
+    }
+    return { ok: true, data: plain }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { ok: false, error: message }
   }
 })
+
 
