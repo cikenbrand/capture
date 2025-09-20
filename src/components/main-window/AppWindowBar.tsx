@@ -3,18 +3,44 @@ import {
     MenubarContent,
     MenubarItem,
     MenubarMenu,
+    MenubarSeparator,
     MenubarTrigger,
 } from "@/components/ui/menubar"
 import { VscChromeMinimize, VscChromeClose } from "react-icons/vsc";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DraggableDialog } from "@/components/ui/draggable-dialog";
 import { Button } from "../ui/button";
 import CreateProjectForm from "./CreateProjectForm";
+import OpenProject from "./OpenProject";
+import EditProjectDetailsForm from "./EditProjectDetailsForm";
 
 export default function AppWindowBar() {
     const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
     const [newProjectOpen, setNewProjectOpen] = useState(false)
     const [openProjectOpen, setOpenProjectOpen] = useState(false)
+    const [editProjectOpen, setEditProjectOpen] = useState(false)
+    const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+
+    useEffect(() => {
+        let done = false
+        ;(async () => {
+            try {
+                const res = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+                if (!done && res?.ok) setSelectedProjectId(res.data ?? null)
+            } catch {}
+        })()
+        const onChanged = (e: any) => {
+            try {
+                const id = e?.detail ?? null
+                setSelectedProjectId(id)
+            } catch {}
+        }
+        window.addEventListener('selectedProjectChanged', onChanged as any)
+        return () => {
+            done = true
+            window.removeEventListener('selectedProjectChanged', onChanged as any)
+        }
+    }, [])
 
     return (
         < div className='h-9 w-full drag flex items-center justify-between pl-2' >
@@ -27,6 +53,30 @@ export default function AppWindowBar() {
                         </MenubarItem>
                         <MenubarItem onClick={() => setOpenProjectOpen(true)}>
                             Open Project
+                        </MenubarItem>
+                        <MenubarSeparator/>
+                        <MenubarItem onClick={() => setEditProjectOpen(true)} disabled={!selectedProjectId}>
+                            Edit Project
+                        </MenubarItem>
+                        <MenubarItem
+                            disabled={!selectedProjectId}
+                            onClick={async () => {
+                                try {
+                                    await window.ipcRenderer.invoke('app:setSelectedProjectId', null)
+                                    setSelectedProjectId(null)
+                                    try {
+                                        const ev = new CustomEvent('selectedProjectChanged', { detail: null })
+                                        window.dispatchEvent(ev)
+                                        await window.ipcRenderer.invoke('app:setSelectedDiveId', null)
+                                        try {
+                                            const ev2 = new CustomEvent('selectedDiveChanged', { detail: null })
+                                            window.dispatchEvent(ev2)
+                                        } catch {}
+                                    } catch {}
+                                } catch {}
+                            }}
+                        >
+                            Close Project
                         </MenubarItem>
                     </MenubarContent>
                 </MenubarMenu>
@@ -85,8 +135,18 @@ export default function AppWindowBar() {
                 open={openProjectOpen}
                 onOpenChange={setOpenProjectOpen}
                 title="Open Project"
-                width={520}
-            />
+                width={1220}
+            >
+                <OpenProject onClose={() => setOpenProjectOpen(false)} />
+            </DraggableDialog>
+            <DraggableDialog
+                open={editProjectOpen}
+                onOpenChange={setEditProjectOpen}
+                title="Edit Project"
+                width={800}
+            >
+                <EditProjectDetailsForm onClose={() => setEditProjectOpen(false)}/>
+            </DraggableDialog>
         </div >
     )
 }

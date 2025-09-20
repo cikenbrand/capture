@@ -19,3 +19,12 @@ ipcMain.handle('app:setSelectedProjectId', async (_event, id: string | null) => 
     return { ok: false, error: message }
   }
 })
+
+ipcMain.handle('app:getSelectedProjectId', async () => {
+  try {
+    return { ok: true, data: getSelectedProjectId() }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})

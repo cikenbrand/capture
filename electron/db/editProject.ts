@@ -1,4 +1,5 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
+import { ipcMain } from 'electron'
 import { MONGODB_URI } from '../settings'
 
 export interface EditProjectInput {
@@ -67,4 +68,25 @@ export async function editProject(projectId: string, updates: EditProjectInput):
 
   return updated
 }
+
+ipcMain.handle('db:editProject', async (_event, projectId: string, updates: EditProjectInput) => {
+  try {
+    const updated = await editProject(projectId, updates)
+    const plain = {
+      _id: updated._id.toString(),
+      name: updated.name,
+      client: updated.client,
+      contractor: updated.contractor,
+      vessel: updated.vessel,
+      location: updated.location,
+      projectType: updated.projectType,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    }
+    return { ok: true, data: plain }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
 

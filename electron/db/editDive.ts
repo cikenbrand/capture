@@ -6,6 +6,7 @@ import { ipcMain } from 'electron'
 export interface EditDiveInput {
   name?: string
   remarks?: string
+  started?: boolean
 }
 
 let cachedClient: MongoClient | null = null
@@ -36,6 +37,7 @@ export async function editDive(diveId: string, updates: EditDiveInput): Promise<
 
   if (typeof updates.name === 'string') set.name = updates.name.trim()
   if (typeof updates.remarks === 'string') set.remarks = updates.remarks.trim()
+  if (typeof updates.started === 'boolean') set.started = updates.started
 
   const updated = await dives.findOneAndUpdate(
     { _id },

@@ -40,10 +40,22 @@ export async function createTask(input: NewTask): Promise<TaskDoc> {
 
   const now = new Date()
   const remarks = typeof input.remarks === 'string' ? input.remarks.trim() : undefined
+  const trimmedName = input.name.trim()
+  if (!trimmedName) {
+    throw new Error('Task name is required')
+  }
+  // Enforce uniqueness of task name within the same project (case-insensitive)
+  const existing = await tasks.findOne({
+    projectId: new ObjectId(input.projectId),
+    name: { $regex: `^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
+  })
+  if (existing) {
+    throw new Error('A task with this name already exists in this project')
+  }
 
   const doc = {
     projectId: new ObjectId(input.projectId),
-    name: input.name.trim(),
+    name: trimmedName,
     ...(remarks ? { remarks } : {}),
     createdAt: now,
     updatedAt: now,
@@ -56,7 +68,8 @@ export async function createTask(input: NewTask): Promise<TaskDoc> {
 ipcMain.handle('db:createTask', async (_event, input) => {
   try {
     const created = await createTask(input)
-    return { ok: true, data: created }
+    const id = (created as any)?._id?.toString?.() ?? created
+    return { ok: true, data: id }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { ok: false, error: message }

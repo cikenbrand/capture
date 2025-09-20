@@ -10,6 +10,8 @@ import { connectToOBSWebsocket } from './obs/websocket_functions/connectToOBSWeb
 import { SPLASHSCREEN_DURATION_MS } from './settings'
 import './db/createProject'
 import './db/createTask'
+import './db/getAllTasks'
+import './db/getSelectedTaskDetails'
 import './db/editTask'
 import './db/createDive'
 import './db/editDive'
@@ -17,6 +19,12 @@ import './db/createNode'
 import './db/getAllNodes'
 import './db/getAllProjects'
 import './getter-setter/selectedProject'
+import './getter-setter/selectedDive'
+import './getter-setter/selectedTask'
+import './db/getAllDives'
+import './db/getSelectedProjectDetails'
+import './db/getSelectedDiveDetails'
+import './db/editProject'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')

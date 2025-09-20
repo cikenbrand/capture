@@ -160,9 +160,9 @@ function checkIfOBSOpenOrNot() {
     return false;
   }
 }
-let cachedClient$7 = null;
-async function getClient$7() {
-  if (cachedClient$7) return cachedClient$7;
+let cachedClient$d = null;
+async function getClient$d() {
+  if (cachedClient$d) return cachedClient$d;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -171,11 +171,11 @@ async function getClient$7() {
     }
   });
   await client.connect();
-  cachedClient$7 = client;
+  cachedClient$d = client;
   return client;
 }
 async function createProject(input) {
-  const client = await getClient$7();
+  const client = await getClient$d();
   const db = client.db("capture");
   const projects = db.collection("projects");
   const now = /* @__PURE__ */ new Date();
@@ -193,17 +193,19 @@ async function createProject(input) {
   return { _id: result.insertedId, ...doc };
 }
 ipcMain.handle("db:createProject", async (_event, input) => {
+  var _a, _b;
   try {
     const created = await createProject(input);
-    return { ok: true, data: created };
+    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
+    return { ok: true, data: id };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };
   }
 });
-let cachedClient$6 = null;
-async function getClient$6() {
-  if (cachedClient$6) return cachedClient$6;
+let cachedClient$c = null;
+async function getClient$c() {
+  if (cachedClient$c) return cachedClient$c;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -212,18 +214,29 @@ async function getClient$6() {
     }
   });
   await client.connect();
-  cachedClient$6 = client;
+  cachedClient$c = client;
   return client;
 }
 async function createTask(input) {
-  const client = await getClient$6();
+  const client = await getClient$c();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const now = /* @__PURE__ */ new Date();
   const remarks = typeof input.remarks === "string" ? input.remarks.trim() : void 0;
+  const trimmedName = input.name.trim();
+  if (!trimmedName) {
+    throw new Error("Task name is required");
+  }
+  const existing = await tasks.findOne({
+    projectId: new ObjectId(input.projectId),
+    name: { $regex: `^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" }
+  });
+  if (existing) {
+    throw new Error("A task with this name already exists in this project");
+  }
   const doc = {
     projectId: new ObjectId(input.projectId),
-    name: input.name.trim(),
+    name: trimmedName,
     ...remarks ? { remarks } : {},
     createdAt: now,
     updatedAt: now
@@ -232,17 +245,19 @@ async function createTask(input) {
   return { _id: result.insertedId, ...doc };
 }
 ipcMain.handle("db:createTask", async (_event, input) => {
+  var _a, _b;
   try {
     const created = await createTask(input);
-    return { ok: true, data: created };
+    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
+    return { ok: true, data: id };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };
   }
 });
-let cachedClient$5 = null;
-async function getClient$5() {
-  if (cachedClient$5) return cachedClient$5;
+let cachedClient$b = null;
+async function getClient$b() {
+  if (cachedClient$b) return cachedClient$b;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -251,11 +266,97 @@ async function getClient$5() {
     }
   });
   await client.connect();
-  cachedClient$5 = client;
+  cachedClient$b = client;
+  return client;
+}
+async function getAllTasks(projectId) {
+  const client = await getClient$b();
+  const db = client.db("capture");
+  const tasks = db.collection("tasks");
+  return tasks.find({ projectId: new ObjectId(projectId) }).sort({ createdAt: -1 }).toArray();
+}
+ipcMain.handle("db:getAllTasks", async (_event, projectId) => {
+  try {
+    if (!projectId || typeof projectId !== "string") {
+      return { ok: false, error: "projectId is required" };
+    }
+    const items = await getAllTasks(projectId);
+    const plain = items.map((t) => {
+      var _a, _b, _c, _d;
+      return {
+        _id: ((_b = (_a = t._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? t._id,
+        projectId: ((_d = (_c = t.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? t.projectId,
+        name: t.name,
+        remarks: t.remarks,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt
+      };
+    });
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$a = null;
+async function getClient$a() {
+  if (cachedClient$a) return cachedClient$a;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$a = client;
+  return client;
+}
+async function getSelectedTaskDetails(taskId) {
+  const client = await getClient$a();
+  const db = client.db("capture");
+  const tasks = db.collection("tasks");
+  const _id = new ObjectId(taskId);
+  const doc = await tasks.findOne({ _id });
+  return doc;
+}
+ipcMain.handle("db:getSelectedTaskDetails", async (_event, taskId) => {
+  try {
+    if (!taskId || typeof taskId !== "string") {
+      return { ok: false, error: "Invalid taskId" };
+    }
+    const doc = await getSelectedTaskDetails(taskId);
+    if (!doc) return { ok: true, data: null };
+    const plain = {
+      _id: doc._id.toString(),
+      projectId: doc.projectId.toString(),
+      name: doc.name,
+      remarks: doc.remarks ?? void 0,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt
+    };
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$9 = null;
+async function getClient$9() {
+  if (cachedClient$9) return cachedClient$9;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$9 = client;
   return client;
 }
 async function editTask(taskId, updates) {
-  const client = await getClient$5();
+  const client = await getClient$9();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const _id = new ObjectId(taskId);
@@ -282,9 +383,9 @@ ipcMain.handle("db:editTask", async (_event, taskId, updates) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$4 = null;
-async function getClient$4() {
-  if (cachedClient$4) return cachedClient$4;
+let cachedClient$8 = null;
+async function getClient$8() {
+  if (cachedClient$8) return cachedClient$8;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -293,19 +394,31 @@ async function getClient$4() {
     }
   });
   await client.connect();
-  cachedClient$4 = client;
+  cachedClient$8 = client;
   return client;
 }
 async function createDive(input) {
-  const client = await getClient$4();
+  const client = await getClient$8();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const now = /* @__PURE__ */ new Date();
   const remarks = typeof input.remarks === "string" ? input.remarks.trim() : void 0;
+  const trimmedName = input.name.trim();
+  if (!trimmedName) {
+    throw new Error("Dive name is required");
+  }
+  const existing = await dives.findOne({
+    projectId: new ObjectId(input.projectId),
+    name: { $regex: `^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" }
+  });
+  if (existing) {
+    throw new Error("A dive with this name already exists in this project");
+  }
   const doc = {
     projectId: new ObjectId(input.projectId),
-    name: input.name.trim(),
+    name: trimmedName,
     ...remarks ? { remarks } : {},
+    started: false,
     createdAt: now,
     updatedAt: now
   };
@@ -313,17 +426,19 @@ async function createDive(input) {
   return { _id: result.insertedId, ...doc };
 }
 ipcMain.handle("db:createDive", async (_event, input) => {
+  var _a, _b;
   try {
     const created = await createDive(input);
-    return { ok: true, data: created };
+    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
+    return { ok: true, data: id };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };
   }
 });
-let cachedClient$3 = null;
-async function getClient$3() {
-  if (cachedClient$3) return cachedClient$3;
+let cachedClient$7 = null;
+async function getClient$7() {
+  if (cachedClient$7) return cachedClient$7;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -332,11 +447,11 @@ async function getClient$3() {
     }
   });
   await client.connect();
-  cachedClient$3 = client;
+  cachedClient$7 = client;
   return client;
 }
 async function editDive(diveId, updates) {
-  const client = await getClient$3();
+  const client = await getClient$7();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const _id = new ObjectId(diveId);
@@ -344,6 +459,7 @@ async function editDive(diveId, updates) {
   const set = { updatedAt: now };
   if (typeof updates.name === "string") set.name = updates.name.trim();
   if (typeof updates.remarks === "string") set.remarks = updates.remarks.trim();
+  if (typeof updates.started === "boolean") set.started = updates.started;
   const updated = await dives.findOneAndUpdate(
     { _id },
     { $set: set },
@@ -363,9 +479,9 @@ ipcMain.handle("db:editDive", async (_event, diveId, updates) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$2 = null;
-async function getClient$2() {
-  if (cachedClient$2) return cachedClient$2;
+let cachedClient$6 = null;
+async function getClient$6() {
+  if (cachedClient$6) return cachedClient$6;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -374,11 +490,11 @@ async function getClient$2() {
     }
   });
   await client.connect();
-  cachedClient$2 = client;
+  cachedClient$6 = client;
   return client;
 }
 async function createNode(input) {
-  const client = await getClient$2();
+  const client = await getClient$6();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
   const now = /* @__PURE__ */ new Date();
@@ -416,9 +532,9 @@ ipcMain.handle("db:createNode", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$1 = null;
-async function getClient$1() {
-  if (cachedClient$1) return cachedClient$1;
+let cachedClient$5 = null;
+async function getClient$5() {
+  if (cachedClient$5) return cachedClient$5;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -427,11 +543,11 @@ async function getClient$1() {
     }
   });
   await client.connect();
-  cachedClient$1 = client;
+  cachedClient$5 = client;
   return client;
 }
 async function getAllNodes(projectId) {
-  const client = await getClient$1();
+  const client = await getClient$5();
   const db = client.db("capture");
   const nodesCol = db.collection("nodes");
   const projectObjectId = new ObjectId(projectId);
@@ -475,9 +591,9 @@ ipcMain.handle("db:getAllNodes", async (_event, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient = null;
-async function getClient() {
-  if (cachedClient) return cachedClient;
+let cachedClient$4 = null;
+async function getClient$4() {
+  if (cachedClient$4) return cachedClient$4;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -486,11 +602,11 @@ async function getClient() {
     }
   });
   await client.connect();
-  cachedClient = client;
+  cachedClient$4 = client;
   return client;
 }
 async function getAllProjects() {
-  const client = await getClient();
+  const client = await getClient$4();
   const db = client.db("capture");
   const projects = db.collection("projects");
   return projects.find({}).sort({ createdAt: -1 }).toArray();
@@ -509,6 +625,268 @@ ipcMain.handle("db:getAllProjects", async () => {
       createdAt: p.createdAt,
       updatedAt: p.updatedAt
     }));
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let selectedProjectId = null;
+function setSelectedProjectId(id) {
+  selectedProjectId = id ? id.trim() || null : null;
+}
+function getSelectedProjectId() {
+  return selectedProjectId;
+}
+ipcMain.handle("app:setSelectedProjectId", async (_event, id) => {
+  try {
+    setSelectedProjectId(id);
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("app:getSelectedProjectId", async () => {
+  try {
+    return { ok: true, data: getSelectedProjectId() };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let selectedDiveId = null;
+function setSelectedDiveId(id) {
+  selectedDiveId = id ? id.trim() || null : null;
+}
+function getSelectedDiveId() {
+  return selectedDiveId;
+}
+ipcMain.handle("app:setSelectedDiveId", async (_event, id) => {
+  try {
+    setSelectedDiveId(id);
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("app:getSelectedDiveId", async () => {
+  try {
+    return { ok: true, data: getSelectedDiveId() };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let selectedTaskId = null;
+function setSelectedTaskId(id) {
+  selectedTaskId = id ? id.trim() || null : null;
+}
+function getSelectedTaskId() {
+  return selectedTaskId;
+}
+ipcMain.handle("app:setSelectedTaskId", async (_event, id) => {
+  try {
+    setSelectedTaskId(id);
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("app:getSelectedTaskId", async () => {
+  try {
+    return { ok: true, data: getSelectedTaskId() };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$3 = null;
+async function getClient$3() {
+  if (cachedClient$3) return cachedClient$3;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$3 = client;
+  return client;
+}
+async function getAllDives(projectId) {
+  const client = await getClient$3();
+  const db = client.db("capture");
+  const dives = db.collection("dives");
+  return dives.find({ projectId: new ObjectId(projectId) }).sort({ createdAt: -1 }).toArray();
+}
+ipcMain.handle("db:getAllDives", async (_event, projectId) => {
+  try {
+    if (!projectId || typeof projectId !== "string") {
+      return { ok: false, error: "projectId is required" };
+    }
+    const items = await getAllDives(projectId);
+    const plain = items.map((d) => {
+      var _a, _b, _c, _d;
+      return {
+        _id: ((_b = (_a = d._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? d._id,
+        projectId: ((_d = (_c = d.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? d.projectId,
+        name: d.name,
+        remarks: d.remarks,
+        started: !!d.started,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt
+      };
+    });
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$2 = null;
+async function getClient$2() {
+  if (cachedClient$2) return cachedClient$2;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$2 = client;
+  return client;
+}
+async function getSelectedProjectDetails(projectId) {
+  const client = await getClient$2();
+  const db = client.db("capture");
+  const projects = db.collection("projects");
+  const _id = new ObjectId(projectId);
+  const doc = await projects.findOne({ _id });
+  return doc;
+}
+ipcMain.handle("db:getSelectedProjectDetails", async (_event, projectId) => {
+  try {
+    if (!projectId || typeof projectId !== "string") {
+      return { ok: false, error: "Invalid projectId" };
+    }
+    const doc = await getSelectedProjectDetails(projectId);
+    if (!doc) return { ok: true, data: null };
+    const plain = {
+      _id: doc._id.toString(),
+      name: doc.name,
+      client: doc.client,
+      contractor: doc.contractor,
+      vessel: doc.vessel,
+      location: doc.location,
+      projectType: doc.projectType,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt
+    };
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$1 = null;
+async function getClient$1() {
+  if (cachedClient$1) return cachedClient$1;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$1 = client;
+  return client;
+}
+async function getSelectedDiveDetails(diveId) {
+  const client = await getClient$1();
+  const db = client.db("capture");
+  const dives = db.collection("dives");
+  const _id = new ObjectId(diveId);
+  const doc = await dives.findOne({ _id });
+  return doc;
+}
+ipcMain.handle("db:getSelectedDiveDetails", async (_event, diveId) => {
+  try {
+    if (!diveId || typeof diveId !== "string") {
+      return { ok: false, error: "Invalid diveId" };
+    }
+    const doc = await getSelectedDiveDetails(diveId);
+    if (!doc) return { ok: true, data: null };
+    const plain = {
+      _id: doc._id.toString(),
+      projectId: doc.projectId.toString(),
+      name: doc.name,
+      remarks: doc.remarks ?? void 0,
+      started: !!doc.started,
+      createdAt: doc.createdAt,
+      updatedAt: doc.updatedAt
+    };
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient = null;
+async function getClient() {
+  if (cachedClient) return cachedClient;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient = client;
+  return client;
+}
+async function editProject(projectId, updates) {
+  const client = await getClient();
+  const db = client.db("capture");
+  const projects = db.collection("projects");
+  const _id = new ObjectId(projectId);
+  const now = /* @__PURE__ */ new Date();
+  const set = { updatedAt: now };
+  if (typeof updates.name === "string") set.name = updates.name.trim();
+  if (typeof updates.client === "string") set.client = updates.client.trim();
+  if (typeof updates.contractor === "string") set.contractor = updates.contractor.trim();
+  if (typeof updates.vessel === "string") set.vessel = updates.vessel.trim();
+  if (typeof updates.location === "string") set.location = updates.location.trim();
+  const updated = await projects.findOneAndUpdate(
+    { _id },
+    { $set: set },
+    { returnDocument: "after", includeResultMetadata: false }
+  );
+  if (!updated) {
+    throw new Error("Project not found");
+  }
+  return updated;
+}
+ipcMain.handle("db:editProject", async (_event, projectId, updates) => {
+  try {
+    const updated = await editProject(projectId, updates);
+    const plain = {
+      _id: updated._id.toString(),
+      name: updated.name,
+      client: updated.client,
+      contractor: updated.contractor,
+      vessel: updated.vessel,
+      location: updated.location,
+      projectType: updated.projectType,
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt
+    };
     return { ok: true, data: plain };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

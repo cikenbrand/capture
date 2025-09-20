@@ -13,6 +13,7 @@ export interface DiveDoc {
   projectId: ObjectId
   name: string
   remarks?: string
+  started?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -40,10 +41,23 @@ export async function createDive(input: NewDive): Promise<DiveDoc> {
 
   const now = new Date()
   const remarks = typeof input.remarks === 'string' ? input.remarks.trim() : undefined
+  const trimmedName = input.name.trim()
+  if (!trimmedName) {
+    throw new Error('Dive name is required')
+  }
+  // Enforce uniqueness of dive name within the same project (case-insensitive)
+  const existing = await dives.findOne({
+    projectId: new ObjectId(input.projectId),
+    name: { $regex: `^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' },
+  })
+  if (existing) {
+    throw new Error('A dive with this name already exists in this project')
+  }
   const doc = {
     projectId: new ObjectId(input.projectId),
-    name: input.name.trim(),
+    name: trimmedName,
     ...(remarks ? { remarks } : {}),
+    started: false,
     createdAt: now,
     updatedAt: now,
   }
@@ -55,7 +69,8 @@ export async function createDive(input: NewDive): Promise<DiveDoc> {
 ipcMain.handle('db:createDive', async (_event, input) => {
   try {
     const created = await createDive(input)
-    return { ok: true, data: created }
+    const id = (created as any)?._id?.toString?.() ?? created
+    return { ok: true, data: id }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { ok: false, error: message }
