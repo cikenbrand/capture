@@ -21,7 +21,7 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
     selectedItems: selectedId ? [selectedId] : [],
   }), [expanded, selectedId])
 
-  const getItem = useMemo(() => (itemId: string) => data[itemId], [data])
+  const getItem = useMemo(() => (itemId: string) => data[itemId] ?? { name: '', children: [] }, [data])
   const getChildren = useMemo(() => (itemId: string) => data[itemId]?.children ?? [], [data])
   const dataLoader = useMemo(() => ({ getItem, getChildren }), [getItem, getChildren])
 
@@ -46,7 +46,7 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
       <AssistiveTreeDescription tree={tree} />
       {tree.getItems().map((item) => {
         return (
-          <TreeItem
+            <TreeItem
             key={item.getId()}
             item={item}
             className="pb-0!"
@@ -66,7 +66,7 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
             }}
           >
             <TreeItemLabel className="rounded-none py-1">
-              <span className="flex items-center gap-2">{item.getItemName()}</span>
+              <span className="flex items-center gap-2">{item.getItemName() || '(deleted)'}</span>
             </TreeItemLabel>
           </TreeItem>
         )

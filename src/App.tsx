@@ -4,7 +4,7 @@ import { DraggableDialog } from "@/components/ui/draggable-dialog"
 import AddNewDive from "./components/main-window/AddNewDiveForm"
 import { useEffect, useState } from "react"
 import { BiPlus } from "react-icons/bi";
-import { MdDelete, MdEdit } from "react-icons/md";
+import { MdCameraRoll, MdDelete, MdEdit } from "react-icons/md";
 import DiveSelection from "./components/main-window/DiveSelection"
 import EditDiveForm from "./components/main-window/EditDiveForm"
 import ShowDiveRemarks from "./components/main-window/ShowDiveRemarks"
@@ -17,6 +17,12 @@ import ShowTaskRemarks from "./components/main-window/ShowTaskRemarks"
 import NodesTree from "./components/main-window/NodesTree"
 import AddNewNodeForm from "./components/main-window/AddNewNodeForm"
 import EditNodeDetailsForm from "./components/main-window/EditNodeDetailsForm"
+import DeleteNodeConfirmation from "./components/main-window/DeleteNodeConfirmation"
+import PreviewVirtualCam from "./components/main-window/PreviewVirtualCam"
+import { FaCircle, FaFileVideo, FaHeadphones, FaMicrophone, FaMousePointer, FaPause, FaPencilAlt, FaPlay, FaStop, FaVideo } from "react-icons/fa"
+import { BsArrowUpRight, BsCameraFill } from "react-icons/bs";
+import { FaRegCircle } from "react-icons/fa";
+import AudioMeter from "./components/main-window/AudioMeter"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -30,6 +36,7 @@ function App() {
   const [isCreateNodeDialogOpen, setIsCreateNodeDialogOpen] = useState(false)
   const [isEditNodeDialogOpen, setIsEditNodeDialogOpen] = useState(false)
   const [isDeleteNodeDialogOpen, setIsDeleteNodeDialogOpen] = useState(false)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
 
   useEffect(() => {
     let done = false
@@ -41,6 +48,8 @@ function App() {
           if (!done && d?.ok) setSelectedDiveId(d.data ?? null)
           const t = await window.ipcRenderer.invoke('app:getSelectedTaskId')
           if (!done && t?.ok) setSelectedTaskId(t.data ?? null)
+          const n = await window.ipcRenderer.invoke('app:getSelectedNodeId')
+          if (!done && n?.ok) setSelectedNodeId(n.data ?? null)
         } catch { }
       })()
     const onChanged = (e: any) => {
@@ -61,14 +70,22 @@ function App() {
         setSelectedTaskId(id)
       } catch { }
     }
+    const onNodeChanged = (e: any) => {
+      try {
+        const id = e?.detail ?? null
+        setSelectedNodeId(id)
+      } catch { }
+    }
     window.addEventListener('selectedProjectChanged', onChanged as any)
     window.addEventListener('selectedDiveChanged', onDiveChanged as any)
     window.addEventListener('selectedTaskChanged', onTaskChanged as any)
+    window.addEventListener('selectedNodeChanged', onNodeChanged as any)
     return () => {
       done = true
       window.removeEventListener('selectedProjectChanged', onChanged as any)
       window.removeEventListener('selectedDiveChanged', onDiveChanged as any)
       window.removeEventListener('selectedTaskChanged', onTaskChanged as any)
+      window.removeEventListener('selectedNodeChanged', onNodeChanged as any)
     }
   }, [])
 
@@ -97,8 +114,8 @@ function App() {
   return (
     <div className='h-screen flex flex-col bg-[#1D2229]'>
       <AppWindowBar />
-      <div className="flex-1 flex p-2">
-        <div className="flex-none flex flex-col gap-1 h-full w-[300px] border-r">
+      <div className="flex-1 flex p-2 gap-1">
+        <div className="flex-none flex flex-col gap-1 h-full w-[300px]">
           <Tabs defaultValue="dive">
             <TabsList>
               <TabsTrigger value="dive">Dive</TabsTrigger>
@@ -144,24 +161,109 @@ function App() {
                 <button title="New Node" disabled={!selectedProjectId} onMouseDown={(e) => e.preventDefault()} onClick={() => setIsCreateNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                   <BiPlus className="h-6 w-6" />
                 </button>
-                <button title="Edit Node" disabled={!selectedProjectId} onClick={() => setIsEditNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                <button title="Edit Node" disabled={!selectedProjectId || !selectedNodeId} onClick={() => setIsEditNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                   <MdEdit className="h-4.5 w-4.5" />
                 </button>
-                <button title="Delete Node" disabled={!selectedProjectId} onClick={() => setIsDeleteNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                <button title="Delete Node" disabled={!selectedProjectId || !selectedNodeId} onClick={() => setIsDeleteNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                   <MdDelete className="h-4.5 w-4.5" />
                 </button>
               </div>
               <div className="bg-[#21262E] p-1 h-full">
-                <NodesTree/>
+                <NodesTree />
               </div>
             </TabsContent>
           </Tabs>
         </div>
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col gap-1">
+          <div className="flex-1">
+            <Tabs defaultValue="preview" className="h-full">
+              <TabsList>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+              </TabsList>
+              <TabsContent value="preview" className="flex flex-col gap-1 p-0">
+                <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
+                  <button title="Start Session" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <FaCircle className="h-3.5 w-3.5" />
+                  </button>
+                  <button title="Stop Session" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <FaStop className="h-3.5 w-3.5" />
+                  </button>
+                  <button title="Pause Session" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <FaPause className="h-3.5 w-3.5" />
+                  </button>
+                  <button title="Pause Session" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <FaPlay className="h-3.5 w-3.5" />
+                  </button>
+                  <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
+                    <span className="tracking-[5px] font-bold text-lg">00:00:00</span>
+                  </div>
+                  <div className="h-[30px] w-[1px] bg-white/20 mx-1"/>
+                  <button title="Start Clip" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <MdCameraRoll  className="h-3.5 w-3.5" />
+                  </button>
+                  <button title="Stop Clip" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <FaStop className="h-3.5 w-3.5" />
+                  </button>
+                  <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
+                    <span className="tracking-[5px] font-bold text-lg">00:00:00</span>
+                  </div>
+                  <div className="h-[30px] w-[1px] bg-white/20 mx-1"/>
+                  <button title="Take Snapshot" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <BsCameraFill className="h-4 w-4" />
+                  </button>
+                  <div className="h-[30px] w-[1px] bg-white/20 mx-1"/>
+                  <button title="Move Tool" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <FaMousePointer className="h-3.5 w-3.5" />
+                  </button>
+                  <button title="Free Draw" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <FaPencilAlt className="h-3.5 w-3.5" />
+                  </button>
+                  <button title="Draw Arrow" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <BsArrowUpRight className="h-4 w-4" />
+                  </button>
+                  <button title="Draw Circle" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <FaRegCircle className="h-4 w-4" />
+                  </button>
+                  <div className="h-[30px] w-[1px] bg-white/20 mx-1"/>
+                  <button title="Mute Microphone" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                    <FaMicrophone className="h-4 w-4" />
+                  </button>
+                  <AudioMeter valueDb={-100}/>
+                </div>
+                <div className="flex-1 bg-black">
+                  <PreviewVirtualCam />
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+          <div className="flex-none h-[250px] w-full">
+            <Tabs defaultValue="alllogs" className="h-full">
+              <TabsList>
+                <TabsTrigger value="alllogs">All Logs</TabsTrigger>
+                <TabsTrigger value="events">Events</TabsTrigger>
+              </TabsList>
+              <TabsContent value="alllogs" className="flex flex-col gap-1">
 
+              </TabsContent>
+              <TabsContent value="events" className="flex flex-col gap-1">
+
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
-        <div className="flex-none h-full w-[300px] border-l">
+        <div className="flex-none h-full w-[300px]">
+          <Tabs defaultValue="device" className="h-full">
+            <TabsList>
+              <TabsTrigger value="device">Device</TabsTrigger>
+              <TabsTrigger value="overlay">Overlay</TabsTrigger>
+            </TabsList>
+            <TabsContent value="device" className="flex flex-col gap-1">
 
+            </TabsContent>
+            <TabsContent value="overlay" className="flex flex-col gap-1">
+
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
       <DraggableDialog open={isCreateDiveDialogOpen} onOpenChange={setIsCreateDiveDialogOpen} title="New Dive">
@@ -183,6 +285,7 @@ function App() {
         <EditNodeDetailsForm onClose={() => setIsEditNodeDialogOpen(false)} />
       </DraggableDialog>
       <DraggableDialog open={isDeleteNodeDialogOpen} onOpenChange={setIsDeleteNodeDialogOpen} title="Delete Node">
+        <DeleteNodeConfirmation onClose={() => setIsDeleteNodeDialogOpen(false)} />
       </DraggableDialog>
     </div>
   )
