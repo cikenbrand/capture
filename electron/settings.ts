@@ -13,6 +13,8 @@ export const OBS_BASIC_INI_PATH = path.join(
   'basic.ini',
 )
 
+export const OVERLAY_WS_PORT = 3620
+
 export const MONGODB_URI = 'mongodb://localhost:27017/capture'
 
 export const SPLASHSCREEN_DURATION_MS = 5000

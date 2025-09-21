@@ -1,0 +1,16 @@
+{
+  "name": "drawing-service",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "WebSocket broadcast relay for the drawing overlay",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.17.0"
+  }
+}
+
+

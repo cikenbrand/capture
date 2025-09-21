@@ -1,4 +1,5 @@
 // import VideoDrawOverlay from '@/features/drawing/components/DrawingCanvas'
+import VideoDrawOverlay from './DrawingCanvas'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Webcam from 'react-webcam'
 
@@ -172,8 +173,8 @@ export default function PreviewVirtualCam() {
             onUserMediaError={(e) => setError((e as any)?.message || 'Failed to access camera')}
           />
           <canvas ref={canvasRef} className="absolute inset-0" />
-          <div className="pointer-events-none absolute inset-0">
-            {/* <VideoDrawOverlay enabled={drawEnabled} onRequestDisable={() => setDrawEnabled(false)} /> */}
+          <div className="absolute inset-0">
+            <VideoDrawOverlay enabled={drawEnabled} onRequestDisable={() => setDrawEnabled(false)} />
           </div>
         </>
 

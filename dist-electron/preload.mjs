@@ -20,3 +20,40 @@ electron.contextBridge.exposeInMainWorld("ipcRenderer", {
   // You can expose other APTs you need here.
   // ...
 });
+electron.contextBridge.exposeInMainWorld("obs", {
+  async getCurrentScene() {
+    try {
+      const name = await electron.ipcRenderer.invoke("obs:get-current-scene");
+      return typeof name === "string" ? name : "";
+    } catch {
+      return "";
+    }
+  },
+  onCurrentSceneChanged(listener) {
+    const channel = "obs:current-scene-changed";
+    const handler = (_e, sceneName) => {
+      try {
+        listener(sceneName);
+      } catch {
+      }
+    };
+    electron.ipcRenderer.on(channel, handler);
+    return () => {
+      try {
+        electron.ipcRenderer.off(channel, handler);
+      } catch {
+      }
+    };
+  }
+});
+electron.contextBridge.exposeInMainWorld("overlay", {
+  wsPort: (() => {
+    try {
+      const val = electron.ipcRenderer.sendSync("overlay:get-port-sync");
+      const num = Number(val);
+      return Number.isFinite(num) && num > 0 ? num : 3620;
+    } catch {
+      return 3620;
+    }
+  })()
+});

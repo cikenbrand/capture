@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Overlay Draw</title>
+    <style>
+      html, body { height:100%; }
+      body { margin:0; background:transparent; overflow:hidden; }
+      #root { position:fixed; inset:0; }
+      canvas { position:absolute; inset:0; width:100%; height:100%; display:block; background:transparent; }
+      /* optional debug log overlay (hidden by default) */
+      #log { position:fixed; left:8px; bottom:8px; color:#e5e7eb; background:rgba(2,6,23,.6); padding:6px 8px; border-radius:6px; font:12px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; display:none; max-width:50vw; max-height:40vh; overflow:auto; }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <canvas id="canvas"></canvas>
+      <div id="log"></div>
+    </div>
+    <script>
+      const $ = (id) => document.getElementById(id)
+      const log = (m) => { const el = $('log'); if (!el) return; el.textContent += m + '\n'; el.scrollTop = el.scrollHeight }
+
+      const canvas = $('canvas')
+      const ctx = canvas.getContext('2d')
+      // Shapes store (declare early so renderAll in initial resize can access it)
+      const state = { channel: 1, items: [], preview: null }
+
+      // Parse channel from query string: supports ?ch=1, ?channel=1, ?c=1, and presence of ch1/ch2/ch3/ch4
+      try {
+        const qs = (location.search || '').toLowerCase()
+        const params = new URLSearchParams(qs)
+        let ch = 1
+        const direct = params.get('ch') || params.get('channel') || params.get('c')
+        if (direct != null) {
+          const v = String(direct).trim().toLowerCase().replace(/^ch/, '')
+          const n = Number(v)
+          if (Number.isFinite(n) && n >= 1 && n <= 4) ch = n
+        } else {
+          if (qs.includes('ch4')) ch = 4
+          else if (qs.includes('ch3')) ch = 3
+          else if (qs.includes('ch2')) ch = 2
+          else ch = 1
+        }
+        state.channel = ch
+        try { document.title = `Overlay Draw - ch${ch}` } catch {}
+      } catch {}
+      let dpr = 1
+      function resize() {
+        const rectW = document.documentElement.clientWidth
+        const rectH = document.documentElement.clientHeight
+        dpr = Math.max(1, window.devicePixelRatio || 1)
+        canvas.width = Math.max(1, Math.floor(rectW * dpr))
+        canvas.height = Math.max(1, Math.floor(rectH * dpr))
+        canvas.style.width = rectW + 'px'
+        canvas.style.height = rectH + 'px'
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+        renderAll()
+      }
+      new ResizeObserver(resize).observe(document.documentElement)
+      resize()
+
+      // state.items: [{ type, channel, color, ...normalized coords..., ts }]
+
+      // Map normalized coordinates (source 1920x1080) into current canvas size while keeping aspect ratio like in app
+      function mapX(nx) {
+        const w = canvas.clientWidth, h = canvas.clientHeight
+        const naturalW = 1920, naturalH = 1080
+        const scale = Math.min(w / naturalW, h / naturalH)
+        const contentW = naturalW * scale
+        const left = Math.max(0, (w - contentW) / 2)
+        return left + nx * contentW
+      }
+      function mapY(ny) {
+        const w = canvas.clientWidth, h = canvas.clientHeight
+        const naturalW = 1920, naturalH = 1080
+        const scale = Math.min(w / naturalW, h / naturalH)
+        const contentH = naturalH * scale
+        const top = Math.max(0, (h - contentH) / 2)
+        return top + ny * contentH
+      }
+
+      function renderAll() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        const wView = canvas.clientWidth, hView = canvas.clientHeight
+        const naturalW = 1920, naturalH = 1080
+        const scale = Math.min(wView / naturalW, hView / naturalH)
+        const lineW = Math.max(1, (3 * scale))
+        const arrowHead = 20 * scale
+        for (const s of state.items) {
+          if (s.channel != null && s.channel !== state.channel) continue
+          try {
+            ctx.strokeStyle = s.color || '#ff2d2e'
+            ctx.fillStyle = s.color || '#ff2d2e'
+            ctx.lineWidth = (s.lw ? s.lw * scale : lineW)
+            ctx.lineJoin = 'round'
+            ctx.lineCap = 'round'
+            if (s.type === 'drawArrow') {
+              const x1 = mapX(s.nx1 || 0), y1 = mapY(s.ny1 || 0)
+              const x2 = mapX(s.nx2 || 0), y2 = mapY(s.ny2 || 0)
+              ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke()
+              const headLength = arrowHead
+              const angle = Math.atan2(y2 - y1, x2 - x1)
+              const hx1 = x2 - headLength * Math.cos(angle - Math.PI / 6)
+              const hy1 = y2 - headLength * Math.sin(angle - Math.PI / 6)
+              const hx2 = x2 - headLength * Math.cos(angle + Math.PI / 6)
+              const hy2 = y2 - headLength * Math.sin(angle + Math.PI / 6)
+              ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(hx1, hy1); ctx.lineTo(hx2, hy2); ctx.closePath(); ctx.fill()
+            } else if (s.type === 'drawCircle') {
+              const cx = mapX(s.cx || 0), cy = mapY(s.cy || 0)
+              const rx = (s.rx || s.r || 0) * (naturalW * scale)
+              const ry = (s.ry || s.r || 0) * (naturalH * scale)
+              const r = Math.max(rx, ry)
+              ctx.beginPath(); try { ctx.arc(cx, cy, r, 0, Math.PI * 2) } catch {} ctx.stroke()
+            } else if (s.type === 'drawRect') {
+              const x = mapX(s.x || 0), y = mapY(s.y || 0)
+              const rw = (s.w || 0) * (naturalW * scale)
+              const rh = (s.h || 0) * (naturalH * scale)
+              try { ctx.strokeRect(x, y, rw, rh) } catch {}
+            } else if (s.type === 'drawFree') {
+              const pts = (s.points || []).map(p => ({ x: mapX(p.x || 0), y: mapY(p.y || 0) }))
+              if (pts.length >= 2) { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke() }
+            }
+          } catch {}
+        }
+        // Render transient preview on top
+        const p = state.preview
+        if (p && (p.channel == null || p.channel === state.channel)) {
+          try {
+            ctx.strokeStyle = p.color || '#ff2d2e'
+            ctx.fillStyle = p.color || '#ff2d2e'
+            ctx.lineWidth = (p.lw ? p.lw * scale : lineW)
+            ctx.lineJoin = 'round'
+            ctx.lineCap = 'round'
+            if (p.type === 'previewArrow') {
+              const x1 = mapX(p.nx1 || 0), y1 = mapY(p.ny1 || 0)
+              const x2 = mapX(p.nx2 || 0), y2 = mapY(p.ny2 || 0)
+              ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke()
+              const headLength = arrowHead
+              const angle = Math.atan2(y2 - y1, x2 - x1)
+              const hx1 = x2 - headLength * Math.cos(angle - Math.PI / 6)
+              const hy1 = y2 - headLength * Math.sin(angle - Math.PI / 6)
+              const hx2 = x2 - headLength * Math.cos(angle + Math.PI / 6)
+              const hy2 = y2 - headLength * Math.sin(angle + Math.PI / 6)
+              ctx.beginPath(); ctx.moveTo(x2, y2); ctx.lineTo(hx1, hy1); ctx.lineTo(hx2, hy2); ctx.closePath(); ctx.fill()
+            } else if (p.type === 'previewCircle') {
+              const cx = mapX(p.cx || 0), cy = mapY(p.cy || 0)
+              const rx = (p.rx || p.r || 0) * (naturalW * scale)
+              const ry = (p.ry || p.r || 0) * (naturalH * scale)
+              const r = Math.max(rx, ry)
+              ctx.beginPath(); try { ctx.arc(cx, cy, r, 0, Math.PI * 2) } catch {} ctx.stroke()
+            } else if (p.type === 'previewRect') {
+              const x = mapX(p.x || 0), y = mapY(p.y || 0)
+              const rw = (p.w || 0) * (naturalW * scale)
+              const rh = (p.h || 0) * (naturalH * scale)
+              try { ctx.strokeRect(x, y, rw, rh) } catch {}
+            } else if (p.type === 'previewFree') {
+              const pts = (p.points || []).map(pt => ({ x: mapX(pt.x || 0), y: mapY(pt.y || 0) }))
+              if (pts.length >= 2) { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); ctx.stroke() }
+            }
+          } catch {}
+        }
+      }
+
+      // WebSocket auto-connect
+      let ws = null
+      function connect() {
+        try {
+          const url = 'ws://' + (location.hostname || '127.0.0.1') + ':' + (location.port || '3620')
+          ws = new WebSocket(url)
+          ws.onopen = () => log('[open]')
+          ws.onclose = () => { log('[close]'); setTimeout(connect, 1000) }
+          ws.onerror = () => { try { ws.close() } catch {} }
+          ws.onmessage = async (ev) => {
+            try {
+              const text = typeof ev.data === 'string' ? ev.data : (ev.data instanceof Blob ? await ev.data.text() : String(ev.data))
+              const msg = JSON.parse(text)
+              if (!msg || typeof msg !== 'object') return
+              if (msg.type === 'clearAll') {
+                if (msg.channel == null || msg.channel === state.channel) {
+                  state.items = state.items.filter(s => s.channel !== (msg.channel || state.channel))
+                  state.preview = null
+                }
+              } else if (msg.type === 'eraseShape') {
+                if (msg.channel == null || msg.channel === state.channel) {
+                  state.items = state.items.filter(s => !(s.channel === (msg.channel || state.channel) && s.ts === msg.ts))
+                }
+              } else if (msg.type === 'bulkSync') {
+                // replace items for that channel
+                if (msg.channel == null || msg.channel === state.channel) {
+                  state.items = state.items.filter(s => s.channel !== (msg.channel || state.channel)).concat(Array.isArray(msg.items) ? msg.items : [])
+                  state.preview = null
+                }
+              } else if (msg.type === 'state') {
+                // full state update from app; replace items for channel
+                if (msg.channel == null || msg.channel === state.channel) {
+                  state.items = state.items.filter(s => s.channel !== (msg.channel || state.channel)).concat(Array.isArray(msg.items) ? msg.items : [])
+                  state.preview = null
+                }
+              } else if (msg.type === 'drawArrow' || msg.type === 'drawCircle' || msg.type === 'drawRect' || msg.type === 'drawFree') {
+                if (msg.channel == null || msg.channel === state.channel) state.items.push(msg)
+                state.preview = null
+              } else if (msg.type === 'previewArrow' || msg.type === 'previewCircle' || msg.type === 'previewRect' || msg.type === 'previewFree') {
+                if (msg.channel == null || msg.channel === state.channel) state.preview = msg
+              } else if (msg.type === 'clearPreview') {
+                if (msg.channel == null || msg.channel === state.channel) state.preview = null
+              }
+              renderAll()
+            } catch (e) { log('[parse-error] ' + (e && e.message || '')) }
+          }
+        } catch {}
+      }
+      connect()
+    </script>
+  </body>
+  </html>
+
+

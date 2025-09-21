@@ -10,5 +10,14 @@ interface IpcRendererAPI {
 declare global {
 	interface Window {
 		ipcRenderer: IpcRendererAPI
+		obs: {
+			getCurrentScene: () => Promise<string>
+			onCurrentSceneChanged: (listener: (sceneName: string) => void) => () => void
+		}
+		overlay: {
+			wsPort: number
+		}
 	}
 }
+
+export {}

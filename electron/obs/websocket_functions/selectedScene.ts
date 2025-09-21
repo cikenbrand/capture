@@ -1,5 +1,6 @@
 import { getObsClient } from './connectToOBSWebsocket'
 import { ipcMain } from 'electron'
+import { BrowserWindow } from 'electron'
 
 /**
  * Returns the current Program scene name from OBS via obs-websocket-js.
@@ -26,5 +27,21 @@ ipcMain.handle('obs:get-current-scene', async () => {
     return ''
   }
 })
+
+// Broadcast OBS Program scene changes to all renderer windows
+try {
+  const obs = getObsClient() as any
+  if (obs && typeof obs.on === 'function') {
+    obs.on('CurrentProgramSceneChanged', (data: any) => {
+      const name = (data as any)?.sceneName ?? ''
+      const sceneName = typeof name === 'string' ? name : ''
+      try {
+        for (const bw of BrowserWindow.getAllWindows()) {
+          try { bw.webContents.send('obs:current-scene-changed', sceneName) } catch {}
+        }
+      } catch {}
+    })
+  }
+} catch {}
 
 

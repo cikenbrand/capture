@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import OBSWebSocket from "obs-websocket-js";
+import http from "node:http";
 import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
 let splash = null;
 function createSplashWindow(timeoutMs) {
@@ -66,6 +67,7 @@ path.join(
   "Default",
   "basic.ini"
 );
+const OVERLAY_WS_PORT = 3620;
 const MONGODB_URI = "mongodb://localhost:27017/capture";
 const SPLASHSCREEN_DURATION_MS = 5e3;
 function openObs() {
@@ -158,6 +160,141 @@ function checkIfOBSOpenOrNot() {
     return false;
   } catch (_err) {
     return false;
+  }
+}
+async function getCurrentSceneName() {
+  try {
+    const obs = getObsClient();
+    if (!obs) return "";
+    const res = await obs.call("GetCurrentProgramScene");
+    const name = (res == null ? void 0 : res.currentProgramSceneName) ?? "";
+    return typeof name === "string" ? name : "";
+  } catch {
+    return "";
+  }
+}
+ipcMain.handle("obs:get-current-scene", async () => {
+  try {
+    const name = await getCurrentSceneName();
+    return name;
+  } catch {
+    return "";
+  }
+});
+try {
+  const obs = getObsClient();
+  if (obs && typeof obs.on === "function") {
+    obs.on("CurrentProgramSceneChanged", (data) => {
+      const name = (data == null ? void 0 : data.sceneName) ?? "";
+      const sceneName = typeof name === "string" ? name : "";
+      try {
+        for (const bw of BrowserWindow.getAllWindows()) {
+          try {
+            bw.webContents.send("obs:current-scene-changed", sceneName);
+          } catch {
+          }
+        }
+      } catch {
+      }
+    });
+  }
+} catch {
+}
+let drawingProc = null;
+let currentPort = null;
+function resolveServerPath() {
+  const appRoot = process.env.APP_ROOT || path.join(__dirname, "..", "..");
+  return path.join(appRoot, "drawing-service", "server.js");
+}
+function waitForHealth(port, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  return new Promise((resolve) => {
+    const tryOnce = () => {
+      try {
+        const req = http.get({ host: "127.0.0.1", port, path: "/health", timeout: 1e3 }, (res) => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              res.resume();
+            } catch {
+            }
+            resolve(true);
+          } else {
+            try {
+              res.resume();
+            } catch {
+            }
+            if (Date.now() >= deadline) return resolve(false);
+            setTimeout(tryOnce, 300);
+          }
+        });
+        req.on("error", () => {
+          if (Date.now() >= deadline) return resolve(false);
+          setTimeout(tryOnce, 300);
+        });
+        req.on("timeout", () => {
+          try {
+            req.destroy();
+          } catch {
+          }
+          if (Date.now() >= deadline) return resolve(false);
+          setTimeout(tryOnce, 300);
+        });
+      } catch {
+        if (Date.now() >= deadline) return resolve(false);
+        setTimeout(tryOnce, 300);
+      }
+    };
+    tryOnce();
+  });
+}
+async function startDrawingService(port) {
+  try {
+    if (drawingProc) return true;
+    const resolvedPort = Number(port || OVERLAY_WS_PORT || 3620) || 3620;
+    const serverPath = resolveServerPath();
+    const cmd = process.platform === "win32" ? "node.exe" : "node";
+    drawingProc = spawn(cmd, [serverPath], {
+      cwd: path.dirname(serverPath),
+      env: { ...process.env, OVERLAY_WS_PORT: String(resolvedPort) },
+      stdio: "ignore",
+      detached: false
+    });
+    drawingProc.on("exit", (code, signal) => {
+      try {
+        console.log(`[drawing-service] exited code=${code} signal=${signal}`);
+      } catch {
+      }
+      drawingProc = null;
+      currentPort = null;
+    });
+    currentPort = resolvedPort;
+    const ok = await waitForHealth(resolvedPort, 5e3);
+    if (!ok) {
+      try {
+        console.warn("[drawing-service] did not become healthy in time");
+      } catch {
+      }
+    }
+    return true;
+  } catch (err) {
+    try {
+      console.error("[drawing-service] failed to start:", err);
+    } catch {
+    }
+    return false;
+  }
+}
+async function stopDrawingService() {
+  try {
+    const p = drawingProc;
+    drawingProc = null;
+    currentPort = null;
+    if (!p) return;
+    try {
+      p.kill();
+    } catch {
+    }
+  } catch {
   }
 }
 let cachedClient$g = null;
@@ -1050,6 +1187,30 @@ ipcMain.handle("db:editProject", async (_event, projectId, updates) => {
     return { ok: false, error: message };
   }
 });
+let selectedDrawingTool = null;
+function setSelectedDrawingTool(tool) {
+  selectedDrawingTool = tool;
+}
+function getSelectedDrawingTool() {
+  return selectedDrawingTool;
+}
+ipcMain.handle("app:setSelectedDrawingTool", async (_event, tool) => {
+  try {
+    setSelectedDrawingTool(tool);
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("app:getSelectedDrawingTool", async () => {
+  try {
+    return { ok: true, data: getSelectedDrawingTool() };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -1109,6 +1270,10 @@ async function createWindow() {
     }
   }
   await updateSplash("Connecting to OBS WebSocket…");
+  try {
+    await startDrawingService();
+  } catch {
+  }
   while (true) {
     const ok = await connectToOBSWebsocket(4e3);
     if (ok) break;
@@ -1145,6 +1310,10 @@ app.on("before-quit", async (e) => {
     await exitOBS();
   } catch {
   }
+  try {
+    await stopDrawingService();
+  } catch {
+  }
   app.quit();
 });
 app.on("activate", () => {
@@ -1153,6 +1322,13 @@ app.on("activate", () => {
   }
 });
 app.whenReady().then(createWindow);
+ipcMain.on("overlay:get-port-sync", (e) => {
+  try {
+    e.returnValue = OVERLAY_WS_PORT;
+  } catch {
+    e.returnValue = 3620;
+  }
+});
 ipcMain.handle("window:minimize", async () => {
   try {
     win == null ? void 0 : win.minimize();

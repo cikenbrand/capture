@@ -19,10 +19,14 @@ import AddNewNodeForm from "./components/main-window/AddNewNodeForm"
 import EditNodeDetailsForm from "./components/main-window/EditNodeDetailsForm"
 import DeleteNodeConfirmation from "./components/main-window/DeleteNodeConfirmation"
 import PreviewVirtualCam from "./components/main-window/PreviewVirtualCam"
-import { FaCircle, FaFileVideo, FaHeadphones, FaMicrophone, FaMousePointer, FaPause, FaPencilAlt, FaPlay, FaStop, FaVideo } from "react-icons/fa"
+import { FaCircle, FaMicrophone, FaPause, FaPlay, FaStop } from "react-icons/fa"
 import { BsArrowUpRight, BsCameraFill } from "react-icons/bs";
 import { FaRegCircle } from "react-icons/fa";
 import AudioMeter from "./components/main-window/AudioMeter"
+import CursorToolButton from "./components/main-window/CursorToolButton"
+import FreeDrawToolButton from "./components/main-window/FreeDrawToolButton"
+import ArrowDrawingTool from "./components/main-window/ArrowDrawingTool"
+import CircleDrawingTool from "./components/main-window/CircleDrawingTool"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -197,9 +201,9 @@ function App() {
                   <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
                     <span className="tracking-[5px] font-bold text-lg">00:00:00</span>
                   </div>
-                  <div className="h-[30px] w-[1px] bg-white/20 mx-1"/>
+                  <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
                   <button title="Start Clip" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                    <MdCameraRoll  className="h-3.5 w-3.5" />
+                    <MdCameraRoll className="h-3.5 w-3.5" />
                   </button>
                   <button title="Stop Clip" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaStop className="h-3.5 w-3.5" />
@@ -207,28 +211,20 @@ function App() {
                   <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
                     <span className="tracking-[5px] font-bold text-lg">00:00:00</span>
                   </div>
-                  <div className="h-[30px] w-[1px] bg-white/20 mx-1"/>
+                  <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
                   <button title="Take Snapshot" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <BsCameraFill className="h-4 w-4" />
                   </button>
-                  <div className="h-[30px] w-[1px] bg-white/20 mx-1"/>
-                  <button title="Move Tool" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                    <FaMousePointer className="h-3.5 w-3.5" />
-                  </button>
-                  <button title="Free Draw" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                    <FaPencilAlt className="h-3.5 w-3.5" />
-                  </button>
-                  <button title="Draw Arrow" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                    <BsArrowUpRight className="h-4 w-4" />
-                  </button>
-                  <button title="Draw Circle" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                    <FaRegCircle className="h-4 w-4" />
-                  </button>
-                  <div className="h-[30px] w-[1px] bg-white/20 mx-1"/>
+                  <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
+                  <CursorToolButton/>
+                  <FreeDrawToolButton/>
+                  <ArrowDrawingTool/>
+                  <CircleDrawingTool/>
+                  <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
                   <button title="Mute Microphone" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaMicrophone className="h-4 w-4" />
                   </button>
-                  <AudioMeter valueDb={-100}/>
+                  <AudioMeter valueDb={-100} />
                 </div>
                 <div className="flex-1 bg-black">
                   <PreviewVirtualCam />

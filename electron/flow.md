@@ -16,6 +16,8 @@
   - Call `connectToObsWebsocket` to establish a connection.
   - If connection fails, remain on Splash Screen until it succeeds.
 
+- Connect to overlayWebsocket
+
 - Open Main Window
   - Once OBS WebSocket connection is successful:
     - Close the Splash Screen.

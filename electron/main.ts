@@ -7,6 +7,9 @@ import { openObs } from './obs/openOBS'
 import { exitOBS } from './obs/websocket_functions/exitOBS'
 import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
 import { connectToOBSWebsocket } from './obs/websocket_functions/connectToOBSWebsocket'
+import './obs/websocket_functions/selectedScene'
+import { startDrawingService, stopDrawingService } from './services/drawingService'
+import { OVERLAY_WS_PORT } from './settings'
 import { SPLASHSCREEN_DURATION_MS } from './settings'
 import './db/createProject'
 import './db/createTask'
@@ -29,6 +32,7 @@ import './db/getAllDives'
 import './db/getSelectedProjectDetails'
 import './db/getSelectedDiveDetails'
 import './db/editProject'
+import './getter-setter/selectedDrawingTool'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -107,6 +111,8 @@ async function createWindow() {
 
   // 2) Connect to OBS WebSocket, keep retrying while on splash
   await updateSplash('Connecting to OBS WebSocket…')
+  // Also start drawing service early
+  try { await startDrawingService() } catch {}
   while (true) {
     const ok = await connectToOBSWebsocket(4000)
     if (ok) break
@@ -152,6 +158,7 @@ app.on('before-quit', async (e) => {
   try {
     await exitOBS()
   } catch {}
+  try { await stopDrawingService() } catch {}
   app.quit()
 })
 app.on('activate', () => {
@@ -163,6 +170,9 @@ app.on('activate', () => {
 app.whenReady().then(createWindow)
 
 // IPC: window controls
+ipcMain.on('overlay:get-port-sync', (e) => {
+  try { e.returnValue = OVERLAY_WS_PORT } catch { e.returnValue = 3620 }
+})
 ipcMain.handle('window:minimize', async () => {
   try {
     win?.minimize()
