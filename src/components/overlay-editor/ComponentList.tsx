@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Listbox } from "../ui/listbox";
+import { MultiSelectListbox } from "../ui/MultiSelectListbox";
 
 type ComponentItem = {
     _id: string
@@ -9,29 +9,27 @@ type ComponentItem = {
 export default function ComponentList() {
     const [overlayId, setOverlayId] = useState<string | null>(null)
     const [items, setItems] = useState<ComponentItem[]>([])
-    const [selectedId, setSelectedId] = useState<string | null>(null)
-    const [loading, setLoading] = useState(false)
+    const [selectedIds, setSelectedIds] = useState<string[]>([])
     const [error, setError] = useState<string | null>(null)
 
     async function loadForOverlay(id: string | null) {
         setError(null)
         if (!id) {
             setItems([])
-            setSelectedId(null)
+            setSelectedIds([])
             return
         }
         try {
-            setLoading(true)
             const res = await window.ipcRenderer.invoke('db:getAllOverlayComponents', { overlayId: id })
             if (res?.ok) {
                 const list: ComponentItem[] = Array.isArray(res.data) ? res.data : []
                 setItems(list)
-                if (selectedId && !list.some(c => c._id === selectedId)) setSelectedId(null)
+                setSelectedIds((prev) => prev.filter((id) => list.some(c => c._id === id)))
             } else {
                 setError(res?.error || 'Failed to load components')
             }
         } finally {
-            setLoading(false)
+            // no-op
         }
     }
 
@@ -82,18 +80,35 @@ export default function ComponentList() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    // Persist selected component id when user clicks an item
+    // Persist selected component ids when user clicks items and broadcast changes
     useEffect(() => {
         (async () => {
             try {
-                await window.ipcRenderer.invoke('app:setSelectedOverlayComponentId', selectedId ?? null)
+                await window.ipcRenderer.invoke('app:setSelectedOverlayComponentIds', selectedIds)
                 try {
-                    const ev = new CustomEvent('selectedOverlayComponentChanged', { detail: selectedId ?? null })
-                    window.dispatchEvent(ev)
+                    const last = selectedIds.length ? selectedIds[selectedIds.length - 1] : null
+                    const evSingle = new CustomEvent('selectedOverlayComponentChanged', { detail: last })
+                    window.dispatchEvent(evSingle)
+                    const evPlural = new CustomEvent('selectedOverlayComponentIdsChanged', { detail: selectedIds })
+                    window.dispatchEvent(evPlural)
                 } catch { }
             } catch { }
         })()
-    }, [selectedId])
+    }, [selectedIds])
+
+    // React to external multi-selection changes
+    useEffect(() => {
+        const onSelectedIdsExternal = (e: any) => {
+            try {
+                const ids = e?.detail
+                if (Array.isArray(ids)) setSelectedIds(ids)
+            } catch {}
+        }
+        window.addEventListener('selectedOverlayComponentIdsChanged', onSelectedIdsExternal as any)
+        return () => {
+            window.removeEventListener('selectedOverlayComponentIdsChanged', onSelectedIdsExternal as any)
+        }
+    }, [])
 
     if (error) {
         return (
@@ -106,10 +121,13 @@ export default function ComponentList() {
 
     return (
         <div className="h-full">
-            <Listbox
+            <MultiSelectListbox
                 items={items.map(i => ({ value: i._id, label: i.name }))}
-                selectedValue={selectedId}
-                onChange={setSelectedId}
+                selectedValues={selectedIds}
+                onChange={(vals) => {
+                    try { console.log('Selected component IDs:', vals) } catch {}
+                    setSelectedIds(vals)
+                }}
             />
         </div>
     )

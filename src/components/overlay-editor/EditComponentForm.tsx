@@ -6,7 +6,7 @@ type Props = {
     onClose?: () => void
 }
 
-export default function RenameComponentForm({ onClose }: Props) {
+export default function EditComponentForm({ onClose }: Props) {
     const [componentId, setComponentId] = useState<string | null>(null)
     const [overlayId, setOverlayId] = useState<string | null>(null)
     const [name, setName] = useState("")

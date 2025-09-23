@@ -1,18 +1,26 @@
 import { ipcMain } from 'electron'
 
-let selectedOverlayComponentId: string | null = null
+let selectedOverlayComponentIds: string[] = []
 
-export function setSelectedOverlayComponentId(id: string | null) {
-  selectedOverlayComponentId = id ? id.trim() || null : null
+export function setSelectedOverlayComponentIds(ids: string[] | null) {
+  if (!ids || !Array.isArray(ids)) {
+    selectedOverlayComponentIds = []
+    return
+  }
+  const cleaned = ids
+    .map((s) => (typeof s === 'string' ? s.trim() : ''))
+    .filter((s) => !!s)
+  selectedOverlayComponentIds = Array.from(new Set(cleaned))
 }
 
-export function getSelectedOverlayComponentId(): string | null {
-  return selectedOverlayComponentId
+export function getSelectedOverlayComponentIds(): string[] {
+  return [...selectedOverlayComponentIds]
 }
 
-ipcMain.handle('app:setSelectedOverlayComponentId', async (_event, id: string | null) => {
+// New plural IPC
+ipcMain.handle('app:setSelectedOverlayComponentIds', async (_event, ids: string[] | null) => {
   try {
-    setSelectedOverlayComponentId(id)
+    setSelectedOverlayComponentIds(ids)
     return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
@@ -20,9 +28,9 @@ ipcMain.handle('app:setSelectedOverlayComponentId', async (_event, id: string | 
   }
 })
 
-ipcMain.handle('app:getSelectedOverlayComponentId', async () => {
+ipcMain.handle('app:getSelectedOverlayComponentIds', async () => {
   try {
-    return { ok: true, data: getSelectedOverlayComponentId() }
+    return { ok: true, data: getSelectedOverlayComponentIds() }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { ok: false, error: message }

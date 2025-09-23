@@ -1,42 +1,33 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-export type ListboxItem = {
+export type MultiListboxItem = {
   value: string
   label: React.ReactNode
   disabled?: boolean
 }
 
-type ListboxProps = {
-  items: ListboxItem[]
-  selectedValue?: string | null
-  onChange?: (value: string) => void
+type MultiSelectListboxProps = {
+  items: MultiListboxItem[]
+  selectedValues?: string[]
+  onChange?: (values: string[]) => void
   className?: string
   itemClassName?: string
-  /** Optional max height of the list before it scrolls (e.g., 240) */
   maxHeightPx?: number
 }
 
-export function Listbox({
-  items,
-  selectedValue = null,
-  onChange,
-  className,
-  itemClassName,
-  maxHeightPx,
-}: ListboxProps) {
+export function MultiSelectListbox({ items, selectedValues = [], onChange, className, itemClassName, maxHeightPx }: MultiSelectListboxProps) {
   const containerRef = React.useRef<HTMLDivElement | null>(null)
-
   const enabledItems = React.useMemo(() => items.filter(i => !i.disabled), [items])
-  const selectedIndex = React.useMemo(
-    () => (selectedValue == null ? -1 : enabledItems.findIndex(i => i.value === selectedValue)),
-    [enabledItems, selectedValue]
-  )
-  const [activeIndex, setActiveIndex] = React.useState<number>(Math.max(0, selectedIndex))
+  const lastIndex = React.useMemo(() => {
+    if (!selectedValues.length) return -1
+    return enabledItems.findIndex(i => i.value === selectedValues[selectedValues.length - 1])
+  }, [enabledItems, selectedValues])
+  const [activeIndex, setActiveIndex] = React.useState<number>(Math.max(0, lastIndex))
 
   React.useEffect(() => {
-    if (selectedIndex >= 0) setActiveIndex(selectedIndex)
-  }, [selectedIndex])
+    if (lastIndex >= 0) setActiveIndex(lastIndex)
+  }, [lastIndex])
 
   function moveActive(delta: number) {
     if (!enabledItems.length) return
@@ -46,29 +37,24 @@ export function Listbox({
     })
   }
 
-  function selectActive() {
+  function selectActive(e?: { ctrlKey?: boolean; metaKey?: boolean }) {
     const item = enabledItems[activeIndex]
     if (!item || item.disabled) return
-    onChange?.(item.value)
+    const current = new Set(selectedValues)
+    if (e?.ctrlKey || e?.metaKey) {
+      if (current.has(item.value)) current.delete(item.value); else current.add(item.value)
+    } else {
+      current.clear(); current.add(item.value)
+    }
+    onChange?.(Array.from(current))
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    if (e.key === "ArrowDown") {
-      e.preventDefault()
-      moveActive(1)
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault()
-      moveActive(-1)
-    } else if (e.key === "Home") {
-      e.preventDefault()
-      setActiveIndex(0)
-    } else if (e.key === "End") {
-      e.preventDefault()
-      setActiveIndex(Math.max(0, enabledItems.length - 1))
-    } else if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault()
-      selectActive()
-    }
+    if (e.key === "ArrowDown") { e.preventDefault(); moveActive(1) }
+    else if (e.key === "ArrowUp") { e.preventDefault(); moveActive(-1) }
+    else if (e.key === "Home") { e.preventDefault(); setActiveIndex(0) }
+    else if (e.key === "End") { e.preventDefault(); setActiveIndex(Math.max(0, enabledItems.length - 1)) }
+    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectActive(e) }
   }
 
   React.useEffect(() => {
@@ -90,7 +76,7 @@ export function Listbox({
       ref={containerRef}
       role="listbox"
       tabIndex={0}
-      aria-multiselectable={undefined}
+      aria-multiselectable
       aria-activedescendant={activeIndex >= 0 ? `lb-item-${activeIndex}` : undefined}
       className={cn(
         "bg-[#21262E] p-1 relative z-0 w-full overflow-auto outline-none h-full",
@@ -99,11 +85,13 @@ export function Listbox({
       )}
       style={typeof maxHeightPx === 'number' ? { maxHeight: maxHeightPx } : undefined}
       onKeyDown={onKeyDown}
+      onMouseLeave={() => setActiveIndex(-1)}
     >
       {items.map((item, i) => {
-        const isSelected = selectedValue != null && item.value === selectedValue
+        const isSelected = (selectedValues ?? []).includes(item.value)
         const isActive = enabledItems[activeIndex]?.value === item.value
         const disabled = !!item.disabled
+        const isMulti = (selectedValues ?? []).length > 1
         return (
           <div
             key={item.value}
@@ -114,8 +102,10 @@ export function Listbox({
             aria-disabled={disabled}
             className={cn(
               "relative flex w-full cursor-default items-center gap-2 py-1 pr-8 pl-2 text-sm select-none rounded-[3px] border border-transparent",
-              !isSelected && "hover:bg-[#2A3644]",
-              isActive && !isSelected && "bg-[#2A3644] text-white",
+              !isSelected && "hover:bg-[#2A3644] hover:border-transparent",
+              // When multiple are selected, use the selected color for the active row too
+              isMulti && isActive && !isSelected && "bg-[#374F66] text-white border-white/30",
+              !isMulti && isActive && !isSelected && "bg-[#2A3644] text-white",
               isSelected && "bg-[#374F66] text-white border-white/30",
               disabled && "opacity-50 pointer-events-none",
               itemClassName
@@ -125,9 +115,15 @@ export function Listbox({
               const idx = enabledItems.findIndex(e => e.value === item.value)
               if (idx >= 0) setActiveIndex(idx)
             }}
-            onClick={() => {
+            onClick={(e) => {
               if (disabled) return
-              onChange?.(item.value)
+              const current = new Set(selectedValues ?? [])
+              if (e.ctrlKey || e.metaKey) {
+                if (current.has(item.value)) current.delete(item.value); else current.add(item.value)
+              } else {
+                current.clear(); current.add(item.value)
+              }
+              onChange?.(Array.from(current))
             }}
           >
             <span className="truncate">{item.label}</span>

@@ -40,14 +40,8 @@ type EditableFields = Partial<{
   imagePath: string
 }>
 
-export async function editOverlayComponent(id: string, updates: EditableFields): Promise<boolean> {
-  const client = await getClient()
-  const db = client.db('capture')
-  const components = db.collection<OverlayComponentDoc>('overlay_components')
-
-  const _id = new ObjectId(id)
+function buildSetObject(updates: EditableFields): Record<string, any> {
   const $set: Record<string, any> = { updatedAt: new Date() }
-
   if (typeof updates.overlayId === 'string' && updates.overlayId.trim()) {
     $set.overlayId = new ObjectId(updates.overlayId)
   }
@@ -68,17 +62,29 @@ export async function editOverlayComponent(id: string, updates: EditableFields):
   if (typeof updates.dataType === 'string') $set.dataType = updates.dataType
   if (typeof updates.nodeLevel === 'number') $set.nodeLevel = updates.nodeLevel
   if (typeof updates.imagePath === 'string') $set.imagePath = updates.imagePath
-
-  const res = await components.updateOne({ _id }, { $set })
-  return res.matchedCount === 1
+  return $set
 }
 
-ipcMain.handle('db:editOverlayComponent', async (_event, input: { id: string; updates: EditableFields }) => {
+export async function editOverlayComponents(ids: string[], updates: EditableFields): Promise<number> {
+  const client = await getClient()
+  const db = client.db('capture')
+  const components = db.collection<OverlayComponentDoc>('overlay_components')
+
+  const cleaned = Array.from(new Set((ids || []).map((s) => typeof s === 'string' ? s.trim() : '').filter(Boolean)))
+  if (!cleaned.length) return 0
+
+  const objectIds = cleaned.map((id) => new ObjectId(id))
+  const $set = buildSetObject(updates)
+  const res = await components.updateMany({ _id: { $in: objectIds } }, { $set })
+  return res.modifiedCount ?? 0
+}
+
+ipcMain.handle('db:editOverlayComponent', async (_event, input: { ids: string[]; updates: EditableFields }) => {
   try {
-    if (!input?.id || !input?.updates || typeof input.updates !== 'object') throw new Error('Invalid input')
-    const ok = await editOverlayComponent(input.id, input.updates)
-    if (!ok) throw new Error('Overlay component not found')
-    return { ok: true, data: input.id }
+    if (!input || !Array.isArray(input.ids) || !input.updates || typeof input.updates !== 'object') throw new Error('Invalid input')
+    const modified = await editOverlayComponents(input.ids, input.updates)
+    if (modified === 0) throw new Error('Overlay component(s) not found')
+    return { ok: true, data: { ids: input.ids, modified } }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { ok: false, error: message }

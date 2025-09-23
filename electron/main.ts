@@ -43,6 +43,7 @@ import './db/createOverlayComponent'
 import './db/getAllOverlayComponents'
 import './db/editOverlayComponent'
 import './db/deleteOverlayComponent'
+import './db/getOverlayComponentsForRender'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
