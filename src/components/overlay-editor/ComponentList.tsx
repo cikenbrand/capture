@@ -55,6 +55,14 @@ export default function ComponentList() {
                 await loadForOverlay(id)
             } catch { }
         }
+        const onComponentsChanged = async () => {
+            try {
+                const res = await window.ipcRenderer.invoke('app:getSelectedOverlayLayerId')
+                const id: string | null = res?.ok ? (res.data ?? null) : null
+                setOverlayId(id)
+                await loadForOverlay(id)
+            } catch { }
+        }
         const onSelectedOverlayChanged = async (e: any) => {
             try {
                 const id = e?.detail ?? null
@@ -63,18 +71,30 @@ export default function ComponentList() {
             } catch { }
         }
         window.addEventListener('overlaysChanged', onOverlaysChanged as any)
+        window.addEventListener('overlayComponentsChanged', onComponentsChanged as any)
         window.addEventListener('selectedOverlayLayerChanged', onSelectedOverlayChanged as any)
         return () => {
             done = true
             window.removeEventListener('overlaysChanged', onOverlaysChanged as any)
+            window.removeEventListener('overlayComponentsChanged', onComponentsChanged as any)
             window.removeEventListener('selectedOverlayLayerChanged', onSelectedOverlayChanged as any)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    if (loading) {
-        return <div className="h-full text-white/70 flex items-center justify-center">Loading…</div>
-    }
+    // Persist selected component id when user clicks an item
+    useEffect(() => {
+        (async () => {
+            try {
+                await window.ipcRenderer.invoke('app:setSelectedOverlayComponentId', selectedId ?? null)
+                try {
+                    const ev = new CustomEvent('selectedOverlayComponentChanged', { detail: selectedId ?? null })
+                    window.dispatchEvent(ev)
+                } catch { }
+            } catch { }
+        })()
+    }, [selectedId])
+
     if (error) {
         return (
             <div className="h-full p-2 text-red-400 text-sm">

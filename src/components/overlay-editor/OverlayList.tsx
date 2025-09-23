@@ -61,6 +61,10 @@ export default function OverlayList() {
         (async () => {
             try {
                 await window.ipcRenderer.invoke('app:setSelectedOverlayLayerId', selectedId ?? null)
+                try {
+                    const ev = new CustomEvent('selectedOverlayLayerChanged', { detail: selectedId ?? null })
+                    window.dispatchEvent(ev)
+                } catch { }
             } catch { }
         })()
     }, [selectedId])

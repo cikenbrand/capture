@@ -74,7 +74,6 @@ async function getClient(): Promise<MongoClient> {
 export async function createOverlayComponent(input: NewOverlayComponent): Promise<OverlayComponentDoc> {
   // Basic validation
   if (!input?.overlayId) throw new Error('overlayId is required')
-  if (!input?.name || !input.name.trim()) throw new Error('name is required')
   if (!input?.type) throw new Error('type is required')
 
   const overlayObjectId = new ObjectId(input.overlayId)
@@ -121,14 +120,28 @@ export async function createOverlayComponent(input: NewOverlayComponent): Promis
     // dive, task: no special props
   }
 
+  const client = await getClient()
+  const db = client.db('capture')
+  const components = db.collection<OverlayComponentDoc>('overlay_components')
+
+  // Determine index for default naming based on current count within the same overlay
+  const existingCount = await components.countDocuments({ overlayId: overlayObjectId })
+  const defaultName = `${input.type}-${existingCount + 1}`
+
+  // Robust numeric defaults
+  const defaultX = 100
+  const defaultY = 100
+  const defaultWidth = 320
+  const defaultHeight = 64
+
   const doc: Omit<OverlayComponentDoc, '_id'> = {
     overlayId: overlayObjectId,
-    name: input.name.trim(),
+    name: (input.name && input.name.trim()) ? input.name.trim() : defaultName,
     type: input.type,
-    x: Number(input.x) || 0,
-    y: Number(input.y) || 0,
-    width: Math.max(1, Number(input.width) || 100),
-    height: Math.max(1, Number(input.height) || 40),
+    x: Number.isFinite(Number(input.x)) ? Number(input.x) : defaultX,
+    y: Number.isFinite(Number(input.y)) ? Number(input.y) : defaultY,
+    width: Math.max(1, Number.isFinite(Number(input.width)) ? Number(input.width) : defaultWidth),
+    height: Math.max(1, Number.isFinite(Number(input.height)) ? Number(input.height) : defaultHeight),
     backgroundColor: input.backgroundColor ?? 'transparent',
     borderColor: input.borderColor ?? 'transparent',
     radius: typeof input.radius === 'number' ? input.radius : 0,
@@ -137,10 +150,6 @@ export async function createOverlayComponent(input: NewOverlayComponent): Promis
     createdAt: new Date(),
     updatedAt: new Date(),
   }
-
-  const client = await getClient()
-  const db = client.db('capture')
-  const components = db.collection<OverlayComponentDoc>('overlay_components')
   const result = await components.insertOne(doc as any)
   return { _id: result.insertedId, ...(doc as any) }
 }

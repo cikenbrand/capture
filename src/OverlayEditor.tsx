@@ -9,19 +9,21 @@ import { MdDelete, MdEdit } from "react-icons/md";
 import OverlayList from "./components/overlay-editor/OverlayList";
 import RenameOverlayForm from "./components/overlay-editor/RenameOverlayForm";
 import DeleteOverlayConfirmation from "./components/overlay-editor/DeleteOverlayConfirmation";
-import { MdOutlineTextFields } from "react-icons/md";
-import { FaFileImage } from "react-icons/fa";
 import { IoIosTime } from "react-icons/io";
 import { IoCalendar } from "react-icons/io5";
 import { LuCable } from "react-icons/lu";
 import { FaPersonSwimming } from "react-icons/fa6";
 import { FaFolderTree } from "react-icons/fa6";
 import ComponentList from "./components/overlay-editor/ComponentList";
+import CreateCustomTextButton from "./components/overlay-editor/CreateCustomTextButton";
+import CreateImageButton from "./components/overlay-editor/CreateImageButton";
+import RenameComponentForm from "./components/overlay-editor/RenameComponentForm";
 
 export default function OverlayEditor() {
     const [newOverlayOpen, setNewOverlayOpen] = useState(false)
     const [renameOverlayOpen, setRenameOverlayOpen] = useState(false)
     const [deleteOverlayOpen, setDeleteOverlayOpen] = useState(false)
+    const [editComponentOpen, setEditComponentOpen] = useState(false)
     return (
         <div className='h-screen flex flex-col bg-[#1D2229]'>
             <OverlayWindowBar />
@@ -54,12 +56,8 @@ export default function OverlayEditor() {
                         </TabsList>
                         <TabsContent value="editor" className="flex flex-col gap-1 p-0">
                             <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
-                                <button title="Custom Text" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                                    <MdOutlineTextFields className="h-4.5 w-4.5" />
-                                </button>
-                                <button title="Image" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                                    <FaFileImage className="h-4.5 w-4.5" />
-                                </button>
+                                <CreateCustomTextButton/>
+                                <CreateImageButton/>
                                 <button title="Time" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                                     <IoIosTime className="h-4.5 w-4.5" />
                                 </button>
@@ -91,10 +89,28 @@ export default function OverlayEditor() {
                         </TabsList>
                         <TabsContent value="properties" className="flex flex-col gap-1">
                             <div className="flex gap-1">
-                                <button title="Edit Component" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                                <button onClick={() => setEditComponentOpen(true)} title="Edit Component" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                                     <MdEdit className="h-4.5 w-4.5" />
                                 </button>
-                                <button title="Delete Component" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                                <button
+                                    title="Delete Component"
+                                    className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
+                                    onClick={async () => {
+                                        try {
+                                            const res = await window.ipcRenderer.invoke('app:getSelectedOverlayComponentId')
+                                            const id: string | null = res?.ok ? (res.data ?? null) : null
+                                            if (!id) return
+                                            const del = await window.ipcRenderer.invoke('db:deleteOverlayComponent', { id })
+                                            if (del?.ok) {
+                                                try { await window.ipcRenderer.invoke('app:setSelectedOverlayComponentId', null) } catch { }
+                                                try {
+                                                    const ev = new CustomEvent('overlayComponentsChanged', { detail: { id, action: 'deleted' } })
+                                                    window.dispatchEvent(ev)
+                                                } catch { }
+                                            }
+                                        } catch { }
+                                    }}
+                                >
                                     <MdDelete className="h-4.5 w-4.5" />
                                 </button>
                             </div>
@@ -123,6 +139,13 @@ export default function OverlayEditor() {
                 title="Delete Overlay"
             >
                 <DeleteOverlayConfirmation onClose={() => setDeleteOverlayOpen(false)} />
+            </DraggableDialog>
+            <DraggableDialog
+                open={editComponentOpen}
+                onOpenChange={setEditComponentOpen}
+                title="Edit Component"
+            >
+                <RenameComponentForm onClose={() => setEditComponentOpen(false)} />
             </DraggableDialog>
         </div>
     )

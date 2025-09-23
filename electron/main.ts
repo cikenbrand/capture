@@ -36,10 +36,13 @@ import './db/getSelectedDiveDetails'
 import './db/editProject'
 import './getter-setter/selectedDrawingTool'
 import './getter-setter/selectedOverlayLayer'
+import './getter-setter/selectedOverlayComponent'
 import './db/renameOverlay'
 import './db/deleteOverlay'
 import './db/createOverlayComponent'
 import './db/getAllOverlayComponents'
+import './db/editOverlayComponent'
+import './db/deleteOverlayComponent'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
