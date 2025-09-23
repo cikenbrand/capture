@@ -1,3 +1,4 @@
+import { ipcMain } from 'electron'
 import { getObsClient } from './connectToOBSWebsocket'
 
 /**
@@ -16,4 +17,11 @@ export async function setSelectedScene(sceneName: string): Promise<boolean> {
   }
 }
 
-
+ipcMain.handle('obs:set-current-scene', async (_event, sceneName: string) => {
+  try {
+    if (typeof sceneName !== 'string' || !sceneName.trim()) return false
+    return await setSelectedScene(sceneName)
+  } catch {
+    return false
+  }
+})

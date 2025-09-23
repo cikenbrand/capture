@@ -8,7 +8,7 @@ export type ListboxItem = {
 }
 
 type ListboxProps = {
-  items: ListboxItem[]
+  items: readonly ListboxItem[]
   selectedValue?: string | null
   onChange?: (value: string) => void
   className?: string
@@ -36,6 +36,10 @@ export function Listbox({
 
   React.useEffect(() => {
     if (selectedIndex >= 0) setActiveIndex(selectedIndex)
+  }, [selectedIndex])
+
+  const handleMouseLeave = React.useCallback(() => {
+    setActiveIndex(selectedIndex >= 0 ? selectedIndex : -1)
   }, [selectedIndex])
 
   function moveActive(delta: number) {
@@ -99,6 +103,7 @@ export function Listbox({
       )}
       style={typeof maxHeightPx === 'number' ? { maxHeight: maxHeightPx } : undefined}
       onKeyDown={onKeyDown}
+      onMouseLeave={handleMouseLeave}
     >
       {items.map((item, i) => {
         const isSelected = selectedValue != null && item.value === selectedValue
@@ -113,7 +118,7 @@ export function Listbox({
             aria-selected={isSelected}
             aria-disabled={disabled}
             className={cn(
-              "relative flex w-full cursor-default items-center gap-2 py-1 pr-8 pl-2 text-sm select-none rounded-[3px] border border-transparent",
+              "relative flex w-full cursor-pointer items-center gap-2 py-1 pr-8 pl-2 text-sm select-none rounded-[3px] border border-transparent",
               !isSelected && "hover:bg-[#2A3644]",
               isActive && !isSelected && "bg-[#2A3644] text-white",
               isSelected && "bg-[#374F66] text-white border-white/30",
@@ -125,8 +130,10 @@ export function Listbox({
               const idx = enabledItems.findIndex(e => e.value === item.value)
               if (idx >= 0) setActiveIndex(idx)
             }}
-            onClick={() => {
+            onMouseDown={(e) => {
               if (disabled) return
+              // Prevent focus loss flicker and ensure consistent firing
+              try { e.preventDefault() } catch {}
               onChange?.(item.value)
             }}
           >
@@ -137,5 +144,6 @@ export function Listbox({
     </div>
   )
 }
+
 
 

@@ -203,25 +203,24 @@ ipcMain.handle("obs:get-current-scene", async () => {
     return "";
   }
 });
-try {
-  const obs = getObsClient();
-  if (obs && typeof obs.on === "function") {
-    obs.on("CurrentProgramSceneChanged", (data) => {
-      const name = (data == null ? void 0 : data.sceneName) ?? "";
-      const sceneName = typeof name === "string" ? name : "";
-      try {
-        for (const bw of BrowserWindow.getAllWindows()) {
-          try {
-            bw.webContents.send("obs:current-scene-changed", sceneName);
-          } catch {
-          }
-        }
-      } catch {
-      }
-    });
+async function setSelectedScene(sceneName) {
+  try {
+    const obs = getObsClient();
+    if (!obs) return false;
+    await obs.call("SetCurrentProgramScene", { sceneName });
+    return true;
+  } catch {
+    return false;
   }
-} catch {
 }
+ipcMain.handle("obs:set-current-scene", async (_event, sceneName) => {
+  try {
+    if (typeof sceneName !== "string" || !sceneName.trim()) return false;
+    return await setSelectedScene(sceneName);
+  } catch {
+    return false;
+  }
+});
 let drawingProc = null;
 let currentPort = null;
 function resolveServerPath() {

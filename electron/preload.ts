@@ -33,6 +33,19 @@ contextBridge.exposeInMainWorld('obs', {
       return ''
     }
   },
+  async setCurrentScene(sceneName: string): Promise<boolean> {
+    try {
+      if (typeof sceneName !== 'string' || !sceneName.trim()) return false
+      const ok = await ipcRenderer.invoke('obs:set-current-scene', sceneName)
+      return ok === true
+    } catch {
+      return false
+    }
+  },
+  // Alias for clarity in renderer code
+  async setSelectedScene(sceneName: string): Promise<boolean> {
+    return this.setCurrentScene(sceneName)
+  },
   onCurrentSceneChanged(listener: (sceneName: string) => void) {
     const channel = 'obs:current-scene-changed'
     const handler = (_e: unknown, sceneName: string) => {

@@ -28,6 +28,7 @@ import FreeDrawToolButton from "./components/main-window/FreeDrawToolButton"
 import ArrowDrawingTool from "./components/main-window/ArrowDrawingTool"
 import CircleDrawingTool from "./components/main-window/CircleDrawingTool"
 import AllLogsTable from "./components/main-window/AllLogsTable"
+import ChannelViewList from "./components/main-window/ChannelViewList"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -255,7 +256,7 @@ function App() {
               <TabsTrigger value="overlay">Overlay</TabsTrigger>
             </TabsList>
             <TabsContent value="device" className="flex flex-col gap-1">
-
+              <ChannelViewList/>
             </TabsContent>
             <TabsContent value="overlay" className="flex flex-col gap-1">
 

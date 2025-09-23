@@ -29,6 +29,19 @@ electron.contextBridge.exposeInMainWorld("obs", {
       return "";
     }
   },
+  async setCurrentScene(sceneName) {
+    try {
+      if (typeof sceneName !== "string" || !sceneName.trim()) return false;
+      const ok = await electron.ipcRenderer.invoke("obs:set-current-scene", sceneName);
+      return ok === true;
+    } catch {
+      return false;
+    }
+  },
+  // Alias for clarity in renderer code
+  async setSelectedScene(sceneName) {
+    return this.setCurrentScene(sceneName);
+  },
   onCurrentSceneChanged(listener) {
     const channel = "obs:current-scene-changed";
     const handler = (_e, sceneName) => {
