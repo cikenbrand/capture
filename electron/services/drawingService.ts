@@ -1,9 +1,9 @@
 import path from 'node:path'
-import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import http from 'node:http'
 import { OVERLAY_WS_PORT } from '../settings'
 
-let drawingProc: ChildProcessWithoutNullStreams | null = null
+let drawingProc: ChildProcess | null = null
 let currentPort: number | null = null
 
 function resolveServerPath() {

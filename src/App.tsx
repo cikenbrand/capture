@@ -27,6 +27,7 @@ import CursorToolButton from "./components/main-window/CursorToolButton"
 import FreeDrawToolButton from "./components/main-window/FreeDrawToolButton"
 import ArrowDrawingTool from "./components/main-window/ArrowDrawingTool"
 import CircleDrawingTool from "./components/main-window/CircleDrawingTool"
+import AllLogsTable from "./components/main-window/AllLogsTable"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -239,7 +240,7 @@ function App() {
                 <TabsTrigger value="events">Events</TabsTrigger>
               </TabsList>
               <TabsContent value="alllogs" className="flex flex-col gap-1">
-
+                <AllLogsTable/>
               </TabsContent>
               <TabsContent value="events" className="flex flex-col gap-1">
 

@@ -1,17 +1,7 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
 import { ipcMain } from 'electron'
-
-export interface NewOverlay {
-  name: string
-}
-
-export interface OverlayDoc {
-  _id: ObjectId
-  name: string
-  createdAt: Date
-  updatedAt: Date
-}
+import type { OverlayDoc } from './createOverlay'
 
 let cachedClient: MongoClient | null = null
 
@@ -29,38 +19,28 @@ async function getClient(): Promise<MongoClient> {
   return client
 }
 
-export async function createOverlay(input: NewOverlay): Promise<OverlayDoc> {
+export async function renameOverlay(id: string, name: string): Promise<OverlayDoc | null> {
   const client = await getClient()
   const db = client.db('capture')
   const overlays = db.collection<OverlayDoc>('overlays')
 
+  const _id = new ObjectId(id)
   const now = new Date()
-  const doc = {
-    name: input.name.trim(),
-    createdAt: now,
-    updatedAt: now,
-  }
-
-  const result = await overlays.insertOne(doc as any)
-  return { _id: result.insertedId, ...(doc as any) }
+  await overlays.updateOne({ _id }, { $set: { name: name.trim(), updatedAt: now } })
+  const updated = await overlays.findOne({ _id })
+  return updated
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
+ipcMain.handle('db:renameOverlay', async (_event, input: { id: string; name: string }) => {
   try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
-  }
-}
-
-ipcMain.handle('db:createOverlay', async (_event, input: NewOverlay) => {
-  try {
-    const created = await createOverlay(input)
-    const id = (created as any)?._id?.toString?.() ?? created
-    return { ok: true, data: id }
+    if (!input?.id || !input?.name || !input.name.trim()) throw new Error('Invalid input')
+    const updated = await renameOverlay(input.id, input.name)
+    const idStr = (updated as any)?._id?.toString?.() ?? input.id
+    return { ok: true, data: idStr }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { ok: false, error: message }
   }
 })
+
+

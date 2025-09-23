@@ -55,6 +55,28 @@ function createMainWindow() {
   }
   return win2;
 }
+function createOverlayEditorWindow() {
+  const win2 = new BrowserWindow({
+    width: 1e3,
+    height: 700,
+    show: true,
+    frame: false,
+    backgroundColor: "#0f0f0f",
+    icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), "electron-vite.svg"),
+    webPreferences: {
+      preload: path.join(process.env.APP_ROOT || path.join(__dirname, "..", ".."), "dist-electron", "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  const devUrl = getDevUrl();
+  if (devUrl) {
+    win2.loadURL(`${devUrl}?window=overlay-editor`);
+  } else {
+    win2.loadFile(path.join(getRendererDist(), "index.html"), { query: { window: "overlay-editor" } });
+  }
+  return win2;
+}
 const OBS_EXECUTABLE_PATH = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\");
 const OBS_WORKING_DIR = "C:\\Program Files\\obs-studio\\bin\\64bit".replace(/\\/g, "\\");
 const OBS_WEBSOCKET_URL = "ws://127.0.0.1:4455";
@@ -297,9 +319,9 @@ async function stopDrawingService() {
   } catch {
   }
 }
-let cachedClient$g = null;
-async function getClient$g() {
-  if (cachedClient$g) return cachedClient$g;
+let cachedClient$m = null;
+async function getClient$m() {
+  if (cachedClient$m) return cachedClient$m;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -308,11 +330,11 @@ async function getClient$g() {
     }
   });
   await client.connect();
-  cachedClient$g = client;
+  cachedClient$m = client;
   return client;
 }
 async function createProject(input) {
-  const client = await getClient$g();
+  const client = await getClient$m();
   const db = client.db("capture");
   const projects = db.collection("projects");
   const now = /* @__PURE__ */ new Date();
@@ -340,9 +362,9 @@ ipcMain.handle("db:createProject", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$f = null;
-async function getClient$f() {
-  if (cachedClient$f) return cachedClient$f;
+let cachedClient$l = null;
+async function getClient$l() {
+  if (cachedClient$l) return cachedClient$l;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -351,11 +373,84 @@ async function getClient$f() {
     }
   });
   await client.connect();
-  cachedClient$f = client;
+  cachedClient$l = client;
+  return client;
+}
+async function createOverlay(input) {
+  const client = await getClient$l();
+  const db = client.db("capture");
+  const overlays = db.collection("overlays");
+  const now = /* @__PURE__ */ new Date();
+  const doc = {
+    name: input.name.trim(),
+    createdAt: now,
+    updatedAt: now
+  };
+  const result = await overlays.insertOne(doc);
+  return { _id: result.insertedId, ...doc };
+}
+ipcMain.handle("db:createOverlay", async (_event, input) => {
+  var _a, _b;
+  try {
+    const created = await createOverlay(input);
+    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
+    return { ok: true, data: id };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$k = null;
+async function getClient$k() {
+  if (cachedClient$k) return cachedClient$k;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$k = client;
+  return client;
+}
+async function getAllOverlay() {
+  const client = await getClient$k();
+  const db = client.db("capture");
+  const overlays = db.collection("overlays");
+  return overlays.find({}).sort({ createdAt: -1 }).toArray();
+}
+ipcMain.handle("db:getAllOverlay", async () => {
+  try {
+    const overlays = await getAllOverlay();
+    const plain = overlays.map((o) => ({
+      _id: o._id.toString(),
+      name: o.name,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt
+    }));
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$j = null;
+async function getClient$j() {
+  if (cachedClient$j) return cachedClient$j;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$j = client;
   return client;
 }
 async function createTask(input) {
-  const client = await getClient$f();
+  const client = await getClient$j();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const now = /* @__PURE__ */ new Date();
@@ -392,9 +487,9 @@ ipcMain.handle("db:createTask", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$e = null;
-async function getClient$e() {
-  if (cachedClient$e) return cachedClient$e;
+let cachedClient$i = null;
+async function getClient$i() {
+  if (cachedClient$i) return cachedClient$i;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -403,11 +498,11 @@ async function getClient$e() {
     }
   });
   await client.connect();
-  cachedClient$e = client;
+  cachedClient$i = client;
   return client;
 }
 async function getAllTasks(projectId) {
-  const client = await getClient$e();
+  const client = await getClient$i();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   return tasks.find({ projectId: new ObjectId(projectId) }).sort({ createdAt: -1 }).toArray();
@@ -435,9 +530,9 @@ ipcMain.handle("db:getAllTasks", async (_event, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$d = null;
-async function getClient$d() {
-  if (cachedClient$d) return cachedClient$d;
+let cachedClient$h = null;
+async function getClient$h() {
+  if (cachedClient$h) return cachedClient$h;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -446,11 +541,11 @@ async function getClient$d() {
     }
   });
   await client.connect();
-  cachedClient$d = client;
+  cachedClient$h = client;
   return client;
 }
 async function getSelectedTaskDetails(taskId) {
-  const client = await getClient$d();
+  const client = await getClient$h();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const _id = new ObjectId(taskId);
@@ -478,9 +573,9 @@ ipcMain.handle("db:getSelectedTaskDetails", async (_event, taskId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$c = null;
-async function getClient$c() {
-  if (cachedClient$c) return cachedClient$c;
+let cachedClient$g = null;
+async function getClient$g() {
+  if (cachedClient$g) return cachedClient$g;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -489,11 +584,11 @@ async function getClient$c() {
     }
   });
   await client.connect();
-  cachedClient$c = client;
+  cachedClient$g = client;
   return client;
 }
 async function editTask(taskId, updates) {
-  const client = await getClient$c();
+  const client = await getClient$g();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const _id = new ObjectId(taskId);
@@ -520,9 +615,9 @@ ipcMain.handle("db:editTask", async (_event, taskId, updates) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$b = null;
-async function getClient$b() {
-  if (cachedClient$b) return cachedClient$b;
+let cachedClient$f = null;
+async function getClient$f() {
+  if (cachedClient$f) return cachedClient$f;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -531,11 +626,11 @@ async function getClient$b() {
     }
   });
   await client.connect();
-  cachedClient$b = client;
+  cachedClient$f = client;
   return client;
 }
 async function createDive(input) {
-  const client = await getClient$b();
+  const client = await getClient$f();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const now = /* @__PURE__ */ new Date();
@@ -573,9 +668,9 @@ ipcMain.handle("db:createDive", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$a = null;
-async function getClient$a() {
-  if (cachedClient$a) return cachedClient$a;
+let cachedClient$e = null;
+async function getClient$e() {
+  if (cachedClient$e) return cachedClient$e;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -584,11 +679,11 @@ async function getClient$a() {
     }
   });
   await client.connect();
-  cachedClient$a = client;
+  cachedClient$e = client;
   return client;
 }
 async function editDive(diveId, updates) {
-  const client = await getClient$a();
+  const client = await getClient$e();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const _id = new ObjectId(diveId);
@@ -616,9 +711,9 @@ ipcMain.handle("db:editDive", async (_event, diveId, updates) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$9 = null;
-async function getClient$9() {
-  if (cachedClient$9) return cachedClient$9;
+let cachedClient$d = null;
+async function getClient$d() {
+  if (cachedClient$d) return cachedClient$d;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -627,11 +722,11 @@ async function getClient$9() {
     }
   });
   await client.connect();
-  cachedClient$9 = client;
+  cachedClient$d = client;
   return client;
 }
 async function createNode(input) {
-  const client = await getClient$9();
+  const client = await getClient$d();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
   const now = /* @__PURE__ */ new Date();
@@ -669,9 +764,9 @@ ipcMain.handle("db:createNode", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$8 = null;
-async function getClient$8() {
-  if (cachedClient$8) return cachedClient$8;
+let cachedClient$c = null;
+async function getClient$c() {
+  if (cachedClient$c) return cachedClient$c;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -680,11 +775,11 @@ async function getClient$8() {
     }
   });
   await client.connect();
-  cachedClient$8 = client;
+  cachedClient$c = client;
   return client;
 }
 async function editNode(nodeId, updates) {
-  const client = await getClient$8();
+  const client = await getClient$c();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
   const _id = new ObjectId(nodeId);
@@ -711,9 +806,9 @@ ipcMain.handle("db:editNode", async (_event, nodeId, updates) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$7 = null;
-async function getClient$7() {
-  if (cachedClient$7) return cachedClient$7;
+let cachedClient$b = null;
+async function getClient$b() {
+  if (cachedClient$b) return cachedClient$b;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -722,11 +817,11 @@ async function getClient$7() {
     }
   });
   await client.connect();
-  cachedClient$7 = client;
+  cachedClient$b = client;
   return client;
 }
 async function getAllNodes(projectId) {
-  const client = await getClient$7();
+  const client = await getClient$b();
   const db = client.db("capture");
   const nodesCol = db.collection("nodes");
   const projectObjectId = new ObjectId(projectId);
@@ -770,9 +865,9 @@ ipcMain.handle("db:getAllNodes", async (_event, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$6 = null;
-async function getClient$6() {
-  if (cachedClient$6) return cachedClient$6;
+let cachedClient$a = null;
+async function getClient$a() {
+  if (cachedClient$a) return cachedClient$a;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -781,11 +876,11 @@ async function getClient$6() {
     }
   });
   await client.connect();
-  cachedClient$6 = client;
+  cachedClient$a = client;
   return client;
 }
 async function deleteNode(nodeId) {
-  const client = await getClient$6();
+  const client = await getClient$a();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
   const rootId = new ObjectId(nodeId);
@@ -816,9 +911,9 @@ ipcMain.handle("db:deleteNode", async (_event, nodeId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$5 = null;
-async function getClient$5() {
-  if (cachedClient$5) return cachedClient$5;
+let cachedClient$9 = null;
+async function getClient$9() {
+  if (cachedClient$9) return cachedClient$9;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -827,11 +922,11 @@ async function getClient$5() {
     }
   });
   await client.connect();
-  cachedClient$5 = client;
+  cachedClient$9 = client;
   return client;
 }
 async function getSelectedNodeDetails(nodeId) {
-  const client = await getClient$5();
+  const client = await getClient$9();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
   const _id = new ObjectId(nodeId);
@@ -861,9 +956,9 @@ ipcMain.handle("db:getSelectedNodeDetails", async (_event, nodeId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$4 = null;
-async function getClient$4() {
-  if (cachedClient$4) return cachedClient$4;
+let cachedClient$8 = null;
+async function getClient$8() {
+  if (cachedClient$8) return cachedClient$8;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -872,11 +967,11 @@ async function getClient$4() {
     }
   });
   await client.connect();
-  cachedClient$4 = client;
+  cachedClient$8 = client;
   return client;
 }
 async function getAllProjects() {
-  const client = await getClient$4();
+  const client = await getClient$8();
   const db = client.db("capture");
   const projects = db.collection("projects");
   return projects.find({}).sort({ createdAt: -1 }).toArray();
@@ -997,9 +1092,9 @@ ipcMain.handle("app:getSelectedNodeId", async () => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$3 = null;
-async function getClient$3() {
-  if (cachedClient$3) return cachedClient$3;
+let cachedClient$7 = null;
+async function getClient$7() {
+  if (cachedClient$7) return cachedClient$7;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -1008,11 +1103,11 @@ async function getClient$3() {
     }
   });
   await client.connect();
-  cachedClient$3 = client;
+  cachedClient$7 = client;
   return client;
 }
 async function getAllDives(projectId) {
-  const client = await getClient$3();
+  const client = await getClient$7();
   const db = client.db("capture");
   const dives = db.collection("dives");
   return dives.find({ projectId: new ObjectId(projectId) }).sort({ createdAt: -1 }).toArray();
@@ -1041,9 +1136,9 @@ ipcMain.handle("db:getAllDives", async (_event, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$2 = null;
-async function getClient$2() {
-  if (cachedClient$2) return cachedClient$2;
+let cachedClient$6 = null;
+async function getClient$6() {
+  if (cachedClient$6) return cachedClient$6;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -1052,11 +1147,11 @@ async function getClient$2() {
     }
   });
   await client.connect();
-  cachedClient$2 = client;
+  cachedClient$6 = client;
   return client;
 }
 async function getSelectedProjectDetails(projectId) {
-  const client = await getClient$2();
+  const client = await getClient$6();
   const db = client.db("capture");
   const projects = db.collection("projects");
   const _id = new ObjectId(projectId);
@@ -1087,9 +1182,9 @@ ipcMain.handle("db:getSelectedProjectDetails", async (_event, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$1 = null;
-async function getClient$1() {
-  if (cachedClient$1) return cachedClient$1;
+let cachedClient$5 = null;
+async function getClient$5() {
+  if (cachedClient$5) return cachedClient$5;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -1098,11 +1193,11 @@ async function getClient$1() {
     }
   });
   await client.connect();
-  cachedClient$1 = client;
+  cachedClient$5 = client;
   return client;
 }
 async function getSelectedDiveDetails(diveId) {
-  const client = await getClient$1();
+  const client = await getClient$5();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const _id = new ObjectId(diveId);
@@ -1131,9 +1226,9 @@ ipcMain.handle("db:getSelectedDiveDetails", async (_event, diveId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient = null;
-async function getClient() {
-  if (cachedClient) return cachedClient;
+let cachedClient$4 = null;
+async function getClient$4() {
+  if (cachedClient$4) return cachedClient$4;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -1142,11 +1237,11 @@ async function getClient() {
     }
   });
   await client.connect();
-  cachedClient = client;
+  cachedClient$4 = client;
   return client;
 }
 async function editProject(projectId, updates) {
-  const client = await getClient();
+  const client = await getClient$4();
   const db = client.db("capture");
   const projects = db.collection("projects");
   const _id = new ObjectId(projectId);
@@ -1211,6 +1306,218 @@ ipcMain.handle("app:getSelectedDrawingTool", async () => {
     return { ok: false, error: message };
   }
 });
+let selectedOverlayLayerId = null;
+function setSelectedOverlayLayerId(id) {
+  selectedOverlayLayerId = id ? id.trim() || null : null;
+}
+function getSelectedOverlayLayerId() {
+  return selectedOverlayLayerId;
+}
+ipcMain.handle("app:setSelectedOverlayLayerId", async (_event, id) => {
+  try {
+    setSelectedOverlayLayerId(id);
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("app:getSelectedOverlayLayerId", async () => {
+  try {
+    return { ok: true, data: getSelectedOverlayLayerId() };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$3 = null;
+async function getClient$3() {
+  if (cachedClient$3) return cachedClient$3;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$3 = client;
+  return client;
+}
+async function renameOverlay(id, name) {
+  const client = await getClient$3();
+  const db = client.db("capture");
+  const overlays = db.collection("overlays");
+  const _id = new ObjectId(id);
+  const now = /* @__PURE__ */ new Date();
+  await overlays.updateOne({ _id }, { $set: { name: name.trim(), updatedAt: now } });
+  const updated = await overlays.findOne({ _id });
+  return updated;
+}
+ipcMain.handle("db:renameOverlay", async (_event, input) => {
+  var _a, _b;
+  try {
+    if (!(input == null ? void 0 : input.id) || !(input == null ? void 0 : input.name) || !input.name.trim()) throw new Error("Invalid input");
+    const updated = await renameOverlay(input.id, input.name);
+    const idStr = ((_b = (_a = updated == null ? void 0 : updated._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? input.id;
+    return { ok: true, data: idStr };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$2 = null;
+async function getClient$2() {
+  if (cachedClient$2) return cachedClient$2;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$2 = client;
+  return client;
+}
+async function deleteOverlay(id) {
+  const client = await getClient$2();
+  const db = client.db("capture");
+  const overlays = db.collection("overlays");
+  const _id = new ObjectId(id);
+  const res = await overlays.deleteOne({ _id });
+  return res.deletedCount === 1;
+}
+ipcMain.handle("db:deleteOverlay", async (_event, input) => {
+  try {
+    if (!(input == null ? void 0 : input.id)) throw new Error("Invalid id");
+    const ok = await deleteOverlay(input.id);
+    if (!ok) throw new Error("Overlay not found");
+    return { ok: true, data: input.id };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$1 = null;
+async function getClient$1() {
+  if (cachedClient$1) return cachedClient$1;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$1 = client;
+  return client;
+}
+async function createOverlayComponent(input) {
+  if (!(input == null ? void 0 : input.overlayId)) throw new Error("overlayId is required");
+  if (!(input == null ? void 0 : input.name) || !input.name.trim()) throw new Error("name is required");
+  if (!(input == null ? void 0 : input.type)) throw new Error("type is required");
+  const overlayObjectId = new ObjectId(input.overlayId);
+  const isTextCapable = input.type !== "image";
+  const defaultTextStyle = isTextCapable ? {
+    fontFamily: "Inter, ui-sans-serif, system-ui",
+    fontSize: 16,
+    fontWeight: "normal",
+    color: "#FFFFFF",
+    align: "left",
+    letterSpacing: 0,
+    lineHeight: 1.2,
+    italic: false,
+    underline: false,
+    uppercase: false
+  } : void 0;
+  let customFields = {};
+  switch (input.type) {
+    case "custom-text":
+      customFields.customText = input.customText ?? "Text";
+      break;
+    case "date":
+      customFields.dateFormat = input.dateFormat ?? "YYYY-MM-DD";
+      break;
+    case "time":
+      customFields.twentyFourHour = input.twentyFourHour ?? true;
+      customFields.useUTC = input.useUTC ?? false;
+      break;
+    case "data":
+      customFields.dataType = input.dataType ?? "string";
+      break;
+    case "node":
+      customFields.nodeLevel = input.nodeLevel ?? 1;
+      break;
+    case "image":
+      customFields.imagePath = input.imagePath ?? "";
+      break;
+  }
+  const doc = {
+    overlayId: overlayObjectId,
+    name: input.name.trim(),
+    type: input.type,
+    x: Number(input.x) || 0,
+    y: Number(input.y) || 0,
+    width: Math.max(1, Number(input.width) || 100),
+    height: Math.max(1, Number(input.height) || 40),
+    backgroundColor: input.backgroundColor ?? "transparent",
+    borderColor: input.borderColor ?? "transparent",
+    radius: typeof input.radius === "number" ? input.radius : 0,
+    textStyle: isTextCapable ? { ...defaultTextStyle, ...input.textStyle ?? {} } : void 0,
+    ...customFields,
+    createdAt: /* @__PURE__ */ new Date(),
+    updatedAt: /* @__PURE__ */ new Date()
+  };
+  const client = await getClient$1();
+  const db = client.db("capture");
+  const components = db.collection("overlay_components");
+  const result = await components.insertOne(doc);
+  return { _id: result.insertedId, ...doc };
+}
+ipcMain.handle("db:createOverlayComponent", async (_event, input) => {
+  var _a, _b;
+  try {
+    const created = await createOverlayComponent(input);
+    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
+    return { ok: true, data: id };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient = null;
+async function getClient() {
+  if (cachedClient) return cachedClient;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient = client;
+  return client;
+}
+async function getAllOverlayComponents(overlayId) {
+  const client = await getClient();
+  const db = client.db("capture");
+  const components = db.collection("overlay_components");
+  const filter = overlayId ? { overlayId: new ObjectId(overlayId) } : {};
+  const cursor = components.find(filter, { projection: { _id: 1, name: 1 } }).sort({ createdAt: -1 });
+  return cursor.toArray();
+}
+ipcMain.handle("db:getAllOverlayComponents", async (_event, input) => {
+  try {
+    const items = await getAllOverlayComponents(input == null ? void 0 : input.overlayId);
+    const plain = items.map((i) => ({ _id: i._id.toString(), name: i.name }));
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -1219,6 +1526,7 @@ const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
 let win = null;
 let splashWin = null;
+let overlayEditorWin = null;
 function delay(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -1327,6 +1635,38 @@ ipcMain.on("overlay:get-port-sync", (e) => {
     e.returnValue = OVERLAY_WS_PORT;
   } catch {
     e.returnValue = 3620;
+  }
+});
+ipcMain.handle("window:open-overlay-editor", async () => {
+  try {
+    if (overlayEditorWin && !overlayEditorWin.isDestroyed()) {
+      overlayEditorWin.show();
+      overlayEditorWin.focus();
+      return true;
+    }
+    overlayEditorWin = createOverlayEditorWindow();
+    overlayEditorWin.on("closed", () => {
+      overlayEditorWin = null;
+    });
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("overlay-window:minimize", async () => {
+  try {
+    overlayEditorWin == null ? void 0 : overlayEditorWin.minimize();
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("overlay-window:close", async () => {
+  try {
+    overlayEditorWin == null ? void 0 : overlayEditorWin.close();
+    return true;
+  } catch {
+    return false;
   }
 });
 ipcMain.handle("window:minimize", async () => {

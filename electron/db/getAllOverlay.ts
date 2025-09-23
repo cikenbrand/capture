@@ -2,10 +2,6 @@ import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
 import { ipcMain } from 'electron'
 
-export interface NewOverlay {
-  name: string
-}
-
 export interface OverlayDoc {
   _id: ObjectId
   name: string
@@ -29,38 +25,27 @@ async function getClient(): Promise<MongoClient> {
   return client
 }
 
-export async function createOverlay(input: NewOverlay): Promise<OverlayDoc> {
+export async function getAllOverlay(): Promise<OverlayDoc[]> {
   const client = await getClient()
   const db = client.db('capture')
   const overlays = db.collection<OverlayDoc>('overlays')
-
-  const now = new Date()
-  const doc = {
-    name: input.name.trim(),
-    createdAt: now,
-    updatedAt: now,
-  }
-
-  const result = await overlays.insertOne(doc as any)
-  return { _id: result.insertedId, ...(doc as any) }
+  return overlays.find({}).sort({ createdAt: -1 }).toArray()
 }
 
-export async function closeMongo() {
-  if (!cachedClient) return
+ipcMain.handle('db:getAllOverlay', async () => {
   try {
-    await cachedClient.close()
-  } finally {
-    cachedClient = null
-  }
-}
-
-ipcMain.handle('db:createOverlay', async (_event, input: NewOverlay) => {
-  try {
-    const created = await createOverlay(input)
-    const id = (created as any)?._id?.toString?.() ?? created
-    return { ok: true, data: id }
+    const overlays = await getAllOverlay()
+    const plain = overlays.map(o => ({
+      _id: o._id.toString(),
+      name: o.name,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt,
+    }))
+    return { ok: true, data: plain }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { ok: false, error: message }
   }
 })
+
+

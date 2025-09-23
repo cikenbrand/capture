@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createSplashWindow } from './windows/splashscreen'
-import { createMainWindow } from './windows/main'
+import { createMainWindow, createOverlayEditorWindow } from './windows/main'
 import { openObs } from './obs/openOBS'
 import { exitOBS } from './obs/websocket_functions/exitOBS'
 import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
@@ -12,6 +12,8 @@ import { startDrawingService, stopDrawingService } from './services/drawingServi
 import { OVERLAY_WS_PORT } from './settings'
 import { SPLASHSCREEN_DURATION_MS } from './settings'
 import './db/createProject'
+import './db/createOverlay'
+import './db/getAllOverlay'
 import './db/createTask'
 import './db/getAllTasks'
 import './db/getSelectedTaskDetails'
@@ -33,6 +35,11 @@ import './db/getSelectedProjectDetails'
 import './db/getSelectedDiveDetails'
 import './db/editProject'
 import './getter-setter/selectedDrawingTool'
+import './getter-setter/selectedOverlayLayer'
+import './db/renameOverlay'
+import './db/deleteOverlay'
+import './db/createOverlayComponent'
+import './db/getAllOverlayComponents'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -47,6 +54,7 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 
 let win: BrowserWindow | null = null
 let splashWin: BrowserWindow | null = null
+let overlayEditorWin: BrowserWindow | null = null
 
 // ——— helpers ———
 function delay(ms: number) {
@@ -172,6 +180,37 @@ app.whenReady().then(createWindow)
 // IPC: window controls
 ipcMain.on('overlay:get-port-sync', (e) => {
   try { e.returnValue = OVERLAY_WS_PORT } catch { e.returnValue = 3620 }
+})
+ipcMain.handle('window:open-overlay-editor', async () => {
+  try {
+    if (overlayEditorWin && !overlayEditorWin.isDestroyed()) {
+      overlayEditorWin.show()
+      overlayEditorWin.focus()
+      return true
+    }
+    overlayEditorWin = createOverlayEditorWindow()
+    overlayEditorWin.on('closed', () => { overlayEditorWin = null })
+    return true
+  } catch {
+    return false
+  }
+})
+ipcMain.handle('overlay-window:minimize', async () => {
+  try {
+    overlayEditorWin?.minimize()
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('overlay-window:close', async () => {
+  try {
+    overlayEditorWin?.close()
+    return true
+  } catch {
+    return false
+  }
 })
 ipcMain.handle('window:minimize', async () => {
   try {
