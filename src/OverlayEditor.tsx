@@ -1,5 +1,6 @@
 import { BiPlus } from "react-icons/bi";
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { DraggableDialog } from "@/components/ui/draggable-dialog";
 import OverlayWindowBar from "./components/overlay-editor/OverlayWindowBar";
 import CreateOverlayForm from "./components/overlay-editor/CreateOverlayForm";
@@ -8,8 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { MdDelete, MdEdit } from "react-icons/md";
 import OverlayList from "./components/overlay-editor/OverlayList";
 import RenameOverlayForm from "./components/overlay-editor/RenameOverlayForm";
-import { IoIosTime } from "react-icons/io";
-import { IoCalendar } from "react-icons/io5";
 import { LuCable } from "react-icons/lu";
 import { FaPersonSwimming } from "react-icons/fa6";
 import { FaFolderTree } from "react-icons/fa6";
@@ -18,6 +17,12 @@ import CreateCustomTextButton from "./components/overlay-editor/CreateCustomText
 import CreateImageButton from "./components/overlay-editor/CreateImageButton";
 import EditComponentForm from "./components/overlay-editor/EditComponentForm";
 import OverlayItem from "./components/ui/OverlayItem";
+import { useTime } from "./hooks/useTime";
+import { useDate } from "./hooks/useDate";
+import CreateTimeButton from "./components/overlay-editor/CreateTimeButton";
+import CreateDateButton from "./components/overlay-editor/CreateDateButton";
+import CreateDataButton from "./components/overlay-editor/CreateDataButton";
+import CreateDiveButton from "./components/overlay-editor/CreateDiveButton";
 
 export default function OverlayEditor() {
     const [newOverlayOpen, setNewOverlayOpen] = useState(false)
@@ -109,18 +114,10 @@ export default function OverlayEditor() {
                             <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
                                 <CreateCustomTextButton/>
                                 <CreateImageButton/>
-                                <button title="Time" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                                    <IoIosTime className="h-4.5 w-4.5" />
-                                </button>
-                                <button title="Date" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                                    <IoCalendar className="h-4.5 w-4.5" />
-                                </button>
-                                <button title="Data" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                                    <LuCable className="h-4.5 w-4.5" />
-                                </button>
-                                <button title="Dive" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                                    <FaPersonSwimming className="h-4.5 w-4.5" />
-                                </button>
+                                <CreateTimeButton/>
+                                <CreateDateButton/>
+                                <CreateDataButton/>
+                                <CreateDiveButton/>
                             </div>
                             <div className="flex-1 bg-black">
                                 <OverlayEditorCanvas
@@ -174,34 +171,20 @@ export default function OverlayEditor() {
                                                     border: c.borderColor ? `1px solid ${c.borderColor}` : undefined,
                                                     borderRadius: typeof c.radius === 'number' ? c.radius : undefined,
                                                     display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: c.textStyle?.align === 'right' ? 'flex-end' : c.textStyle?.align === 'center' ? 'center' : 'flex-start',
+                                                    alignItems: c.textStyle?.verticalAlign === 'bottom' || c.textStyle?.verticalAlign === 'end' ? 'flex-end' : c.textStyle?.verticalAlign === 'top' || c.textStyle?.verticalAlign === 'start' ? 'flex-start' : 'center',
+                                                    justifyContent: c.textStyle?.align === 'right' || c.textStyle?.align === 'end' ? 'flex-end' : c.textStyle?.align === 'center' ? 'center' : 'flex-start',
                                                     padding: '4px',
                                                     overflow: 'hidden',
                                                 }}
                                             >
-                                                {c.type === 'custom-text' ? (
-                                                    <span
-                                                        style={{
-                                                            fontFamily: c.textStyle?.fontFamily,
-                                                            fontSize: c.textStyle?.fontSize,
-                                                            fontWeight: c.textStyle?.fontWeight as any,
-                                                            fontStyle: c.textStyle?.italic ? 'italic' : undefined,
-                                                            textDecoration: c.textStyle?.underline ? 'underline' : undefined,
-                                                            color: c.textStyle?.color || '#fff',
-                                                            textTransform: c.textStyle?.uppercase ? 'uppercase' : undefined,
-                                                            letterSpacing: c.textStyle?.letterSpacing,
-                                                            lineHeight: c.textStyle?.lineHeight as any,
-                                                        }}
-                                                    >
-                                                        {c.customText || c.name}
-                                                    </span>
-                                                ) : c.type === 'image' ? (
+                                                {c.type === 'image' ? (
                                                     c.imagePath ? (
                                                         <img src={c.imagePath} className="max-w-full max-h-full object-contain" />
                                                     ) : (
                                                         <div className="text-white/60 text-xs">No image</div>
                                                     )
+                                                ) : c.type === 'custom-text' || c.type === 'time' || c.type === 'date' || c.type === 'data' || c.type === 'dive' ? (
+                                                    <TextOverlayContent component={c} />
                                                 ) : (
                                                     <div className="text-white/80 text-xs">{c.name}</div>
                                                 )}
@@ -274,3 +257,52 @@ export default function OverlayEditor() {
         </div>
     )
 }
+
+function buildTextSpanStyle(component: any): CSSProperties {
+    return {
+        fontFamily: component.textStyle?.fontFamily,
+        fontSize: component.textStyle?.fontSize,
+        fontWeight: component.textStyle?.fontWeight as any,
+        fontStyle: component.textStyle?.italic ? 'italic' : undefined,
+        textDecoration: component.textStyle?.underline ? 'underline' : undefined,
+        color: component.textStyle?.color || '#fff',
+        textTransform: component.textStyle?.uppercase ? 'uppercase' : undefined,
+        letterSpacing: component.textStyle?.letterSpacing,
+        lineHeight: component.textStyle?.lineHeight as any,
+    }
+}
+
+function formatTimeDisplay(raw: string, format: string | undefined, twentyFourHour: boolean): string {
+    let result = raw.trim()
+    if (!/s/i.test(format ?? 'ss')) {
+        result = result.replace(/:(\d{2})(?:(?=\s)|$)/, '')
+    }
+    if (twentyFourHour) {
+        result = result.replace(/\s*[AP]M$/i, '').trim()
+    }
+    return result
+}
+
+function TextOverlayContent({ component }: { component: any }) {
+    const style = buildTextSpanStyle(component)
+    if (component.type === 'time') {
+        const value = useTime({ twentyFourHour: component.twentyFourHour ?? true, useUTC: component.useUTC ?? false })
+        return (
+            <span style={style}>
+                {formatTimeDisplay(value, component.timeFormat, component.twentyFourHour ?? true)}
+            </span>
+        )
+    }
+    if (component.type === 'date') {
+        const value = useDate({ useUTC: component.useUTC ?? false })
+        return <span style={style}>{value}</span>
+    }
+    if (component.type === 'data') {
+        return <span style={style}>{component.customText || component.name}</span>
+    }
+    if (component.type === 'dive') {
+        return <span style={style}>{component.customText || component.name}</span>
+    }
+    return <span style={style}>{component.customText || component.name}</span>
+}
+
