@@ -45,6 +45,7 @@ import './db/getAllOverlayComponents'
 import './db/editOverlayComponent'
 import './db/deleteOverlayComponent'
 import './db/getOverlayComponentsForRender'
+import './obs/websocket_functions/getLiveDevices'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')

@@ -1722,6 +1722,67 @@ ipcMain.handle("db:getOverlayComponentsForRender", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
+const TARGET_SCENE = "video sources";
+const TARGET_GROUP = "source 1";
+const TARGET_INPUT = "video capture device 1";
+async function getLiveDevices() {
+  const obs = getObsClient();
+  if (!obs) return [];
+  try {
+    try {
+      const groupItems = await obs.call("GetGroupSceneItemList", { groupName: TARGET_GROUP });
+      const hasInput = Array.isArray(groupItems == null ? void 0 : groupItems.sceneItems) ? groupItems.sceneItems.some((it) => String((it == null ? void 0 : it.sourceName) ?? "").toLowerCase() === TARGET_INPUT) : false;
+      if (!hasInput) {
+        try {
+          const sceneRes = await obs.call("GetSceneItemList", { sceneName: TARGET_SCENE });
+          const hasGroup = Array.isArray(sceneRes == null ? void 0 : sceneRes.sceneItems) ? sceneRes.sceneItems.some((it) => String((it == null ? void 0 : it.sourceName) ?? "").toLowerCase() === TARGET_GROUP) : false;
+          if (!hasGroup) {
+          }
+        } catch {
+        }
+      }
+    } catch {
+    }
+    try {
+      const inputs = await obs.call("GetInputList");
+      const target = (Array.isArray(inputs == null ? void 0 : inputs.inputs) ? inputs.inputs : []).find((i) => String((i == null ? void 0 : i.inputName) ?? "").toLowerCase() === TARGET_INPUT);
+      if (!target) {
+      } else {
+      }
+    } catch {
+    }
+    const devices = [];
+    const tryProperty = async (propertyName) => {
+      try {
+        const res = await obs.call("GetInputPropertiesListPropertyItems", {
+          inputName: TARGET_INPUT,
+          propertyName
+        });
+        const items = Array.isArray(res == null ? void 0 : res.propertyItems) ? res.propertyItems : [];
+        for (const it of items) {
+          const name = String((it == null ? void 0 : it.itemName) ?? (it == null ? void 0 : it.name) ?? "").trim();
+          const id = String((it == null ? void 0 : it.itemValue) ?? (it == null ? void 0 : it.value) ?? "").trim();
+          if (name && id && !devices.some((d) => d.id === id)) {
+            devices.push({ id, name });
+          }
+        }
+      } catch {
+      }
+    };
+    await tryProperty("video_device_id");
+    return devices.filter((d) => !/obs/i.test(d.name));
+  } catch {
+    return [];
+  }
+}
+ipcMain.handle("obs:get-live-devices", async () => {
+  try {
+    const list = await getLiveDevices();
+    return list;
+  } catch {
+    return [];
+  }
+});
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];

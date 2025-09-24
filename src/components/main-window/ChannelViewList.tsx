@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Listbox } from "../ui/listbox";
+import { DraggableDialog } from "../ui/draggable-dialog";
+import VideoDeviceConfigurations from "./VideoDeviceConfigurations";
+import { MdSettings } from "react-icons/md";
 
 const CHANNEL_ITEMS = [
   { value: "channel-1", label: "Channel 1" },
@@ -11,6 +14,9 @@ const CHANNEL_ITEMS = [
   { value: "2 + 1 view", label: "Triple View" },
   { value: "2 + 2 view", label: "Quad View" },
 ] as const;
+
+const SINGLE_VIEW_ITEMS = CHANNEL_ITEMS.filter(i => /^channel-\d$/.test(i.value));
+const MULTI_VIEW_ITEMS = CHANNEL_ITEMS.filter(i => !/^channel-\d$/.test(i.value));
 
 type ChannelValue = (typeof CHANNEL_ITEMS)[number]["value"];
 
@@ -106,11 +112,12 @@ function dispatchChannelChange(value: ChannelValue | null) {
   if (!Number.isFinite(channel)) return;
   try {
     window.dispatchEvent(new CustomEvent("app:set-draw-channel", { detail: { channel } }));
-  } catch {}
+  } catch { }
 }
 
 export default function ChannelViewList() {
   const [selectedValue, setSelectedValue] = useState<ChannelValue | null>(null);
+  const [isVideoConfigOpen, setIsVideoConfigOpen] = useState(false);
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -162,7 +169,7 @@ export default function ChannelViewList() {
       disposed = true;
       try {
         off && off();
-      } catch {}
+      } catch { }
     };
   }, [applySelection]);
 
@@ -184,22 +191,36 @@ export default function ChannelViewList() {
             const setFn = (obsApi as any).setSelectedScene ?? obsApi.setCurrentScene;
             const ok = await setFn(sceneName);
             if (ok) return;
-          } catch {}
+          } catch { }
         }
 
         try {
           const current = await obsApi.getCurrentScene();
           if (!isMountedRef.current) return;
           applySelection(matchSceneToValue(current));
-        } catch {}
+        } catch { }
       })();
     },
     [applySelection]
   );
 
   return (
-    <div className="h-full">
-      <Listbox items={CHANNEL_ITEMS} selectedValue={selectedValue ?? undefined} onChange={handleChange} />
+    <div className="h-full flex flex-col gap-2">
+      <button title="Edit Node" className="flex items-center justify-center gap-2 border border-white/10 h-[35px] bg-black/10 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" onClick={() => setIsVideoConfigOpen(true)}>
+        <MdSettings className="h-4.5 w-4.5" />
+        <span>Video Configurations</span>
+      </button>
+      <DraggableDialog open={isVideoConfigOpen} onOpenChange={setIsVideoConfigOpen} title="Video Configurations">
+        <VideoDeviceConfigurations />
+      </DraggableDialog>
+      <div className="flex flex-col gap-1">
+        <span className="text-white font-semibold">Single View</span>
+        <Listbox items={SINGLE_VIEW_ITEMS} selectedValue={selectedValue ?? undefined} onChange={handleChange} />
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-white font-semibold">Multi View</span>
+        <Listbox items={MULTI_VIEW_ITEMS} selectedValue={selectedValue ?? undefined} onChange={handleChange} />
+      </div>
     </div>
   );
 }
