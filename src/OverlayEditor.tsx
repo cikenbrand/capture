@@ -9,8 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { MdDelete, MdEdit } from "react-icons/md";
 import OverlayList from "./components/overlay-editor/OverlayList";
 import RenameOverlayForm from "./components/overlay-editor/RenameOverlayForm";
-import { LuCable } from "react-icons/lu";
-import { FaPersonSwimming } from "react-icons/fa6";
 import { FaFolderTree } from "react-icons/fa6";
 import ComponentList from "./components/overlay-editor/ComponentList";
 import CreateCustomTextButton from "./components/overlay-editor/CreateCustomTextButton";
@@ -23,6 +21,8 @@ import CreateTimeButton from "./components/overlay-editor/CreateTimeButton";
 import CreateDateButton from "./components/overlay-editor/CreateDateButton";
 import CreateDataButton from "./components/overlay-editor/CreateDataButton";
 import CreateDiveButton from "./components/overlay-editor/CreateDiveButton";
+import CreateNodeButton from "./components/overlay-editor/CreateNodeButton";
+import CreateTaskButton from "./components/overlay-editor/CreateTaskButton";
 
 export default function OverlayEditor() {
     const [newOverlayOpen, setNewOverlayOpen] = useState(false)
@@ -97,9 +97,6 @@ export default function OverlayEditor() {
                                 <button onClick={() => setRenameOverlayOpen(true)} title="Rename Overlay" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                                     <MdEdit className="h-4.5 w-4.5" />
                                 </button>
-                                <button title="Nodes" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                                    <FaFolderTree className="h-4.5 w-4.5" />
-                                </button>
                             </div>
                             <OverlayList />
                         </TabsContent>
@@ -118,6 +115,8 @@ export default function OverlayEditor() {
                                 <CreateDateButton/>
                                 <CreateDataButton/>
                                 <CreateDiveButton/>
+                                <CreateNodeButton/>
+                                <CreateTaskButton/>
                             </div>
                             <div className="flex-1 bg-black">
                                 <OverlayEditorCanvas
@@ -183,7 +182,7 @@ export default function OverlayEditor() {
                                                     ) : (
                                                         <div className="text-white/60 text-xs">No image</div>
                                                     )
-                                                ) : c.type === 'custom-text' || c.type === 'time' || c.type === 'date' || c.type === 'data' || c.type === 'dive' ? (
+                                                ) : c.type === 'custom-text' || c.type === 'time' || c.type === 'date' || c.type === 'data' || c.type === 'dive' || c.type === 'node' ? (
                                                     <TextOverlayContent component={c} />
                                                 ) : (
                                                     <div className="text-white/80 text-xs">{c.name}</div>
@@ -302,6 +301,15 @@ function TextOverlayContent({ component }: { component: any }) {
     }
     if (component.type === 'dive') {
         return <span style={style}>{component.customText || component.name}</span>
+    }
+    if (component.type === 'node') {
+        const level = typeof component.nodeLevel === 'number' ? component.nodeLevel : undefined
+        return (
+            <span style={style} className="inline-flex items-center gap-1">
+                {component.customText || component.name}
+                {level ? ` (L${level})` : ''}
+            </span>
+        )
     }
     return <span style={style}>{component.customText || component.name}</span>
 }

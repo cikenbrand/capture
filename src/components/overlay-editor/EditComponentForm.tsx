@@ -31,6 +31,7 @@ type OverlayComponentForEdit = {
     type?: string
     backgroundColor?: string
     textStyle?: TextStyleShape
+    nodeLevel?: number
 }
 
 const FONT_WEIGHT_OPTIONS = [
@@ -136,6 +137,7 @@ export default function EditComponentForm({ onClose }: Props) {
     const [applyStyleToAll, setApplyStyleToAll] = useState(false)
     const [twentyFourHour, setTwentyFourHour] = useState(true)
     const [useUTC, setUseUTC] = useState(false)
+    const [nodeLevel, setNodeLevel] = useState(1)
 
     const canEdit = selectedIds.length === 1
     const canEditTextStyle = canEdit && componentType !== 'image'
@@ -162,6 +164,7 @@ export default function EditComponentForm({ onClose }: Props) {
             setCustomText('')
             setTwentyFourHour(true)
             setUseUTC(false)
+            setNodeLevel(1)
             setComponentType(null)
             setOverlayComponents([])
         }
@@ -216,6 +219,7 @@ export default function EditComponentForm({ onClose }: Props) {
                     setCustomText(match?.type === 'custom-text' ? (match?.customText ?? '') : '')
                     setTwentyFourHour(match?.twentyFourHour ?? true)
                     setUseUTC(match?.useUTC ?? false)
+                    setNodeLevel(typeof (match as any)?.nodeLevel === 'number' ? (match as any).nodeLevel : 1)
                 }
             } catch {
                 if (active && requestId === latestRequestId) resetState()
@@ -351,11 +355,30 @@ export default function EditComponentForm({ onClose }: Props) {
         }
     }, [broadcastUpdate])
 
+    const updateComponentNodeLevel = useCallback(async (level: number, ids: string[]) => {
+        try {
+            const res = await window.ipcRenderer.invoke('db:editOverlayComponent', {
+                ids,
+                updates: { nodeLevel: level }
+            })
+            if (res?.ok) {
+                setOverlayComponents((prev) => prev.map((component) => (
+                    ids.includes(component._id)
+                        ? { ...component, nodeLevel: level }
+                        : component
+                )))
+                broadcastUpdate(ids)
+            }
+        } catch {
+            // ignore errors during live editing
+        }
+    }, [broadcastUpdate])
+
     const applyTextStyleChange = useCallback(async (stylePatch: TextStyleShape, nextSelectedStyle: TextStyleShape) => {
         if (!canEditTextStyle) return
         setTextStyle(nextSelectedStyle)
-        if (applyStyleToAll && componentType && componentType !== 'image') {
-            const targets = overlayComponents.filter((component) => component.type === componentType && component.type !== 'image')
+        if (applyStyleToAll) {
+            const targets = overlayComponents.filter((component) => component.type !== 'image')
             if (!targets.length) {
                 void updateComponentTextStyle(nextSelectedStyle, selectedIds)
                 return
@@ -385,8 +408,8 @@ export default function EditComponentForm({ onClose }: Props) {
 
     const applyBackgroundColorChange = useCallback(async (color: string) => {
         if (!canEditTextStyle) return
-        if (applyStyleToAll && componentType && componentType !== 'image') {
-            const targets = overlayComponents.filter((component) => component.type === componentType && component.type !== 'image')
+        if (applyStyleToAll) {
+            const targets = overlayComponents.filter((component) => component.type !== 'image')
             if (!targets.length) {
                 void updateComponentBackgroundColor(color, selectedIds)
                 return
@@ -442,6 +465,36 @@ export default function EditComponentForm({ onClose }: Props) {
             void updateComponentTimeSettings(updates, selectedIds)
         }
     }, [applyStyleToAll, broadcastUpdate, canEdit, componentType, overlayComponents, selectedIds, updateComponentTimeSettings])
+
+    const applyNodeLevelChange = useCallback(async (level: number) => {
+        if (!canEdit || componentType !== 'node') return
+        if (applyStyleToAll) {
+            const targets = overlayComponents.filter((component) => component.type === 'node')
+            if (!targets.length) {
+                void updateComponentNodeLevel(level, selectedIds)
+                return
+            }
+            const targetIds = targets.map((component) => component._id)
+            await Promise.all(targetIds.map(async (id) => {
+                try {
+                    await window.ipcRenderer.invoke('db:editOverlayComponent', {
+                        ids: [id],
+                        updates: { nodeLevel: level },
+                    })
+                } catch {
+                    // ignore errors during live editing
+                }
+            }))
+            setOverlayComponents((prev) => prev.map((component) => (
+                targetIds.includes(component._id)
+                    ? { ...component, nodeLevel: level }
+                    : component
+            )))
+            broadcastUpdate(targetIds)
+        } else {
+            void updateComponentNodeLevel(level, selectedIds)
+        }
+    }, [applyStyleToAll, broadcastUpdate, canEdit, componentType, overlayComponents, selectedIds, updateComponentNodeLevel])
 
     const handleCustomTextChange = (event: ChangeEvent<HTMLInputElement>) => {
         const nextValue = event.target.value
@@ -547,9 +600,15 @@ export default function EditComponentForm({ onClose }: Props) {
         void applyTimeSettingChange({ useUTC: checked })
     }
 
-    const checkboxLabel = componentType && componentType !== 'image'
-        ? `Apply to all ${componentType.replace(/-/g, ' ')} components`
-        : 'Apply to all components of this type'
+    const handleNodeLevelChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const nextValue = Number(event.target.value)
+        if (!Number.isFinite(nextValue)) return
+        const sanitized = Math.max(1, Math.floor(nextValue))
+        setNodeLevel(sanitized)
+        void applyNodeLevelChange(sanitized)
+    }
+
+    const checkboxLabel = 'Apply to all components'
 
     return (
         <div className="flex flex-col gap-3">
@@ -601,6 +660,21 @@ export default function EditComponentForm({ onClose }: Props) {
                             />
                             <span>Use UTC time</span>
                         </label>
+                    </div>
+                ) : null}
+
+                {componentType === 'node' ? (
+                    <div className="flex flex-col gap-1">
+                        <span>Node Level</span>
+                        <Input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={String(nodeLevel)}
+                            onChange={handleNodeLevelChange}
+                            disabled={!canEdit}
+                            placeholder="Enter node level"
+                        />
                     </div>
                 ) : null}
 
