@@ -83,6 +83,8 @@
         let reconnectTimer = null;
         let currentOverlayId = '';
         let timeInterval = null;
+        let currentTaskName = '';
+        let currentDiveName = '';
 
         function setStatus(text, cls) {
           statusEl.textContent = text;
@@ -134,6 +136,14 @@
                 if (Array.isArray(parsed.nodeLevels)) {
                   try { window.__nodeLevels = parsed.nodeLevels } catch {}
                   updateNodeTexts();
+                }
+                if (typeof parsed.taskName === 'string') {
+                  currentTaskName = parsed.taskName || '';
+                  updateTaskTexts();
+                }
+                if (typeof parsed.diveName === 'string') {
+                  currentDiveName = parsed.diveName || '';
+                  updateDiveTexts();
                 }
               }
             } catch {}
@@ -272,6 +282,12 @@
                   const val = (window.__nodeLevels && Array.isArray(window.__nodeLevels) && window.__nodeLevels[idx]) || ''
                   return String(val || '')
                 }
+                if (c.type === 'task') {
+                  return String(currentTaskName || c.customText || c.name || '');
+                }
+                if (c.type === 'dive') {
+                  return String(currentDiveName || c.customText || c.name || '');
+                }
                 // TODO: dive/task/data could be wired to live data; for now show name
                 return c.name || '';
               }
@@ -288,6 +304,14 @@
               if (c.type === 'node') {
                 try { item.setAttribute('data-kind', 'node'); } catch {}
                 try { item.setAttribute('data-node-level', String(c.nodeLevel || 1)); } catch {}
+              }
+
+              // Tag task items for later dynamic updates
+              if (c.type === 'task') {
+                try { item.setAttribute('data-kind', 'task'); } catch {}
+              }
+              if (c.type === 'dive') {
+                try { item.setAttribute('data-kind', 'dive'); } catch {}
               }
 
               box.appendChild(content);
@@ -308,6 +332,30 @@
                 const val = (window.__nodeLevels && Array.isArray(window.__nodeLevels) && window.__nodeLevels[idx]) || '';
                 const content = el.querySelector('.text-content');
                 if (content && typeof content.textContent !== 'undefined') content.textContent = String(val || '');
+              } catch {}
+            });
+          } catch {}
+        }
+
+        function updateTaskTexts() {
+          try {
+            const items = stageEl.querySelectorAll('.overlay-item[data-kind="task"]');
+            items.forEach((el) => {
+              try {
+                const content = el.querySelector('.text-content');
+                if (content && typeof content.textContent !== 'undefined') content.textContent = String(currentTaskName || '');
+              } catch {}
+            });
+          } catch {}
+        }
+
+        function updateDiveTexts() {
+          try {
+            const items = stageEl.querySelectorAll('.overlay-item[data-kind="dive"]');
+            items.forEach((el) => {
+              try {
+                const content = el.querySelector('.text-content');
+                if (content && typeof content.textContent !== 'undefined') content.textContent = String(currentDiveName || '');
               } catch {}
             });
           } catch {}

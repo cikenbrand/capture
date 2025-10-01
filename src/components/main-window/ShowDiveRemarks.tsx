@@ -65,6 +65,11 @@ export default function ShowDiveRemarks() {
   }, [selectedDiveId])
 
   return (
-    <Input value={remarks} readOnly disabled={!selectedDiveId || isStarted} placeholder={selectedDiveId ? "" : "No dive selected"} />
+    <Input
+      value={selectedDiveId && remarks.trim().length > 0 ? remarks : ""}
+      readOnly
+      disabled={!selectedDiveId || isStarted}
+      placeholder={!selectedDiveId ? "No dive selected" : (remarks.trim().length > 0 ? "" : "No remarks")}
+    />
   )
 }

@@ -55,6 +55,11 @@ export default function ShowTaskRemarks() {
   }, [selectedTaskId])
 
   return (
-    <Input value={remarks} readOnly disabled={!selectedTaskId} placeholder={selectedTaskId ? "" : "No task selected"} />
+    <Input
+      value={selectedTaskId && remarks.trim().length > 0 ? remarks : ""}
+      readOnly
+      disabled={!selectedTaskId}
+      placeholder={!selectedTaskId ? "No task selected" : (remarks.trim().length > 0 ? "" : "No remarks")}
+    />
   )
 }

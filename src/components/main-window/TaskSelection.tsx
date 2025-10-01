@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 
 type Task = {
@@ -12,6 +12,46 @@ export default function TaskSelection() {
   const [loading, setLoading] = useState<boolean>(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+
+  // WebSocket connections per overlay channel (1..4) to send selected task
+  const socketsRef = useRef<Record<number, WebSocket | null>>({})
+  const WS_HOST = '127.0.0.1'
+  const WS_PORT = 3620
+
+  function getSocket(channelIndex: number): WebSocket | null {
+    const existing = socketsRef.current[channelIndex]
+    if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) {
+      return existing
+    }
+    try {
+      const ws = new WebSocket(`ws://${WS_HOST}:${WS_PORT}/overlay?ch=${channelIndex}`)
+      ws.addEventListener('close', () => {
+        try { if (socketsRef.current[channelIndex] === ws) socketsRef.current[channelIndex] = null } catch {}
+      })
+      ws.addEventListener('error', () => { try { /* ignore */ } catch {} })
+      socketsRef.current[channelIndex] = ws
+      return ws
+    } catch {
+      return existing ?? null
+    }
+  }
+
+  function broadcastTaskName(name: string) {
+    const payload = JSON.stringify({ taskName: name })
+    for (const ch of [1, 2, 3, 4]) {
+      try {
+        const ws = getSocket(ch)
+        if (!ws || typeof (ws as any).send !== 'function') continue
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(payload)
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.addEventListener('open', () => {
+            try { ws.send(payload) } catch {}
+          }, { once: true })
+        }
+      } catch {}
+    }
+  }
 
   // Load current project id and keep in sync
   useEffect(() => {
@@ -106,7 +146,24 @@ export default function TaskSelection() {
         window.dispatchEvent(ev)
       } catch {}
     } catch {}
+
+    try {
+      const name = tasks.find(t => t._id === nextId)?.name || ''
+      broadcastTaskName(name)
+    } catch {}
   }
+
+  // Broadcast on initial load/whenever selection or task list changes
+  useEffect(() => {
+    if (!selectedTaskId) {
+      // If cleared, broadcast empty to clear overlay task text
+      broadcastTaskName('')
+      return
+    }
+    const name = tasks.find(t => t._id === selectedTaskId)?.name || ''
+    broadcastTaskName(name)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTaskId, tasks])
 
   const disabled = !projectId || loading || !tasks.length
 

@@ -29,6 +29,7 @@ import CircleDrawingTool from "./components/main-window/CircleDrawingTool"
 import AllLogsTable from "./components/main-window/AllLogsTable"
 import ChannelViewList from "./components/main-window/ChannelViewList"
 import ChannelOverlaySelection from "./components/main-window/ChannelOverlaySelection"
+import ShowNodesRemarks from "./components/main-window/ShowNodesRemarks"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -178,6 +179,7 @@ function App() {
                   <MdDelete className="h-4.5 w-4.5" />
                 </button>
               </div>
+              <ShowNodesRemarks/>
               <div className="bg-[#21262E] p-1 h-full">
                 <NodesTree />
               </div>

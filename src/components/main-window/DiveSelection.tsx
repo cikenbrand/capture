@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
 
 type Dive = {
@@ -13,6 +13,46 @@ export default function DiveSelection() {
   const [selectedDiveId, setSelectedDiveId] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
   const [isStarted, setIsStarted] = useState(false)
+
+  // WebSocket connections per overlay channel (1..4) to send selected dive
+  const socketsRef = useRef<Record<number, WebSocket | null>>({})
+  const WS_HOST = '127.0.0.1'
+  const WS_PORT = 3620
+
+  function getSocket(channelIndex: number): WebSocket | null {
+    const existing = socketsRef.current[channelIndex]
+    if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) {
+      return existing
+    }
+    try {
+      const ws = new WebSocket(`ws://${WS_HOST}:${WS_PORT}/overlay?ch=${channelIndex}`)
+      ws.addEventListener('close', () => {
+        try { if (socketsRef.current[channelIndex] === ws) socketsRef.current[channelIndex] = null } catch {}
+      })
+      ws.addEventListener('error', () => { try { /* ignore */ } catch {} })
+      socketsRef.current[channelIndex] = ws
+      return ws
+    } catch {
+      return existing ?? null
+    }
+  }
+
+  function broadcastDiveName(name: string) {
+    const payload = JSON.stringify({ diveName: name })
+    for (const ch of [1, 2, 3, 4]) {
+      try {
+        const ws = getSocket(ch)
+        if (!ws || typeof (ws as any).send !== 'function') continue
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(payload)
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.addEventListener('open', () => {
+            try { ws.send(payload) } catch {}
+          }, { once: true })
+        }
+      } catch {}
+    }
+  }
 
   // Load current project id and keep in sync
   useEffect(() => {
@@ -131,7 +171,24 @@ export default function DiveSelection() {
         window.dispatchEvent(ev)
       } catch {}
     } catch {}
+
+    try {
+      const name = dives.find(d => d._id === nextId)?.name || ''
+      broadcastDiveName(name)
+    } catch {}
   }
+
+  // Broadcast on initial load/whenever selection or dive list changes
+  useEffect(() => {
+    if (!selectedDiveId) {
+      // If cleared, broadcast empty to clear overlay dive text
+      broadcastDiveName('')
+      return
+    }
+    const name = dives.find(d => d._id === selectedDiveId)?.name || ''
+    broadcastDiveName(name)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDiveId, dives])
 
   const disabled = !projectId || loading || !dives.length || isStarted
 
