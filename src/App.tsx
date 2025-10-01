@@ -21,7 +21,6 @@ import DeleteNodeConfirmation from "./components/main-window/DeleteNodeConfirmat
 import PreviewVirtualCam from "./components/main-window/PreviewVirtualCam"
 import { FaCircle, FaMicrophone, FaPause, FaPlay, FaStop } from "react-icons/fa"
 import { BsArrowUpRight, BsCameraFill } from "react-icons/bs";
-import { FaRegCircle } from "react-icons/fa";
 import AudioMeter from "./components/main-window/AudioMeter"
 import CursorToolButton from "./components/main-window/CursorToolButton"
 import FreeDrawToolButton from "./components/main-window/FreeDrawToolButton"
@@ -29,6 +28,7 @@ import ArrowDrawingTool from "./components/main-window/ArrowDrawingTool"
 import CircleDrawingTool from "./components/main-window/CircleDrawingTool"
 import AllLogsTable from "./components/main-window/AllLogsTable"
 import ChannelViewList from "./components/main-window/ChannelViewList"
+import ChannelOverlaySelection from "./components/main-window/ChannelOverlaySelection"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -43,6 +43,10 @@ function App() {
   const [isEditNodeDialogOpen, setIsEditNodeDialogOpen] = useState(false)
   const [isDeleteNodeDialogOpen, setIsDeleteNodeDialogOpen] = useState(false)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+
+  const isSessionActionDisabled = !(
+    selectedProjectId && selectedTaskId && selectedDiveId && selectedNodeId
+  )
 
   useEffect(() => {
     let done = false
@@ -188,33 +192,33 @@ function App() {
               </TabsList>
               <TabsContent value="preview" className="flex flex-col gap-1 p-0">
                 <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
-                  <button title="Start Session" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Start Session" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaCircle className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Stop Session" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Stop Session" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaStop className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Pause Session" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Pause Session" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaPause className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Pause Session" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Pause Session" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaPlay className="h-3.5 w-3.5" />
                   </button>
                   <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
                     <span className="tracking-[5px] font-bold text-lg">00:00:00</span>
                   </div>
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Start Clip" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Start Clip" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <MdCameraRoll className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Stop Clip" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Stop Clip" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaStop className="h-3.5 w-3.5" />
                   </button>
                   <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
                     <span className="tracking-[5px] font-bold text-lg">00:00:00</span>
                   </div>
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Take Snapshot" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Take Snapshot" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <BsCameraFill className="h-4 w-4" />
                   </button>
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
@@ -223,7 +227,7 @@ function App() {
                   <ArrowDrawingTool/>
                   <CircleDrawingTool/>
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Mute Microphone" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Mute Microphone" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaMicrophone className="h-4 w-4" />
                   </button>
                   <AudioMeter valueDb={-100} />
@@ -253,13 +257,11 @@ function App() {
           <Tabs defaultValue="device" className="h-full">
             <TabsList>
               <TabsTrigger value="device">Device</TabsTrigger>
-              <TabsTrigger value="overlay">Overlay</TabsTrigger>
             </TabsList>
             <TabsContent value="device" className="flex flex-col gap-1">
               <ChannelViewList/>
-            </TabsContent>
-            <TabsContent value="overlay" className="flex flex-col gap-1">
-
+              <div className="w-full h-[1px] bg-white/20 my-2"/>
+              <ChannelOverlaySelection/>
             </TabsContent>
           </Tabs>
         </div>

@@ -1,0 +1,323 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Overlay</title>
+    <style>
+      html, body { height: 100%; width: 100%; margin: 0; background: transparent; color: #e5e7eb; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Noto Sans, 'Apple Color Emoji', 'Segoe UI Emoji'; }
+      /* Full-screen stage for overlay items */
+      #stage { position: relative; width: 100vw; height: 100vh; overflow: hidden; pointer-events: none; }
+      .overlay-item { position: absolute; box-sizing: border-box; display: flex; }
+      .text-box { width: 100%; height: 100%; display: flex; }
+      .text-content { width: 100%; }
+
+      /* Optional debug card (hidden by default) */
+      .wrap { position: fixed; left: 12px; top: 12px; display: none; align-items: center; justify-content: center; z-index: 99999; }
+      .card { background: #111827; border: 1px solid #000; padding: 16px; border-radius: 6px; min-width: 320px; }
+      .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }
+      .muted { color: #9ca3af; }
+      .ok { color: #34d399; }
+      .err { color: #f87171; }
+      .warn { color: #fbbf24; }
+      .list { margin-top: 12px; display: grid; gap: 8px; }
+      .item { background: #0f172a; border: 1px solid #000; padding: 8px; border-radius: 4px; }
+      .label { color: #9ca3af; font-size: 12px; }
+      .val { font-size: 13px; }
+      .code { margin-top: 8px; background: #0b1220; border: 1px solid #000; padding: 8px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; max-height: 300px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div class="wrap">
+      <div class="card">
+        <div class="row" style="margin-bottom: 10px;">
+          <div>
+            <div class="muted">Channel</div>
+            <div id="ch" class="mono"></div>
+          </div>
+          <div style="text-align:right;">
+            <div class="muted">WebSocket</div>
+            <div id="status" class="mono warn">connecting…</div>
+          </div>
+        </div>
+        <div style="margin-top: 8px;">
+          <div class="muted">Last message</div>
+          <div id="msg" class="mono">(none)</div>
+        </div>
+
+        <div id="overlayInfo" style="margin-top: 12px; display: none;">
+          <div class="muted">Overlay components</div>
+          <div id="components" class="list"></div>
+        </div>
+
+        <div id="jsonWrap" style="margin-top: 12px; display: none;">
+          <div class="muted">Components JSON</div>
+          <pre id="json" class="mono code">(empty)</pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const params = new URLSearchParams(window.location.search || '');
+        const ch = Math.max(1, Math.min(4, Number(params.get('ch')) || 1));
+        const debug = params.get('debug') === '1' || params.get('debug') === 'true';
+        const statusEl = document.getElementById('status');
+        const msgEl = document.getElementById('msg');
+        const chEl = document.getElementById('ch');
+        const overlayInfoEl = document.getElementById('overlayInfo');
+        const componentsEl = document.getElementById('components');
+        const jsonWrapEl = document.getElementById('jsonWrap');
+        const jsonEl = document.getElementById('json');
+        const stageEl = document.getElementById('stage');
+        if (debug) {
+          document.querySelector('.wrap').style.display = 'flex';
+        }
+        chEl.textContent = String(ch);
+
+        const endpoint = `ws://127.0.0.1:3620/overlay?ch=${ch}`;
+
+        let ws = null;
+        let reconnectTimer = null;
+        let currentOverlayId = '';
+        let timeInterval = null;
+
+        function setStatus(text, cls) {
+          statusEl.textContent = text;
+          statusEl.className = `mono ${cls || ''}`.trim();
+        }
+
+        function connect() {
+          try {
+            ws = new WebSocket(endpoint);
+          } catch (e) {
+            console.warn('WS ctor failed:', e);
+            scheduleReconnect();
+            return;
+          }
+
+          setStatus('connecting…', 'warn');
+
+          ws.addEventListener('open', () => {
+            console.log(`[overlay.html] connected → ${endpoint}`);
+            setStatus('connected', 'ok');
+          });
+
+          ws.addEventListener('message', (ev) => {
+            console.log(`[overlay.html] ch ${ch} message:`, ev.data);
+            const raw = String(typeof ev.data === 'string' ? ev.data : '');
+            msgEl.textContent = raw || '(empty)';
+
+            // Try to extract overlayId from message
+            let candidate = '';
+            const trimmed = raw.trim().toLowerCase();
+            if (!trimmed) {
+              // Empty payload means clear overlay
+              currentOverlayId = '';
+              stageEl.innerHTML = '';
+              return;
+            }
+            if (trimmed === 'none' || trimmed === 'null' || trimmed === '0') {
+              currentOverlayId = '';
+              stageEl.innerHTML = '';
+              return;
+            }
+            // 1) JSON payload with { overlayId }
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed && typeof parsed === 'object' && typeof parsed.overlayId === 'string') {
+                candidate = parsed.overlayId;
+              }
+            } catch {}
+            // 2) Plain 24-hex string
+            if (!candidate) {
+              const t = raw.trim();
+              if (/^[a-fA-F0-9]{24}$/.test(t)) candidate = t;
+            }
+
+            if (candidate && candidate !== currentOverlayId) {
+              currentOverlayId = candidate;
+              fetchAndRenderComponents(candidate);
+            }
+          });
+
+          ws.addEventListener('close', () => {
+            console.log('[overlay.html] socket closed');
+            setStatus('closed', 'warn');
+            scheduleReconnect();
+          });
+
+          ws.addEventListener('error', (err) => {
+            console.warn('[overlay.html] socket error:', err);
+            setStatus('error', 'err');
+          });
+        }
+
+        function scheduleReconnect() {
+          if (reconnectTimer) return;
+          reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+            connect();
+          }, 1500);
+        }
+
+        window.addEventListener('beforeunload', () => {
+          try { ws && ws.close(); } catch {}
+        });
+
+        connect();
+
+        // Helpers: formatting
+        function pad2(n) { return n < 10 ? '0' + n : String(n) }
+        function formatDate(d, fmt) {
+          const Y = d.getFullYear();
+          const M = pad2(d.getMonth() + 1);
+          const D = pad2(d.getDate());
+          switch (fmt) {
+            case 'DD/MM/YYYY': return `${D}/${M}/${Y}`;
+            case 'YYYY-MM-DD':
+            default: return `${Y}-${M}-${D}`;
+          }
+        }
+        function formatTime(d, twentyFourHour) {
+          let h = d.getHours();
+          const m = pad2(d.getMinutes());
+          const s = pad2(d.getSeconds());
+          if (twentyFourHour) return `${pad2(h)}:${m}:${s}`;
+          const ampm = h >= 12 ? 'PM' : 'AM';
+          h = h % 12; if (h === 0) h = 12;
+          return `${pad2(h)}:${m}:${s} ${ampm}`;
+        }
+
+        // Render components onto stage
+        function renderComponents(list) {
+          // Clear stage and any timer
+          stageEl.innerHTML = '';
+          if (timeInterval) { try { clearInterval(timeInterval) } catch {} timeInterval = null }
+
+          for (const c of list) {
+            const item = document.createElement('div');
+            item.className = 'overlay-item';
+            item.style.left = `${c.x}px`;
+            item.style.top = `${c.y}px`;
+            item.style.width = `${c.width}px`;
+            item.style.height = `${c.height}px`;
+            item.style.background = c.backgroundColor || 'transparent';
+            if (c.borderColor && c.borderColor !== 'transparent') {
+              item.style.border = `1px solid ${c.borderColor}`;
+            }
+            item.style.borderRadius = `${Number(c.radius || 0)}px`;
+
+            if (c.type === 'image' && c.imagePath) {
+              const img = document.createElement('img');
+              img.src = c.imagePath;
+              img.style.width = '100%';
+              img.style.height = '100%';
+              img.style.objectFit = 'contain';
+              item.appendChild(img);
+            } else {
+              const box = document.createElement('div');
+              box.className = 'text-box';
+
+              // Alignments
+              const align = (c.textStyle && c.textStyle.align) || 'left';
+              const vAlign = (c.textStyle && c.textStyle.verticalAlign) || 'top';
+              let justifyContent = 'flex-start';
+              if (align === 'center') justifyContent = 'center';
+              if (align === 'right') justifyContent = 'flex-end';
+              let alignItems = 'flex-start';
+              if (vAlign === 'center') alignItems = 'center';
+              if (vAlign === 'bottom') alignItems = 'flex-end';
+              box.style.justifyContent = justifyContent;
+              box.style.alignItems = alignItems;
+
+              const content = document.createElement('div');
+              content.className = 'text-content';
+              const ts = c.textStyle || {};
+              content.style.fontFamily = ts.fontFamily || 'Inter, ui-sans-serif, system-ui';
+              if (typeof ts.fontSize === 'number') content.style.fontSize = `${ts.fontSize}px`;
+              if (ts.fontWeight != null) content.style.fontWeight = String(ts.fontWeight);
+              content.style.color = ts.color || '#FFFFFF';
+              if (typeof ts.letterSpacing === 'number') content.style.letterSpacing = `${ts.letterSpacing}px`;
+              if (typeof ts.lineHeight !== 'undefined') content.style.lineHeight = String(ts.lineHeight);
+              content.style.fontStyle = ts.italic ? 'italic' : 'normal';
+              content.style.textDecoration = ts.underline ? 'underline' : 'none';
+              content.style.textTransform = ts.uppercase ? 'uppercase' : 'none';
+              content.style.textAlign = align;
+
+              const resolveText = () => {
+                if (c.type === 'custom-text') return c.customText || '';
+                if (c.type === 'date') {
+                  const now = (c.useUTC ? new Date(Date.now()) : new Date());
+                  const d = c.useUTC ? new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) : now;
+                  return formatDate(c.useUTC ? new Date(now.toUTCString()) : now, c.dateFormat || 'YYYY-MM-DD');
+                }
+                if (c.type === 'time') {
+                  const now = c.useUTC ? new Date(new Date().toUTCString()) : new Date();
+                  return formatTime(now, c.twentyFourHour !== false);
+                }
+                // TODO: dive/task/node/data could be wired to live data; for now show name
+                return c.name || '';
+              }
+              content.textContent = resolveText();
+
+              // For time/date, start interval updates
+              if (c.type === 'time' || c.type === 'date') {
+                timeInterval = setInterval(() => {
+                  content.textContent = resolveText();
+                }, 1000);
+              }
+
+              box.appendChild(content);
+              item.appendChild(box);
+            }
+
+            stageEl.appendChild(item);
+          }
+        }
+
+        // Fetch components and render
+        async function fetchAndRenderComponents(id) {
+          try {
+            const res = await fetch(`/api/overlay-components?overlayId=${encodeURIComponent(id)}`);
+            const json = await res.json();
+            if (!json?.ok) throw new Error(json?.error || 'Failed to fetch');
+            const list = Array.isArray(json.data) ? json.data : [];
+            renderComponents(list);
+            if (debug) {
+              componentsEl.innerHTML = '';
+              for (const c of list) {
+                const el = document.createElement('div');
+                el.className = 'item';
+                el.innerHTML = `
+                  <div class="label">${c.type} • ${c.name}</div>
+                  <div class="val mono">pos=(${c.x}, ${c.y}) size=${c.width}x${c.height}</div>
+                `;
+                componentsEl.appendChild(el);
+              }
+              overlayInfoEl.style.display = list.length ? 'block' : 'none';
+            }
+
+            // JSON view
+            if (debug) {
+              jsonEl.textContent = JSON.stringify(list, null, 2);
+              jsonWrapEl.style.display = 'block';
+            }
+          } catch (err) {
+            console.warn('[overlay.html] failed to load components:', err);
+            if (debug) {
+              overlayInfoEl.style.display = 'none';
+              jsonWrapEl.style.display = 'none';
+            }
+          }
+        }
+
+        // No need to read overlayId from URL; it will be provided via WebSocket message
+      })();
+    </script>
+  </body>
+  </html>
+
+

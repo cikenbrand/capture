@@ -205,7 +205,7 @@ export default function ChannelViewList() {
   );
 
   return (
-    <div className="h-full flex flex-col gap-2">
+    <div className="flex flex-col gap-2">
       <button title="Edit Node" className="flex items-center justify-center gap-2 border border-white/10 h-[35px] bg-black/10 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" onClick={() => setIsVideoConfigOpen(true)}>
         <MdSettings className="h-4.5 w-4.5" />
         <span>Video Configurations</span>

@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { MdDelete, MdEdit } from "react-icons/md";
 import OverlayList from "./components/overlay-editor/OverlayList";
 import RenameOverlayForm from "./components/overlay-editor/RenameOverlayForm";
-import { FaFolderTree } from "react-icons/fa6";
 import ComponentList from "./components/overlay-editor/ComponentList";
 import CreateCustomTextButton from "./components/overlay-editor/CreateCustomTextButton";
 import CreateImageButton from "./components/overlay-editor/CreateImageButton";
@@ -30,11 +29,13 @@ export default function OverlayEditor() {
     const [editComponentOpen, setEditComponentOpen] = useState(false)
     const [components, setComponents] = useState<any[]>([])
     const [selectedComponentIds, setSelectedComponentIds] = useState<string[]>([])
+    const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
 
     async function loadComponents() {
         try {
             const ovl = await window.ipcRenderer.invoke('app:getSelectedOverlayLayerId')
             const overlayId: string | null = ovl?.ok ? (ovl.data ?? null) : null
+            setSelectedOverlayId(overlayId)
             if (!overlayId) {
                 setComponents([])
                 return
@@ -182,7 +183,7 @@ export default function OverlayEditor() {
                                                     ) : (
                                                         <div className="text-white/60 text-xs">No image</div>
                                                     )
-                                                ) : c.type === 'custom-text' || c.type === 'time' || c.type === 'date' || c.type === 'data' || c.type === 'dive' || c.type === 'node' ? (
+                                                ) : c.type === 'custom-text' || c.type === 'time' || c.type === 'date' || c.type === 'data' || c.type === 'dive' || c.type === 'node' || c.type === 'task' ? (
                                                     <TextOverlayContent component={c} />
                                                 ) : (
                                                     <div className="text-white/80 text-xs">{c.name}</div>
@@ -202,12 +203,13 @@ export default function OverlayEditor() {
                         </TabsList>
                         <TabsContent value="properties" className="flex flex-col gap-1">
                             <div className="flex gap-1">
-                                <button onClick={() => setEditComponentOpen(true)} title="Edit Component" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                                <button onClick={() => setEditComponentOpen(true)} title="Edit Component" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdEdit className="h-4.5 w-4.5" />
                                 </button>
                                 <button
                                     title="Delete Component(s)"
                                     className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
+                                    disabled={!selectedOverlayId || selectedComponentIds.length === 0}
                                     onClick={async () => {
                                         try {
                                             const ids = selectedComponentIds
@@ -310,6 +312,9 @@ function TextOverlayContent({ component }: { component: any }) {
                 {level ? ` (L${level})` : ''}
             </span>
         )
+    }
+    if (component.type === 'task') {
+        return <span style={style}>{component.customText || component.name}</span>
     }
     return <span style={style}>{component.customText || component.name}</span>
 }

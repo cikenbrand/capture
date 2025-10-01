@@ -216,7 +216,7 @@ export default function EditComponentForm({ onClose }: Props) {
                     }
 
                     setBackgroundColor(normalizeHexColor(match?.backgroundColor, DEFAULT_BACKGROUND_COLOR))
-                    setCustomText(match?.type === 'custom-text' ? (match?.customText ?? '') : '')
+                    setCustomText(match?.type === 'custom-text' || match?.type === 'task' ? (match?.customText ?? '') : '')
                     setTwentyFourHour(match?.twentyFourHour ?? true)
                     setUseUTC(match?.useUTC ?? false)
                     setNodeLevel(typeof (match as any)?.nodeLevel === 'number' ? (match as any).nodeLevel : 1)
@@ -499,7 +499,7 @@ export default function EditComponentForm({ onClose }: Props) {
     const handleCustomTextChange = (event: ChangeEvent<HTMLInputElement>) => {
         const nextValue = event.target.value
         setCustomText(nextValue)
-        if (!canEdit || componentType !== 'custom-text') return
+        if (!canEdit || (componentType !== 'custom-text' && componentType !== 'task')) return
         void updateComponentCustomText(nextValue, selectedIds)
     }
 
@@ -622,7 +622,7 @@ export default function EditComponentForm({ onClose }: Props) {
                 />
             </div>
             <div className="flex flex-col gap-2">
-                {componentType === 'custom-text' ? (
+                {componentType === 'custom-text' || componentType === 'task' ? (
                     <div className="flex flex-col gap-1">
                         <span>Text</span>
                         <Input

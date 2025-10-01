@@ -46,6 +46,13 @@ export default function DeleteOverlayConfirmation({ onClose }: Props) {
                     await window.ipcRenderer.invoke('app:setSelectedOverlayLayerId', null)
                 } catch { }
                 try {
+                    await window.ipcRenderer.invoke('app:setSelectedOverlayComponentIds', [])
+                } catch { }
+                try {
+                    const evSel = new CustomEvent('selectedOverlayLayerChanged', { detail: null })
+                    window.dispatchEvent(evSel)
+                } catch { }
+                try {
                     const ev = new CustomEvent('overlaysChanged', { detail: { id: overlayId, action: 'deleted' } })
                     window.dispatchEvent(ev)
                 } catch { }
