@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react"
+import { memo, useEffect, useMemo, useRef, useState } from "react"
 import { hotkeysCoreFeature, selectionFeature, syncDataLoaderFeature } from "@headless-tree/core"
 import { AssistiveTreeDescription, useTree } from "@headless-tree/react"
 import { Tree, TreeItem, TreeItemLabel } from "@/components/ui/tree"
@@ -10,7 +10,7 @@ interface Item {
 
 const indent = 20
 
-function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record<string, Item>, expanded: string[], selectedId: string | null, onItemClick: (id: string, isFolder: boolean) => void }) {
+function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record<string, Item>, expanded: string[], selectedId: string | null, onItemClick: (id: string, isFolder: boolean, pathNames: string[]) => void }) {
   const features = useMemo(() => [
     syncDataLoaderFeature,
     selectionFeature,
@@ -24,6 +24,18 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
   const getItem = useMemo(() => (itemId: string) => data[itemId] ?? { name: '', children: [] }, [data])
   const getChildren = useMemo(() => (itemId: string) => data[itemId]?.children ?? [], [data])
   const dataLoader = useMemo(() => ({ getItem, getChildren }), [getItem, getChildren])
+
+  // Build parent map from children relationships for quick upward traversal
+  const parentOf = useMemo(() => {
+    const p: Record<string, string | undefined> = {}
+    try {
+      Object.keys(data).forEach((pid) => {
+        const ch = data[pid]?.children || []
+        ch.forEach((cid) => { p[cid] = pid })
+      })
+    } catch {}
+    return p
+  }, [data])
 
   const tree = useTree<Item>({
     initialState,
@@ -54,9 +66,25 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
               try {
                 const id = item.getId()
                 const isFolder = typeof item.isFolder === 'function' ? (item.isFolder() || false) : false
-                try { onItemClick(id, isFolder) } catch {}
                 const nextId = id === 'nodes-root' ? null : id
                 console.log('[NodesTree] selected node id:', nextId)
+                // Log hierarchical levels from top to selected
+                let pathNames: string[] = []
+                if (nextId) {
+                  const pathIds: string[] = []
+                  let cur: string | undefined = nextId
+                  let guard = 0
+                  while (cur && cur !== 'nodes-root' && cur !== 'root' && guard++ < 1000) {
+                    pathIds.push(cur)
+                    cur = parentOf[cur]
+                  }
+                  pathNames = pathIds.reverse().map((nid) => data[nid]?.name || '')
+                  if (pathNames.length) {
+                    const parts = pathNames.map((nm, idx) => `level ${idx + 1}: ${nm}`)
+                    console.log(parts.join(', '))
+                  }
+                }
+                try { onItemClick(id, isFolder, pathNames) } catch {}
                 await window.ipcRenderer.invoke('app:setSelectedNodeId', nextId)
                 try {
                   const ev = new CustomEvent('selectedNodeChanged', { detail: nextId })
@@ -86,6 +114,48 @@ export default function NodesTree() {
   const [pendingExpandIds, setPendingExpandIds] = useState<string[] | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
+  // WebSocket connections per overlay channel (1..4) to send node selection path
+  const socketsRef = useRef<Record<number, WebSocket | null>>({})
+  const WS_HOST = '127.0.0.1'
+  const WS_PORT = 3620
+
+  function getSocket(channelIndex: number): WebSocket | null {
+    const existing = socketsRef.current[channelIndex]
+    if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) {
+      return existing
+    }
+    try {
+      const ws = new WebSocket(`ws://${WS_HOST}:${WS_PORT}/overlay?ch=${channelIndex}`)
+      ws.addEventListener('close', () => {
+        try { if (socketsRef.current[channelIndex] === ws) socketsRef.current[channelIndex] = null } catch {}
+      })
+      ws.addEventListener('error', () => {
+        try { /* ignore */ } catch {}
+      })
+      socketsRef.current[channelIndex] = ws
+      return ws
+    } catch {
+      return existing ?? null
+    }
+  }
+
+  function broadcastNodeLevels(levelNames: string[]) {
+    const payload = JSON.stringify({ nodeLevels: levelNames })
+    for (const ch of [1, 2, 3, 4]) {
+      try {
+        const ws = getSocket(ch)
+        if (!ws || typeof (ws as any).send !== 'function') continue
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(payload)
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.addEventListener('open', () => {
+            try { ws.send(payload) } catch {}
+          }, { once: true })
+        }
+      } catch {}
+    }
+  }
+
   // Keep selected project id in sync
   useEffect(() => {
     let done = false
@@ -114,8 +184,11 @@ export default function NodesTree() {
     }
     async function load() {
       if (!projectId) {
+        // Clear tree when no project is selected
         setItems({ root: { name: 'Nodes', children: [] } })
-        setExpandedIds(['root', 'nodes-root'])
+        setExpandedIds(['root'])
+        setSelectedId(null)
+        setItemsVersion(v => v + 1)
         return
       }
       setLoading(true)
@@ -195,13 +268,16 @@ export default function NodesTree() {
           data={items}
           expanded={expandedIds}
           selectedId={selectedId}
-          onItemClick={(id, isFolder) => {
+          onItemClick={(id, isFolder, pathNames) => {
             if (isFolder) {
               setPendingExpandIds((prev) => {
                 const next = new Set(prev || [])
                 next.add(id)
                 return Array.from(next)
               })
+            }
+            if (Array.isArray(pathNames) && pathNames.length) {
+              try { broadcastNodeLevels(pathNames) } catch {}
             }
           }}
         />

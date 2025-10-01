@@ -4,6 +4,9 @@ import {
     MenubarItem,
     MenubarMenu,
     MenubarSeparator,
+    MenubarSub,
+    MenubarSubContent,
+    MenubarSubTrigger,
     MenubarTrigger,
 } from "@/components/ui/menubar"
 import { VscChromeMinimize, VscChromeClose } from "react-icons/vsc";
@@ -20,6 +23,7 @@ export default function AppWindowBar() {
     const [openProjectOpen, setOpenProjectOpen] = useState(false)
     const [editProjectOpen, setEditProjectOpen] = useState(false)
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+    const [recentProjects, setRecentProjects] = useState<{ _id: string; name: string }[]>([])
 
     useEffect(() => {
         let done = false
@@ -27,6 +31,14 @@ export default function AppWindowBar() {
                 try {
                     const res = await window.ipcRenderer.invoke('app:getSelectedProjectId')
                     if (!done && res?.ok) setSelectedProjectId(res.data ?? null)
+                    // Load recent projects (top 5 by createdAt desc already from backend)
+                    const all = await window.ipcRenderer.invoke('db:getAllProjects')
+                    if (!done && all?.ok && Array.isArray(all.data)) {
+                        const top5 = (all.data as any[]).slice(0, 5).map(p => ({ _id: p._id, name: p.name }))
+                        setRecentProjects(top5)
+                    } else if (!done) {
+                        setRecentProjects([])
+                    }
                 } catch { }
             })()
         const onChanged = (e: any) => {
@@ -58,6 +70,28 @@ export default function AppWindowBar() {
                             <MenubarItem onClick={() => setOpenProjectOpen(true)}>
                                 Open Project
                             </MenubarItem>
+                            <MenubarSub>
+                                <MenubarSubTrigger>Open Recent Projects</MenubarSubTrigger>
+                                <MenubarSubContent>
+                                    {recentProjects.length === 0 ? (
+                                        <MenubarItem data-disabled className="opacity-50">(none)</MenubarItem>
+                                    ) : (
+                                        recentProjects.map(p => (
+                                            <MenubarItem key={p._id} onClick={async () => {
+                                                try {
+                                                    await window.ipcRenderer.invoke('app:setSelectedProjectId', p._id)
+                                                    setSelectedProjectId(p._id)
+                                                    try {
+                                                        const ev = new CustomEvent('selectedProjectChanged', { detail: p._id })
+                                                        window.dispatchEvent(ev)
+                                                    } catch {}
+                                                } catch {}
+                                            }}>{p.name}</MenubarItem>
+                                        ))
+                                    )}
+                                </MenubarSubContent>
+                            </MenubarSub>
+
                             <MenubarSeparator />
                             <MenubarItem onClick={() => setEditProjectOpen(true)} disabled={!selectedProjectId}>
                                 Edit Project
@@ -75,6 +109,12 @@ export default function AppWindowBar() {
                                             try {
                                                 const ev2 = new CustomEvent('selectedDiveChanged', { detail: null })
                                                 window.dispatchEvent(ev2)
+                                                // Clear selected node as well
+                                                await window.ipcRenderer.invoke('app:setSelectedNodeId', null)
+                                                try {
+                                                    const ev3 = new CustomEvent('selectedNodeChanged', { detail: null })
+                                                    window.dispatchEvent(ev3)
+                                                } catch {}
                                             } catch { }
                                         } catch { }
                                     } catch { }

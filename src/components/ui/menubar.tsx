@@ -227,7 +227,8 @@ function MenubarSubTrigger({
       data-slot="menubar-sub-trigger"
       data-inset={inset}
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-[state=open]:bg-accent data-[state=open]:text-accent-foreground flex cursor-default items-center rounded-sm px-2 py-1.5 text-sm outline-none select-none data-[inset]:pl-8",
+        // Match MenubarTrigger styling
+        "text-[#B2B5BA] hover:text-white hover:bg-[#363A41] focus:bg-[#363A41] data-[state=open]:bg-[#363A41] data-[state=open]:text-blue-300 flex items-center rounded-[2px] px-2 py-1 text-sm outline-hidden select-none data-[inset]:pl-8",
         className
       )}
       {...props}
@@ -246,7 +247,8 @@ function MenubarSubContent({
     <MenubarPrimitive.SubContent
       data-slot="menubar-sub-content"
       className={cn(
-        "bg-popover text-popover-foreground z-50 min-w-[8rem] origin-(--radix-menubar-content-transform-origin) overflow-hidden rounded-md border p-1 shadow-lg",
+        // Match MenubarContent styling
+        "bg-[#363D4A] text z-50 min-w-[12rem] origin-(--radix-menubar-content-transform-origin) overflow-hidden border border-black",
         className
       )}
       {...props}

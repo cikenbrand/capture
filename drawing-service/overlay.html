@@ -127,8 +127,14 @@
             // 1) JSON payload with { overlayId }
             try {
               const parsed = JSON.parse(raw);
-              if (parsed && typeof parsed === 'object' && typeof parsed.overlayId === 'string') {
-                candidate = parsed.overlayId;
+              if (parsed && typeof parsed === 'object') {
+                if (typeof parsed.overlayId === 'string') {
+                  candidate = parsed.overlayId;
+                }
+                if (Array.isArray(parsed.nodeLevels)) {
+                  try { window.__nodeLevels = parsed.nodeLevels } catch {}
+                  updateNodeTexts();
+                }
               }
             } catch {}
             // 2) Plain 24-hex string
@@ -246,6 +252,7 @@
               content.style.textDecoration = ts.underline ? 'underline' : 'none';
               content.style.textTransform = ts.uppercase ? 'uppercase' : 'none';
               content.style.textAlign = align;
+              
 
               const resolveText = () => {
                 if (c.type === 'custom-text') return c.customText || '';
@@ -258,7 +265,14 @@
                   const now = c.useUTC ? new Date(new Date().toUTCString()) : new Date();
                   return formatTime(now, c.twentyFourHour !== false);
                 }
-                // TODO: dive/task/node/data could be wired to live data; for now show name
+                if (c.type === 'node') {
+                  // nodeLevel is 1-based index
+                  const lvl = Number(c.nodeLevel || 1)
+                  const idx = Math.max(1, lvl) - 1
+                  const val = (window.__nodeLevels && Array.isArray(window.__nodeLevels) && window.__nodeLevels[idx]) || ''
+                  return String(val || '')
+                }
+                // TODO: dive/task/data could be wired to live data; for now show name
                 return c.name || '';
               }
               content.textContent = resolveText();
@@ -270,12 +284,33 @@
                 }, 1000);
               }
 
+              // Tag node items for later dynamic updates
+              if (c.type === 'node') {
+                try { item.setAttribute('data-kind', 'node'); } catch {}
+                try { item.setAttribute('data-node-level', String(c.nodeLevel || 1)); } catch {}
+              }
+
               box.appendChild(content);
               item.appendChild(box);
             }
 
             stageEl.appendChild(item);
           }
+        }
+
+        function updateNodeTexts() {
+          try {
+            const items = stageEl.querySelectorAll('.overlay-item[data-kind="node"]');
+            items.forEach((el) => {
+              try {
+                const lvl = Number(el.getAttribute('data-node-level') || '1');
+                const idx = Math.max(1, lvl) - 1;
+                const val = (window.__nodeLevels && Array.isArray(window.__nodeLevels) && window.__nodeLevels[idx]) || '';
+                const content = el.querySelector('.text-content');
+                if (content && typeof content.textContent !== 'undefined') content.textContent = String(val || '');
+              } catch {}
+            });
+          } catch {}
         }
 
         // Fetch components and render
@@ -286,6 +321,7 @@
             if (!json?.ok) throw new Error(json?.error || 'Failed to fetch');
             const list = Array.isArray(json.data) ? json.data : [];
             renderComponents(list);
+            updateNodeTexts();
             if (debug) {
               componentsEl.innerHTML = '';
               for (const c of list) {
