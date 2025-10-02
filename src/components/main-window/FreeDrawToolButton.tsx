@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 export default function FreeDrawToolButton() {
   const [selectedTool, setSelectedTool] = useState<null | 'select' | 'arrow' | 'circle' | 'free' | 'rect' | 'eraser'>(null)
+  const [isMultiView, setIsMultiView] = useState(false)
   const isActive = selectedTool === 'free'
 
   useEffect(() => {
@@ -18,11 +19,19 @@ export default function FreeDrawToolButton() {
       try { setSelectedTool((e?.detail ?? null) || null) } catch {}
     }
     window.addEventListener('selectedDrawingToolChanged', onChanged as any)
-    return () => window.removeEventListener('selectedDrawingToolChanged', onChanged as any)
+    const onMultiView = (e: any) => {
+      try { setIsMultiView(!!e?.detail) } catch {}
+    }
+    window.addEventListener('app:multiview-changed', onMultiView as any)
+    return () => {
+      window.removeEventListener('selectedDrawingToolChanged', onChanged as any)
+      window.removeEventListener('app:multiview-changed', onMultiView as any)
+    }
   }, [])
   
   return (
     <button
+      disabled={isMultiView}
       onClick={async () => {
         const next = selectedTool === 'free' ? null : 'free'
         try {

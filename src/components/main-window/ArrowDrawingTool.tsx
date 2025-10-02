@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 export default function ArrowDrawingTool() {
     const [selectedTool, setSelectedTool] = useState<null | 'select' | 'arrow' | 'circle' | 'free' | 'rect' | 'eraser'>(null)
+    const [isMultiView, setIsMultiView] = useState(false)
     const isActive = selectedTool === 'arrow'
 
     useEffect(() => {
@@ -17,12 +18,20 @@ export default function ArrowDrawingTool() {
         const onChanged = (e: any) => {
             try { setSelectedTool((e?.detail ?? null) || null) } catch {}
         }
+        const onMultiView = (e: any) => {
+            try { setIsMultiView(!!e?.detail) } catch {}
+        }
         window.addEventListener('selectedDrawingToolChanged', onChanged as any)
-        return () => window.removeEventListener('selectedDrawingToolChanged', onChanged as any)
+        window.addEventListener('app:multiview-changed', onMultiView as any)
+        return () => {
+            window.removeEventListener('selectedDrawingToolChanged', onChanged as any)
+            window.removeEventListener('app:multiview-changed', onMultiView as any)
+        }
     }, [])
 
     return (
         <button
+            disabled={isMultiView}
             onClick={async () => {
                 const next = selectedTool === 'arrow' ? null : 'arrow'
                 try {

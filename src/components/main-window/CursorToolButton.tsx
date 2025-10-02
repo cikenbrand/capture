@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 
 export default function CursorToolButton() {
     const [selectedTool, setSelectedTool] = useState<null | 'select' | 'arrow' | 'circle' | 'free' | 'rect' | 'eraser'>(null)
+    const [isMultiView, setIsMultiView] = useState(false)
     const isActive = selectedTool === 'select'
 
     useEffect(() => {
@@ -17,11 +18,16 @@ export default function CursorToolButton() {
         const onChanged = (e: any) => {
             try { setSelectedTool((e?.detail ?? null) || null) } catch {}
         }
+        const onMultiView = (e: any) => {
+            try { setIsMultiView(!!e?.detail) } catch {}
+        }
         window.addEventListener('selectedDrawingToolChanged', onChanged as any)
+        window.addEventListener('app:multiview-changed', onMultiView as any)
         return () => window.removeEventListener('selectedDrawingToolChanged', onChanged as any)
     }, [])
     return (
         <button
+            disabled={isMultiView}
             onClick={async () => {
                 const next = selectedTool === 'select' ? null : 'select'
                 try {

@@ -179,7 +179,7 @@ function App() {
                   <MdDelete className="h-4.5 w-4.5" />
                 </button>
               </div>
-              <ShowNodesRemarks/>
+              <ShowNodesRemarks />
               <div className="bg-[#21262E] p-1 h-full">
                 <NodesTree />
               </div>
@@ -224,10 +224,10 @@ function App() {
                     <BsCameraFill className="h-4 w-4" />
                   </button>
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <CursorToolButton/>
-                  <FreeDrawToolButton/>
-                  <ArrowDrawingTool/>
-                  <CircleDrawingTool/>
+                  <CursorToolButton />
+                  <FreeDrawToolButton />
+                  <ArrowDrawingTool />
+                  <CircleDrawingTool />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
                   <button title="Mute Microphone" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaMicrophone className="h-4 w-4" />
@@ -247,7 +247,7 @@ function App() {
                 <TabsTrigger value="events">Events</TabsTrigger>
               </TabsList>
               <TabsContent value="alllogs" className="flex flex-col gap-1">
-                <AllLogsTable/>
+                <AllLogsTable />
               </TabsContent>
               <TabsContent value="events" className="flex flex-col gap-1">
 
@@ -261,9 +261,9 @@ function App() {
               <TabsTrigger value="device">Device</TabsTrigger>
             </TabsList>
             <TabsContent value="device" className="flex flex-col gap-1">
-              <ChannelViewList/>
-              <div className="w-full h-[1px] bg-white/20 my-2"/>
-              <ChannelOverlaySelection/>
+              <ChannelViewList />
+              <div className="w-full h-[1px] bg-white/20 my-2" />
+              <ChannelOverlaySelection />
             </TabsContent>
           </Tabs>
         </div>
