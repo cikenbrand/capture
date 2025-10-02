@@ -26,7 +26,14 @@ export async function renameOverlay(id: string, name: string): Promise<OverlayDo
 
   const _id = new ObjectId(id)
   const now = new Date()
-  await overlays.updateOne({ _id }, { $set: { name: name.trim(), updatedAt: now } })
+  const trimmed = name.trim()
+  if (!trimmed) throw new Error('Overlay name is required')
+  // prevent duplicate names (case-insensitive), excluding current _id
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const existing = await overlays.findOne({ _id: { $ne: _id }, name: { $regex: `^${escapeRegex(trimmed)}$`, $options: 'i' } } as any)
+  if (existing) throw new Error('An overlay with this name already exists')
+
+  await overlays.updateOne({ _id }, { $set: { name: trimmed, updatedAt: now } })
   const updated = await overlays.findOne({ _id })
   return updated
 }

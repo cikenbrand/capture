@@ -16,6 +16,10 @@ export default function ChannelOverlaySelection() {
     const [ch2OverlayId, setCh2OverlayId] = useState<string | null>(null)
     const [ch3OverlayId, setCh3OverlayId] = useState<string | null>(null)
     const [ch4OverlayId, setCh4OverlayId] = useState<string | null>(null)
+    const ch1Ref = useRef<string | null>(null)
+    const ch2Ref = useRef<string | null>(null)
+    const ch3Ref = useRef<string | null>(null)
+    const ch4Ref = useRef<string | null>(null)
 
     // WebSocket connections per channel (1-based index)
     const socketsRef = useRef<Record<number, WebSocket | null>>({})
@@ -45,7 +49,7 @@ export default function ChannelOverlaySelection() {
     function sendOverlaySelection(channelIndex: number, overlayId: string | null) {
 		try {
 			const ws = getSocket(channelIndex)
-			const payload = overlayId ? JSON.stringify({ overlayId }) : ''
+			const payload = overlayId ? JSON.stringify({ overlayId }) : 'none'
 			if (!ws || typeof (ws as any).send !== 'function') return
 			if (ws.readyState === WebSocket.OPEN) {
 				ws.send(payload)
@@ -64,12 +68,12 @@ export default function ChannelOverlaySelection() {
 		} catch {}
 	}
 
-	function setOverlayForChannel(channelIndex: number, overlayId: string | null) {
+    function setOverlayForChannel(channelIndex: number, overlayId: string | null) {
 		switch (channelIndex) {
-			case 1: setCh1OverlayId(overlayId); break
-			case 2: setCh2OverlayId(overlayId); break
-			case 3: setCh3OverlayId(overlayId); break
-			case 4: setCh4OverlayId(overlayId); break
+			case 1: setCh1OverlayId(overlayId); ch1Ref.current = overlayId; break
+			case 2: setCh2OverlayId(overlayId); ch2Ref.current = overlayId; break
+			case 3: setCh3OverlayId(overlayId); ch3Ref.current = overlayId; break
+			case 4: setCh4OverlayId(overlayId); ch4Ref.current = overlayId; break
 		}
 		sendOverlaySelection(channelIndex, overlayId)
 	}
@@ -104,11 +108,33 @@ export default function ChannelOverlaySelection() {
 
     useEffect(() => {
         loadOverlays()
-        const onChanged = () => loadOverlays()
+        const onChanged = (e?: any) => {
+            try {
+                const detail = e?.detail
+                if (detail && detail.action === 'deleted' && detail.id) {
+                    const deletedId = String(detail.id)
+                    // Clear per-channel selections that reference the deleted overlay and notify overlay.html
+                    if (ch1Ref.current === deletedId) { setOverlayForChannel(1, null) }
+                    if (ch2Ref.current === deletedId) { setOverlayForChannel(2, null) }
+                    if (ch3Ref.current === deletedId) { setOverlayForChannel(3, null) }
+                    if (ch4Ref.current === deletedId) { setOverlayForChannel(4, null) }
+                }
+            } catch {}
+            loadOverlays()
+        }
         window.addEventListener('overlaysChanged', onChanged as any)
         // Listen for Electron-level overlay rename events
         try {
-            (window as any).ipcRenderer?.on('overlays:changed', () => {
+            (window as any).ipcRenderer?.on('overlays:changed', (_e: any, payload: any) => {
+                try {
+                    if (payload && payload.action === 'deleted' && payload.id) {
+                        const deletedId = String(payload.id)
+                        if (ch1Ref.current === deletedId) { setOverlayForChannel(1, null) }
+                        if (ch2Ref.current === deletedId) { setOverlayForChannel(2, null) }
+                        if (ch3Ref.current === deletedId) { setOverlayForChannel(3, null) }
+                        if (ch4Ref.current === deletedId) { setOverlayForChannel(4, null) }
+                    }
+                } catch {}
                 try { loadOverlays() } catch {}
             })
         } catch {}

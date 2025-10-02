@@ -70,20 +70,19 @@ export default function OverlayEditor() {
         }
         const onOverlayRefresh = async () => {
             try {
-                const ovl = await window.ipcRenderer.invoke('app:getSelectedOverlayLayerId')
-                const overlayId: string | null = ovl?.ok ? (ovl.data ?? null) : null
-                if (!overlayId) return
-                // Broadcast refresh message to all channels in 1..4
+                // Broadcast refresh message (without overlayId) to channels 1..4.
+                // overlay.html will only refresh if it already has a current overlay selected.
                 for (let ch = 1; ch <= 4; ch++) {
                     try {
                         const ws = new WebSocket(`ws://127.0.0.1:3620/overlay?ch=${ch}`)
-                        ws.addEventListener('open', () => {
-                            try { ws.send(JSON.stringify({ overlayId, action: 'refresh' })) } catch { }
-                            try { ws.close() } catch { }
-                        }, { once: true })
+                        const sendRefresh = () => {
+                            try { ws.send(JSON.stringify({ action: 'refresh' })) } catch {}
+                            try { ws.close() } catch {}
+                        }
                         if (ws.readyState === WebSocket.OPEN) {
-                            try { ws.send(JSON.stringify({ overlayId, action: 'refresh' })) } catch { }
-                            try { ws.close() } catch { }
+                            sendRefresh()
+                        } else {
+                            ws.addEventListener('open', sendRefresh, { once: true })
                         }
                     } catch { }
                 }

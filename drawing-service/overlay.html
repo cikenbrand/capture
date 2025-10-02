@@ -116,9 +116,7 @@
             let candidate = '';
             const trimmed = raw.trim().toLowerCase();
             if (!trimmed) {
-              // Empty payload means clear overlay
-              currentOverlayId = '';
-              stageEl.innerHTML = '';
+              // Empty payload: ignore to avoid unintended clears from bad senders
               return;
             }
             if (trimmed === 'none' || trimmed === 'null' || trimmed === '0') {
@@ -126,7 +124,7 @@
               stageEl.innerHTML = '';
               return;
             }
-            // 1) JSON payload with { overlayId }
+            // 1) JSON payload with { overlayId } or { action: 'refresh' }
             try {
               const parsed = JSON.parse(raw);
               if (parsed && typeof parsed === 'object') {
@@ -152,7 +150,7 @@
                 }
               }
             } catch {}
-            // 2) Plain 24-hex string
+            // 2) Plain 24-hex string (explicit selection)
             if (!candidate) {
               const t = raw.trim();
               if (/^[a-fA-F0-9]{24}$/.test(t)) candidate = t;

@@ -396,10 +396,20 @@ async function createOverlay(input) {
   return { _id: result.insertedId, ...doc };
 }
 ipcMain.handle("db:createOverlay", async (_event, input) => {
-  var _a, _b;
+  var _a, _b, _c, _d;
   try {
     const created = await createOverlay(input);
     const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
+    try {
+      const payload = { id, action: "created", name: ((_d = (_c = input == null ? void 0 : input.name) == null ? void 0 : _c.trim) == null ? void 0 : _d.call(_c)) || "" };
+      for (const win2 of BrowserWindow.getAllWindows()) {
+        try {
+          win2.webContents.send("overlays:changed", payload);
+        } catch {
+        }
+      }
+    } catch {
+    }
     return { ok: true, data: id };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -1438,6 +1448,16 @@ ipcMain.handle("db:deleteOverlay", async (_event, input) => {
     if (!(input == null ? void 0 : input.id)) throw new Error("Invalid id");
     const ok = await deleteOverlay(input.id);
     if (!ok) throw new Error("Overlay not found");
+    try {
+      const payload = { id: input.id, action: "deleted" };
+      for (const win2 of BrowserWindow.getAllWindows()) {
+        try {
+          win2.webContents.send("overlays:changed", payload);
+        } catch {
+        }
+      }
+    } catch {
+    }
     return { ok: true, data: input.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

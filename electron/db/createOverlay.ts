@@ -1,6 +1,6 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 
 export interface NewOverlay {
   name: string
@@ -35,8 +35,16 @@ export async function createOverlay(input: NewOverlay): Promise<OverlayDoc> {
   const overlays = db.collection<OverlayDoc>('overlays')
 
   const now = new Date()
+  const trimmedName = input.name.trim()
+  if (!trimmedName) throw new Error('Overlay name is required')
+
+  // Prevent duplicate names (case-insensitive)
+  const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const existing = await overlays.findOne({ name: { $regex: `^${escapeRegex(trimmedName)}$`, $options: 'i' } } as any)
+  if (existing) throw new Error('An overlay with this name already exists')
+
   const doc = {
-    name: input.name.trim(),
+    name: trimmedName,
     createdAt: now,
     updatedAt: now,
   }
@@ -58,6 +66,12 @@ ipcMain.handle('db:createOverlay', async (_event, input: NewOverlay) => {
   try {
     const created = await createOverlay(input)
     const id = (created as any)?._id?.toString?.() ?? created
+    try {
+      const payload = { id, action: 'created', name: input?.name?.trim?.() || '' }
+      for (const win of BrowserWindow.getAllWindows()) {
+        try { win.webContents.send('overlays:changed', payload) } catch {}
+      }
+    } catch {}
     return { ok: true, data: id }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

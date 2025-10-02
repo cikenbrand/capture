@@ -28,6 +28,8 @@ export default function CreateOverlayForm({ onClose }: Props) {
                     const ev = new CustomEvent('overlaysChanged', { detail: { id: newId, action: 'created' } })
                     window.dispatchEvent(ev)
                 } catch {}
+                // Notify channel overlay selection to refresh (Electron event also emitted)
+                try { (window as any).ipcRenderer?.send?.('noop') } catch {}
                 onClose()
             } else {
                 setError(result?.error || 'Failed to create overlay')

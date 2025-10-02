@@ -1,6 +1,6 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import type { OverlayDoc } from './createOverlay'
 
 let cachedClient: MongoClient | null = null
@@ -33,6 +33,12 @@ ipcMain.handle('db:deleteOverlay', async (_event, input: { id: string }) => {
     if (!input?.id) throw new Error('Invalid id')
     const ok = await deleteOverlay(input.id)
     if (!ok) throw new Error('Overlay not found')
+    try {
+      const payload = { id: input.id, action: 'deleted' }
+      for (const win of BrowserWindow.getAllWindows()) {
+        try { win.webContents.send('overlays:changed', payload) } catch {}
+      }
+    } catch {}
     return { ok: true, data: input.id }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
