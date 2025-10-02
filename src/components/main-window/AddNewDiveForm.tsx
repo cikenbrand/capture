@@ -49,6 +49,12 @@ export default function AddNewDive({ onClose }: Props) {
             const ev = new CustomEvent('selectedDiveChanged', { detail: newDiveId })
             window.dispatchEvent(ev)
           } catch {}
+          // persist last selected dive on project
+          try {
+            if (projectId) {
+              await window.ipcRenderer.invoke('db:editProject', projectId, { lastSelectedDiveId: newDiveId })
+            }
+          } catch {}
         }
         onClose()
       } else {

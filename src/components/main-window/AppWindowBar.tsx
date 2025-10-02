@@ -23,28 +23,52 @@ export default function AppWindowBar() {
     const [openProjectOpen, setOpenProjectOpen] = useState(false)
     const [editProjectOpen, setEditProjectOpen] = useState(false)
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
-    const [recentProjects, setRecentProjects] = useState<{ _id: string; name: string }[]>([])
+    const [selectedProjectName, setSelectedProjectName] = useState<string | null>(null)
+    const [recentProjects, setRecentProjects] = useState<{ _id: string; name: string; lastSelectedDiveId?: string | null; lastSelectedTaskId?: string | null; lastSelectedNodeId?: string | null }[]>([])
 
     useEffect(() => {
         let done = false
             ; (async () => {
                 try {
                     const res = await window.ipcRenderer.invoke('app:getSelectedProjectId')
-                    if (!done && res?.ok) setSelectedProjectId(res.data ?? null)
+                    if (!done && res?.ok) {
+                        const id = res.data ?? null
+                        setSelectedProjectId(id)
+                        if (id) {
+                            try {
+                                const det = await window.ipcRenderer.invoke('db:getSelectedProjectDetails', id)
+                                if (!done) setSelectedProjectName(det?.ok ? (det.data?.name ?? null) : null)
+                            } catch {
+                                if (!done) setSelectedProjectName(null)
+                            }
+                        } else if (!done) {
+                            setSelectedProjectName(null)
+                        }
+                    }
                     // Load recent projects (top 5 by createdAt desc already from backend)
                     const all = await window.ipcRenderer.invoke('db:getAllProjects')
                     if (!done && all?.ok && Array.isArray(all.data)) {
-                        const top5 = (all.data as any[]).slice(0, 5).map(p => ({ _id: p._id, name: p.name }))
+                        const top5 = (all.data as any[]).slice(0, 5).map(p => ({ _id: p._id, name: p.name, lastSelectedDiveId: p.lastSelectedDiveId ?? null, lastSelectedTaskId: p.lastSelectedTaskId ?? null, lastSelectedNodeId: p.lastSelectedNodeId ?? null }))
                         setRecentProjects(top5)
                     } else if (!done) {
                         setRecentProjects([])
                     }
                 } catch { }
             })()
-        const onChanged = (e: any) => {
+        const onChanged = async (e: any) => {
             try {
                 const id = e?.detail ?? null
                 setSelectedProjectId(id)
+                if (id) {
+                    try {
+                        const det = await window.ipcRenderer.invoke('db:getSelectedProjectDetails', id)
+                        setSelectedProjectName(det?.ok ? (det.data?.name ?? null) : null)
+                    } catch {
+                        setSelectedProjectName(null)
+                    }
+                } else {
+                    setSelectedProjectName(null)
+                }
             } catch { }
         }
         window.addEventListener('selectedProjectChanged', onChanged as any)
@@ -81,11 +105,27 @@ export default function AppWindowBar() {
                                                 try {
                                                     await window.ipcRenderer.invoke('app:setSelectedProjectId', p._id)
                                                     setSelectedProjectId(p._id)
+                                                    setSelectedProjectName(p.name)
                                                     try {
                                                         const ev = new CustomEvent('selectedProjectChanged', { detail: p._id })
                                                         window.dispatchEvent(ev)
-                                                    } catch {}
-                                                } catch {}
+                                                    } catch { }
+                                                    try {
+                                                        await window.ipcRenderer.invoke('app:setSelectedDiveId', p.lastSelectedDiveId ?? null)
+                                                        const ev2 = new CustomEvent('selectedDiveChanged', { detail: p.lastSelectedDiveId ?? null })
+                                                        window.dispatchEvent(ev2)
+                                                    } catch { }
+                                                    try {
+                                                        await window.ipcRenderer.invoke('app:setSelectedTaskId', p.lastSelectedTaskId ?? null)
+                                                        const ev3 = new CustomEvent('selectedTaskChanged', { detail: p.lastSelectedTaskId ?? null })
+                                                        window.dispatchEvent(ev3)
+                                                    } catch { }
+                                                    try {
+                                                        await window.ipcRenderer.invoke('app:setSelectedNodeId', p.lastSelectedNodeId ?? null)
+                                                        const ev4 = new CustomEvent('selectedNodeChanged', { detail: p.lastSelectedNodeId ?? null })
+                                                        window.dispatchEvent(ev4)
+                                                    } catch { }
+                                                } catch { }
                                             }}>{p.name}</MenubarItem>
                                         ))
                                     )}
@@ -102,6 +142,7 @@ export default function AppWindowBar() {
                                     try {
                                         await window.ipcRenderer.invoke('app:setSelectedProjectId', null)
                                         setSelectedProjectId(null)
+                                        setSelectedProjectName(null)
                                         try {
                                             const ev = new CustomEvent('selectedProjectChanged', { detail: null })
                                             window.dispatchEvent(ev)
@@ -114,7 +155,7 @@ export default function AppWindowBar() {
                                                 try {
                                                     const ev3 = new CustomEvent('selectedNodeChanged', { detail: null })
                                                     window.dispatchEvent(ev3)
-                                                } catch {}
+                                                } catch { }
                                             } catch { }
                                         } catch { }
                                     } catch { }
@@ -132,6 +173,9 @@ export default function AppWindowBar() {
                         </MenubarContent>
                     </MenubarMenu>
                 </Menubar>
+            </div>
+            <div className="w-full flex items-center relative top-1">
+                <span>{selectedProjectName || ''}</span>
             </div>
             <div className='flex items-center gap-2 h-full'>
                 <button

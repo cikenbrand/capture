@@ -37,6 +37,18 @@ export default function DeleteNodeConfirmation({ onClose }: Props) {
       }
       try { await window.ipcRenderer.invoke('app:setSelectedNodeId', null) } catch {}
       try {
+        const evSel = new CustomEvent('selectedNodeChanged', { detail: null })
+        window.dispatchEvent(evSel)
+      } catch {}
+      // Clear last selected node on the project as well
+      try {
+        const pidRes = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+        const pid: string | null = pidRes?.ok ? (pidRes.data ?? null) : null
+        if (pid) {
+          await window.ipcRenderer.invoke('db:editProject', pid, { lastSelectedNodeId: null })
+        }
+      } catch {}
+      try {
         const ev = new CustomEvent('nodesChanged')
         window.dispatchEvent(ev)
       } catch {}

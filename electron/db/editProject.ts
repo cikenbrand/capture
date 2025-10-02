@@ -8,6 +8,9 @@ export interface EditProjectInput {
   contractor?: string
   vessel?: string
   location?: string
+  lastSelectedDiveId?: string | null
+  lastSelectedTaskId?: string | null
+  lastSelectedNodeId?: string | null
 }
 
 type ProjectType = 'platform' | 'pipeline'
@@ -20,6 +23,9 @@ export interface ProjectDoc {
   vessel: string
   location: string
   projectType: ProjectType
+  lastSelectedDiveId?: string | null
+  lastSelectedTaskId?: string | null
+  lastSelectedNodeId?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -55,6 +61,19 @@ export async function editProject(projectId: string, updates: EditProjectInput):
   if (typeof updates.contractor === 'string') set.contractor = updates.contractor.trim()
   if (typeof updates.vessel === 'string') set.vessel = updates.vessel.trim()
   if (typeof updates.location === 'string') set.location = updates.location.trim()
+  if (updates.hasOwnProperty('lastSelectedDiveId')) {
+    const v = updates.lastSelectedDiveId
+    // allow string or null; trim string
+    ;(set as any).lastSelectedDiveId = (typeof v === 'string') ? (v.trim() || null) : null
+  }
+  if (updates.hasOwnProperty('lastSelectedTaskId')) {
+    const v2 = updates.lastSelectedTaskId
+    ;(set as any).lastSelectedTaskId = (typeof v2 === 'string') ? (v2.trim() || null) : null
+  }
+  if (updates.hasOwnProperty('lastSelectedNodeId')) {
+    const v3 = updates.lastSelectedNodeId
+    ;(set as any).lastSelectedNodeId = (typeof v3 === 'string') ? (v3.trim() || null) : null
+  }
 
   const updated = await projects.findOneAndUpdate(
     { _id },
@@ -80,6 +99,9 @@ ipcMain.handle('db:editProject', async (_event, projectId: string, updates: Edit
       vessel: updated.vessel,
       location: updated.location,
       projectType: updated.projectType,
+      lastSelectedDiveId: updated.lastSelectedDiveId ?? null,
+      lastSelectedTaskId: updated.lastSelectedTaskId ?? null,
+      lastSelectedNodeId: updated.lastSelectedNodeId ?? null,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     }

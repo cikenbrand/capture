@@ -351,6 +351,12 @@ async function createProject(input) {
     vessel: input.vessel.trim(),
     location: input.location.trim(),
     projectType: input.projectType,
+    // initialize with no last selected dive
+    lastSelectedDiveId: null,
+    // initialize with no last selected task
+    lastSelectedTaskId: null,
+    // initialize with no last selected node
+    lastSelectedNodeId: null,
     createdAt: now,
     updatedAt: now
   };
@@ -387,8 +393,13 @@ async function createOverlay(input) {
   const db = client.db("capture");
   const overlays = db.collection("overlays");
   const now = /* @__PURE__ */ new Date();
+  const trimmedName = input.name.trim();
+  if (!trimmedName) throw new Error("Overlay name is required");
+  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const existing = await overlays.findOne({ name: { $regex: `^${escapeRegex(trimmedName)}$`, $options: "i" } });
+  if (existing) throw new Error("An overlay with this name already exists");
   const doc = {
-    name: input.name.trim(),
+    name: trimmedName,
     createdAt: now,
     updatedAt: now
   };
@@ -1003,6 +1014,9 @@ ipcMain.handle("db:getAllProjects", async () => {
       vessel: p.vessel,
       location: p.location,
       projectType: p.projectType,
+      lastSelectedDiveId: p.lastSelectedDiveId ?? null,
+      lastSelectedTaskId: p.lastSelectedTaskId ?? null,
+      lastSelectedNodeId: p.lastSelectedNodeId ?? null,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt
     }));
@@ -1189,6 +1203,9 @@ ipcMain.handle("db:getSelectedProjectDetails", async (_event, projectId) => {
       vessel: doc.vessel,
       location: doc.location,
       projectType: doc.projectType,
+      lastSelectedDiveId: doc.lastSelectedDiveId ?? null,
+      lastSelectedTaskId: doc.lastSelectedTaskId ?? null,
+      lastSelectedNodeId: doc.lastSelectedNodeId ?? null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt
     };
@@ -1268,6 +1285,18 @@ async function editProject(projectId, updates) {
   if (typeof updates.contractor === "string") set.contractor = updates.contractor.trim();
   if (typeof updates.vessel === "string") set.vessel = updates.vessel.trim();
   if (typeof updates.location === "string") set.location = updates.location.trim();
+  if (updates.hasOwnProperty("lastSelectedDiveId")) {
+    const v = updates.lastSelectedDiveId;
+    set.lastSelectedDiveId = typeof v === "string" ? v.trim() || null : null;
+  }
+  if (updates.hasOwnProperty("lastSelectedTaskId")) {
+    const v2 = updates.lastSelectedTaskId;
+    set.lastSelectedTaskId = typeof v2 === "string" ? v2.trim() || null : null;
+  }
+  if (updates.hasOwnProperty("lastSelectedNodeId")) {
+    const v3 = updates.lastSelectedNodeId;
+    set.lastSelectedNodeId = typeof v3 === "string" ? v3.trim() || null : null;
+  }
   const updated = await projects.findOneAndUpdate(
     { _id },
     { $set: set },
@@ -1289,6 +1318,9 @@ ipcMain.handle("db:editProject", async (_event, projectId, updates) => {
       vessel: updated.vessel,
       location: updated.location,
       projectType: updated.projectType,
+      lastSelectedDiveId: updated.lastSelectedDiveId ?? null,
+      lastSelectedTaskId: updated.lastSelectedTaskId ?? null,
+      lastSelectedNodeId: updated.lastSelectedNodeId ?? null,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt
     };
@@ -1395,7 +1427,12 @@ async function renameOverlay(id, name) {
   const overlays = db.collection("overlays");
   const _id = new ObjectId(id);
   const now = /* @__PURE__ */ new Date();
-  await overlays.updateOne({ _id }, { $set: { name: name.trim(), updatedAt: now } });
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("Overlay name is required");
+  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const existing = await overlays.findOne({ _id: { $ne: _id }, name: { $regex: `^${escapeRegex(trimmed)}$`, $options: "i" } });
+  if (existing) throw new Error("An overlay with this name already exists");
+  await overlays.updateOne({ _id }, { $set: { name: trimmed, updatedAt: now } });
   const updated = await overlays.findOne({ _id });
   return updated;
 }

@@ -172,6 +172,13 @@ export default function DiveSelection() {
       } catch {}
     } catch {}
 
+    // persist on project as lastSelectedDiveId
+    try {
+      if (projectId) {
+        await window.ipcRenderer.invoke('db:editProject', projectId, { lastSelectedDiveId: nextId })
+      }
+    } catch {}
+
     try {
       const name = dives.find(d => d._id === nextId)?.name || ''
       broadcastDiveName(name)

@@ -13,6 +13,9 @@ type Project = {
     vessel: string
     location: string
     projectType: "platform" | "pipeline"
+    lastSelectedDiveId?: string | null
+    lastSelectedTaskId?: string | null
+    lastSelectedNodeId?: string | null
     createdAt: string | Date
     updatedAt: string | Date
 }
@@ -54,6 +57,33 @@ export default function OpenProject({ onClose }: Props) {
         try {
             const ev = new CustomEvent('selectedProjectChanged', { detail: selectedId })
             window.dispatchEvent(ev)
+        } catch {}
+        // Auto-select last selected dive for this project, if any
+        try {
+            const targetDiveId = selectedProject?.lastSelectedDiveId ?? null
+            await window.ipcRenderer.invoke('app:setSelectedDiveId', targetDiveId)
+            try {
+                const ev2 = new CustomEvent('selectedDiveChanged', { detail: targetDiveId })
+                window.dispatchEvent(ev2)
+            } catch {}
+        } catch {}
+        // Auto-select last selected task for this project, if any
+        try {
+            const targetTaskId = selectedProject?.lastSelectedTaskId ?? null
+            await window.ipcRenderer.invoke('app:setSelectedTaskId', targetTaskId)
+            try {
+                const ev3 = new CustomEvent('selectedTaskChanged', { detail: targetTaskId })
+                window.dispatchEvent(ev3)
+            } catch {}
+        } catch {}
+        // Auto-select last selected node for this project, if any
+        try {
+            const targetNodeId = selectedProject?.lastSelectedNodeId ?? null
+            await window.ipcRenderer.invoke('app:setSelectedNodeId', targetNodeId)
+            try {
+                const ev4 = new CustomEvent('selectedNodeChanged', { detail: targetNodeId })
+                window.dispatchEvent(ev4)
+            } catch {}
         } catch {}
         onClose()
     }

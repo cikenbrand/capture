@@ -147,6 +147,15 @@ export default function TaskSelection() {
       } catch {}
     } catch {}
 
+    // persist on project as lastSelectedTaskId
+    try {
+      const res = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+      const pid = res?.ok ? (res.data ?? null) : null
+      if (pid) {
+        await window.ipcRenderer.invoke('db:editProject', pid, { lastSelectedTaskId: nextId })
+      }
+    } catch {}
+
     try {
       const name = tasks.find(t => t._id === nextId)?.name || ''
       broadcastTaskName(name)

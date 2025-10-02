@@ -90,6 +90,14 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
                   const ev = new CustomEvent('selectedNodeChanged', { detail: nextId })
                   window.dispatchEvent(ev)
                 } catch {}
+              // persist last selected node on project
+              try {
+                const res = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+                const pid = res?.ok ? (res.data ?? null) : null
+                if (pid) {
+                  await window.ipcRenderer.invoke('db:editProject', pid, { lastSelectedNodeId: nextId })
+                }
+              } catch {}
               } catch {}
             }}
           >

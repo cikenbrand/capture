@@ -12,6 +12,9 @@ export interface ProjectDoc {
   vessel: string
   location: string
   projectType: ProjectType
+  lastSelectedDiveId?: string | null
+  lastSelectedTaskId?: string | null
+  lastSelectedNodeId?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -57,6 +60,9 @@ ipcMain.handle('db:getSelectedProjectDetails', async (_event, projectId: string)
       vessel: doc.vessel,
       location: doc.location,
       projectType: doc.projectType,
+      lastSelectedDiveId: doc.lastSelectedDiveId ?? null,
+      lastSelectedTaskId: doc.lastSelectedTaskId ?? null,
+      lastSelectedNodeId: doc.lastSelectedNodeId ?? null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     }

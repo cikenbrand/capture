@@ -42,6 +42,12 @@ export async function createProject(input: NewProject) {
     vessel: input.vessel.trim(),
     location: input.location.trim(),
     projectType: input.projectType,
+    // initialize with no last selected dive
+    lastSelectedDiveId: null as string | null,
+    // initialize with no last selected task
+    lastSelectedTaskId: null as string | null,
+    // initialize with no last selected node
+    lastSelectedNodeId: null as string | null,
     createdAt: now,
     updatedAt: now,
   }

@@ -160,11 +160,11 @@ export default function ChannelOverlaySelection() {
         <div className="flex flex-col gap-2">
             <button
                 title="Overlay Editor"
-                className="flex items-center justify-center gap-2 border border-white/10 h-[35px] bg-black/10 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
+                className="flex items-center justify-center gap-2 border border-white/10 h-[40px] bg-black/50 hover:bg-black/40 active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
                 onClick={() => window.ipcRenderer.invoke('window:open-overlay-editor')}
             >
                 <MdEdit className="h-4.5 w-4.5" />
-                <span>Overlay Editor</span>
+                <span className="font-semibold text-[14px]">Open Overlay Editor</span>
             </button>
             <div className="flex flex-col gap-1">
 				<div className="flex items-center justify-between">

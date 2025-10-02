@@ -51,6 +51,10 @@ export default function CreateTaskForm({ onClose }: Props) {
             const ev2 = new CustomEvent('tasksChanged')
             window.dispatchEvent(ev2)
           } catch {}
+          // persist last selected task on project
+          try {
+            await window.ipcRenderer.invoke('db:editProject', projectId, { lastSelectedTaskId: newTaskId })
+          } catch {}
         }
         onClose()
       } else {
