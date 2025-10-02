@@ -7,6 +7,7 @@ import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 
 const port = process.env.OVERLAY_WS_PORT ? Number(process.env.OVERLAY_WS_PORT) : 3620
 const server = http.createServer()
+const overlayImagesDir = process.env.OVERLAY_IMAGES_DIR || ''
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const drawHtmlPath = path.join(__dirname, 'draw.html')
 const overlayHtmlPath = path.join(__dirname, 'overlay.html')
@@ -94,6 +95,30 @@ server.on('request', (req, res) => {
       })()
       return
     }
+    // Static: serve overlay images
+    if (url.pathname.startsWith('/images/')) {
+      try {
+        if (!overlayImagesDir) throw new Error('images dir not set')
+        const rel = decodeURIComponent(url.pathname.replace(/^\/images\//, ''))
+        const safe = rel.replace(/\\/g, '/').replace(/\.{2,}/g, '')
+        const p = path.join(overlayImagesDir, safe)
+        const stat = fs.statSync(p)
+        if (!stat.isFile()) { res.statusCode = 404; res.end('Not Found'); return }
+        const ext = path.extname(p).toLowerCase()
+        const type = ext === '.png' ? 'image/png'
+          : (ext === '.jpg' || ext === '.jpeg') ? 'image/jpeg'
+          : ext === '.webp' ? 'image/webp'
+          : ext === '.bmp' ? 'image/bmp'
+          : 'application/octet-stream'
+        res.writeHead(200, { 'Content-Type': type, 'Cache-Control': 'public, max-age=31536000' })
+        fs.createReadStream(p).pipe(res)
+        return
+      } catch {
+        res.statusCode = 404
+        res.end('Not Found')
+        return
+      }
+    }
     if (url.pathname === '/draw') {
       let html = ''
       try { html = fs.readFileSync(drawHtmlPath, 'utf8') } catch { html = '<!doctype html><meta charset="utf-8"><title>Draw</title><h1>Draw</h1>' }
@@ -148,6 +173,6 @@ wss.on('connection', (ws, req) => {
   })
 })
 
-server.listen(port, () => console.log(`[drawing-service] listening on ${port}`))
+server.listen(port, () => console.log(`[browser-source-service] listening on ${port}`))
 
 

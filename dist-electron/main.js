@@ -78,11 +78,10 @@ function createOverlayEditorWindow() {
   }
   return win2;
 }
-const USERDIR = "C:\\temp\\obs_chrome_dev";
 const OBS_EXECUTABLE_PATH = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\");
 const OBS_WORKING_DIR = "C:\\Program Files\\obs-studio\\bin\\64bit".replace(/\\/g, "\\");
 const OBS_WEBSOCKET_URL = "ws://127.0.0.1:4455";
-const OBS_LAUNCH_PARAMS = ["--startvirtualcam", "--disable-shutdown-check", "--disable-web-security", `--user-data-dir=${USERDIR}`, "--allow-file-access-from-files"];
+const OBS_LAUNCH_PARAMS = ["--startvirtualcam", "--disable-shutdown-check"];
 path.join(
   process.env.APPDATA || path.join(process.env.USERPROFILE || "", "AppData", "Roaming"),
   "obs-studio",
@@ -223,7 +222,7 @@ ipcMain.handle("obs:set-current-scene", async (_event, sceneName) => {
     return false;
   }
 });
-let drawingProc = null;
+let browserSourceProc = null;
 let currentPort = null;
 function resolveServerPath() {
   const appRoot = process.env.APP_ROOT || path.join(__dirname, "..", "..");
@@ -270,47 +269,53 @@ function waitForHealth(port, timeoutMs) {
     tryOnce();
   });
 }
-async function startDrawingService(port) {
+async function startBrowserSourceService(port) {
   try {
-    if (drawingProc) return true;
+    if (browserSourceProc) return true;
     const resolvedPort = Number(port || OVERLAY_WS_PORT || 3620) || 3620;
     const serverPath = resolveServerPath();
+    let overlayImagesDir = "";
+    try {
+      overlayImagesDir = path.join(app.getPath("userData"), "overlay-images");
+    } catch {
+      overlayImagesDir = "";
+    }
     const cmd = process.platform === "win32" ? "node.exe" : "node";
-    drawingProc = spawn(cmd, [serverPath], {
+    browserSourceProc = spawn(cmd, [serverPath], {
       cwd: path.dirname(serverPath),
-      env: { ...process.env, OVERLAY_WS_PORT: String(resolvedPort) },
+      env: { ...process.env, OVERLAY_WS_PORT: String(resolvedPort), OVERLAY_IMAGES_DIR: overlayImagesDir },
       stdio: "ignore",
       detached: false
     });
-    drawingProc.on("exit", (code, signal) => {
+    browserSourceProc.on("exit", (code, signal) => {
       try {
-        console.log(`[drawing-service] exited code=${code} signal=${signal}`);
+        console.log(`[browser-source-service] exited code=${code} signal=${signal}`);
       } catch {
       }
-      drawingProc = null;
+      browserSourceProc = null;
       currentPort = null;
     });
     currentPort = resolvedPort;
     const ok = await waitForHealth(resolvedPort, 5e3);
     if (!ok) {
       try {
-        console.warn("[drawing-service] did not become healthy in time");
+        console.warn("[browser-source-service] did not become healthy in time");
       } catch {
       }
     }
     return true;
   } catch (err) {
     try {
-      console.error("[drawing-service] failed to start:", err);
+      console.error("[browser-source-service] failed to start:", err);
     } catch {
     }
     return false;
   }
 }
-async function stopDrawingService() {
+async function stopBrowserSourceService() {
   try {
-    const p = drawingProc;
-    drawingProc = null;
+    const p = browserSourceProc;
+    browserSourceProc = null;
     currentPort = null;
     if (!p) return;
     try {
@@ -1775,7 +1780,8 @@ async function handleUpload(input) {
     const dest = path.join(imagesDir, filename);
     fs.copyFileSync(src, dest);
     const fileUrl = `file://${dest.replace(/\\/g, "/")}`;
-    return { absolutePath: dest, fileUrl, filename };
+    const httpUrl = buildHttpUrl(filename);
+    return { absolutePath: dest, fileUrl, httpUrl, filename };
   }
   if (input.bytesBase64) {
     const rawName = input.filename && input.filename.trim() ? input.filename.trim() : "image.png";
@@ -1784,9 +1790,18 @@ async function handleUpload(input) {
     const buffer = Buffer.from(input.bytesBase64, "base64");
     fs.writeFileSync(dest, buffer);
     const fileUrl = `file://${dest.replace(/\\/g, "/")}`;
-    return { absolutePath: dest, fileUrl, filename };
+    const httpUrl = buildHttpUrl(filename);
+    return { absolutePath: dest, fileUrl, httpUrl, filename };
   }
   throw new Error("Provide either sourcePath or bytesBase64");
+}
+function buildHttpUrl(filename) {
+  try {
+    const port = Number(process.env.OVERLAY_WS_PORT || OVERLAY_WS_PORT || 3620) || 3620;
+    return `http://127.0.0.1:${port}/images/${encodeURIComponent(filename)}`;
+  } catch {
+    return "";
+  }
 }
 ipcMain.handle("fs:uploadOverlayImage", async (_event, input) => {
   try {
@@ -1816,6 +1831,14 @@ function isAllowedExt(ext) {
 function toFileUrl(p) {
   return `file://${p.replace(/\\/g, "/")}`;
 }
+function toHttpUrl(filename) {
+  try {
+    const port = Number(process.env.OVERLAY_WS_PORT || 3620) || 3620;
+    return `http://127.0.0.1:${port}/images/${encodeURIComponent(filename)}`;
+  } catch {
+    return "";
+  }
+}
 function listAllImages() {
   const dir = ensureImagesDir();
   let entries = [];
@@ -1831,6 +1854,7 @@ function listAllImages() {
         entries.push({
           absolutePath: full,
           fileUrl: toFileUrl(full),
+          httpUrl: toHttpUrl(name),
           filename: name,
           size: stat.size,
           modifiedAt: new Date(stat.mtimeMs).toISOString()
@@ -1974,7 +1998,7 @@ async function createWindow() {
   }
   await updateSplash("Connecting to OBS WebSocket…");
   try {
-    await startDrawingService();
+    await startBrowserSourceService();
   } catch {
   }
   while (true) {
@@ -2014,7 +2038,7 @@ app.on("before-quit", async (e) => {
   } catch {
   }
   try {
-    await stopDrawingService();
+    await stopBrowserSourceService();
   } catch {
   }
   app.quit();

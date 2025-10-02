@@ -1,6 +1,7 @@
 import { app, ipcMain } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
+import { OVERLAY_WS_PORT } from '../settings'
 
 type UploadInput = {
   /** Absolute path to an existing image file on disk */
@@ -16,6 +17,8 @@ type UploadResult = {
   absolutePath: string
   /** file:// URL form of the stored image (useful for Electron renderer) */
   fileUrl: string
+  /** HTTP URL served by drawing-service, if available */
+  httpUrl: string
   /** Stored filename only */
   filename: string
 }
@@ -62,7 +65,8 @@ async function handleUpload(input: UploadInput): Promise<UploadResult> {
     const dest = path.join(imagesDir, filename)
     fs.copyFileSync(src, dest)
     const fileUrl = `file://${dest.replace(/\\/g, '/')}`
-    return { absolutePath: dest, fileUrl, filename }
+    const httpUrl = buildHttpUrl(filename)
+    return { absolutePath: dest, fileUrl, httpUrl, filename }
   }
 
   if (input.bytesBase64) {
@@ -72,10 +76,20 @@ async function handleUpload(input: UploadInput): Promise<UploadResult> {
     const buffer = Buffer.from(input.bytesBase64, 'base64')
     fs.writeFileSync(dest, buffer)
     const fileUrl = `file://${dest.replace(/\\/g, '/')}`
-    return { absolutePath: dest, fileUrl, filename }
+    const httpUrl = buildHttpUrl(filename)
+    return { absolutePath: dest, fileUrl, httpUrl, filename }
   }
 
   throw new Error('Provide either sourcePath or bytesBase64')
+}
+
+function buildHttpUrl(filename: string): string {
+  try {
+    const port = Number(process.env.OVERLAY_WS_PORT || OVERLAY_WS_PORT || 3620) || 3620
+    return `http://127.0.0.1:${port}/images/${encodeURIComponent(filename)}`
+  } catch {
+    return ''
+  }
 }
 
 ipcMain.handle('fs:uploadOverlayImage', async (_event, input: UploadInput) => {

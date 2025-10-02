@@ -579,8 +579,9 @@ export default function EditComponentForm({ onClose }: Props) {
             for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
             const base64 = btoa(binary)
             const res = await window.ipcRenderer.invoke('fs:uploadOverlayImage', { bytesBase64: base64, filename: file.name })
-            if (res?.ok && res.data?.fileUrl) {
-                void updateComponentImagePath(res.data.fileUrl, selectedIds)
+            if (res?.ok && (res.data?.httpUrl || res.data?.fileUrl)) {
+                const nextUrl = String(res.data?.httpUrl || res.data?.fileUrl)
+                void updateComponentImagePath(nextUrl, selectedIds)
                 try { await loadOverlayImages() } catch {}
             }
         } catch {
@@ -595,7 +596,7 @@ export default function EditComponentForm({ onClose }: Props) {
             setImagesLoading(true)
             const res = await window.ipcRenderer.invoke('fs:getAllOverlayImages')
             const items = res?.ok && Array.isArray(res.data) ? res.data : []
-            setOverlayImages(items.map((i: any) => ({ fileUrl: String(i.fileUrl || ''), filename: String(i.filename || '') })))
+            setOverlayImages(items.map((i: any) => ({ fileUrl: String(i.httpUrl || i.fileUrl || ''), filename: String(i.filename || '') })))
         } catch {
             setOverlayImages([])
         } finally {

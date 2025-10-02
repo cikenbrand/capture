@@ -1,9 +1,10 @@
 import path from 'node:path'
 import { spawn, type ChildProcess } from 'node:child_process'
 import http from 'node:http'
+import { app } from 'electron'
 import { OVERLAY_WS_PORT } from '../settings'
 
-let drawingProc: ChildProcess | null = null
+let browserSourceProc: ChildProcess | null = null
 let currentPort: number | null = null
 
 function resolveServerPath() {
@@ -44,25 +45,28 @@ function waitForHealth(port: number, timeoutMs: number): Promise<boolean> {
   })
 }
 
-export async function startDrawingService(port?: number): Promise<boolean> {
+export async function startBrowserSourceService(port?: number): Promise<boolean> {
   try {
-    if (drawingProc) return true
+    if (browserSourceProc) return true
     const resolvedPort = Number(port || OVERLAY_WS_PORT || 3620) || 3620
     const serverPath = resolveServerPath()
+    // Resolve images directory under Electron userData
+    let overlayImagesDir = ''
+    try { overlayImagesDir = path.join(app.getPath('userData'), 'overlay-images') } catch { overlayImagesDir = '' }
 
     // Spawn with system Node. In dev, Node should be in PATH.
-    // In prod, ensure drawing-service is packaged alongside app.
+    // In prod, ensure browser source service is packaged alongside app.
     const cmd = process.platform === 'win32' ? 'node.exe' : 'node'
-    drawingProc = spawn(cmd, [serverPath], {
+    browserSourceProc = spawn(cmd, [serverPath], {
       cwd: path.dirname(serverPath),
-      env: { ...process.env, OVERLAY_WS_PORT: String(resolvedPort) },
+      env: { ...process.env, OVERLAY_WS_PORT: String(resolvedPort), OVERLAY_IMAGES_DIR: overlayImagesDir },
       stdio: 'ignore',
       detached: false,
     })
 
-    drawingProc.on('exit', (code, signal) => {
-      try { console.log(`[drawing-service] exited code=${code} signal=${signal}`) } catch {}
-      drawingProc = null
+    browserSourceProc.on('exit', (code, signal) => {
+      try { console.log(`[browser-source-service] exited code=${code} signal=${signal}`) } catch {}
+      browserSourceProc = null
       currentPort = null
     })
 
@@ -71,23 +75,25 @@ export async function startDrawingService(port?: number): Promise<boolean> {
     // Wait briefly for readiness
     const ok = await waitForHealth(resolvedPort, 5000)
     if (!ok) {
-      try { console.warn('[drawing-service] did not become healthy in time') } catch {}
+      try { console.warn('[browser-source-service] did not become healthy in time') } catch {}
     }
     return true
   } catch (err) {
-    try { console.error('[drawing-service] failed to start:', err) } catch {}
+    try { console.error('[browser-source-service] failed to start:', err) } catch {}
     return false
   }
 }
 
-export async function stopDrawingService(): Promise<void> {
+export async function stopBrowserSourceService(): Promise<void> {
   try {
-    const p = drawingProc
-    drawingProc = null
+    const p = browserSourceProc
+    browserSourceProc = null
     currentPort = null
     if (!p) return
     try { p.kill() } catch {}
   } catch {}
 }
+
+export {}
 
 

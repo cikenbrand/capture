@@ -9,7 +9,7 @@ import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
 import { connectToOBSWebsocket } from './obs/websocket_functions/connectToOBSWebsocket'
 import './obs/websocket_functions/selectedScene'
 import './obs/websocket_functions/setSelectedScene'
-import { startDrawingService, stopDrawingService } from './services/drawingService'
+import { startBrowserSourceService, stopBrowserSourceService } from './services/browserSourceService'
 import { OVERLAY_WS_PORT } from './settings'
 import { SPLASHSCREEN_DURATION_MS } from './settings'
 import './db/createProject'
@@ -128,7 +128,7 @@ async function createWindow() {
   // 2) Connect to OBS WebSocket, keep retrying while on splash
   await updateSplash('Connecting to OBS WebSocket…')
   // Also start drawing service early
-  try { await startDrawingService() } catch {}
+  try { await startBrowserSourceService() } catch {}
   while (true) {
     const ok = await connectToOBSWebsocket(4000)
     if (ok) break
@@ -174,7 +174,7 @@ app.on('before-quit', async (e) => {
   try {
     await exitOBS()
   } catch {}
-  try { await stopDrawingService() } catch {}
+  try { await stopBrowserSourceService() } catch {}
   app.quit()
 })
 app.on('activate', () => {

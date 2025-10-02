@@ -5,6 +5,7 @@ import path from 'node:path'
 type OverlayImageEntry = {
   absolutePath: string
   fileUrl: string
+  httpUrl: string
   filename: string
   size: number
   modifiedAt: string
@@ -25,8 +26,12 @@ function isAllowedExt(ext: string): boolean {
   return e === '.png' || e === '.jpg' || e === '.jpeg' || e === '.webp' || e === '.bmp'
 }
 
-function toFileUrl(p: string): string {
-  return `file://${p.replace(/\\/g, '/')}`
+function toFileUrl(p: string): string { return `file://${p.replace(/\\/g, '/')}` }
+function toHttpUrl(filename: string): string {
+  try {
+    const port = Number(process.env.OVERLAY_WS_PORT || 3620) || 3620
+    return `http://127.0.0.1:${port}/images/${encodeURIComponent(filename)}`
+  } catch { return '' }
 }
 
 function listAllImages(): OverlayImageEntry[] {
@@ -44,6 +49,7 @@ function listAllImages(): OverlayImageEntry[] {
         entries.push({
           absolutePath: full,
           fileUrl: toFileUrl(full),
+          httpUrl: toHttpUrl(name),
           filename: name,
           size: stat.size,
           modifiedAt: new Date(stat.mtimeMs).toISOString(),
