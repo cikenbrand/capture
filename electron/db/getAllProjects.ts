@@ -15,6 +15,10 @@ export interface ProjectDoc {
   lastSelectedDiveId?: string | null
   lastSelectedTaskId?: string | null
   lastSelectedNodeId?: string | null
+  lastSelectedOverlayCh1Id?: string | null
+  lastSelectedOverlayCh2Id?: string | null
+  lastSelectedOverlayCh3Id?: string | null
+  lastSelectedOverlayCh4Id?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -57,6 +61,10 @@ ipcMain.handle('db:getAllProjects', async () => {
       lastSelectedDiveId: p.lastSelectedDiveId ?? null,
       lastSelectedTaskId: p.lastSelectedTaskId ?? null,
       lastSelectedNodeId: p.lastSelectedNodeId ?? null,
+      lastSelectedOverlayCh1Id: p.lastSelectedOverlayCh1Id ?? null,
+      lastSelectedOverlayCh2Id: p.lastSelectedOverlayCh2Id ?? null,
+      lastSelectedOverlayCh3Id: p.lastSelectedOverlayCh3Id ?? null,
+      lastSelectedOverlayCh4Id: p.lastSelectedOverlayCh4Id ?? null,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
     }))

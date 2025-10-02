@@ -48,6 +48,11 @@ export async function createProject(input: NewProject) {
     lastSelectedTaskId: null as string | null,
     // initialize with no last selected node
     lastSelectedNodeId: null as string | null,
+    // initialize with no last selected overlays per channel
+    lastSelectedOverlayCh1Id: null as string | null,
+    lastSelectedOverlayCh2Id: null as string | null,
+    lastSelectedOverlayCh3Id: null as string | null,
+    lastSelectedOverlayCh4Id: null as string | null,
     createdAt: now,
     updatedAt: now,
   }

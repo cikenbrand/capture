@@ -357,6 +357,11 @@ async function createProject(input) {
     lastSelectedTaskId: null,
     // initialize with no last selected node
     lastSelectedNodeId: null,
+    // initialize with no last selected overlays per channel
+    lastSelectedOverlayCh1Id: null,
+    lastSelectedOverlayCh2Id: null,
+    lastSelectedOverlayCh3Id: null,
+    lastSelectedOverlayCh4Id: null,
     createdAt: now,
     updatedAt: now
   };
@@ -1017,6 +1022,10 @@ ipcMain.handle("db:getAllProjects", async () => {
       lastSelectedDiveId: p.lastSelectedDiveId ?? null,
       lastSelectedTaskId: p.lastSelectedTaskId ?? null,
       lastSelectedNodeId: p.lastSelectedNodeId ?? null,
+      lastSelectedOverlayCh1Id: p.lastSelectedOverlayCh1Id ?? null,
+      lastSelectedOverlayCh2Id: p.lastSelectedOverlayCh2Id ?? null,
+      lastSelectedOverlayCh3Id: p.lastSelectedOverlayCh3Id ?? null,
+      lastSelectedOverlayCh4Id: p.lastSelectedOverlayCh4Id ?? null,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt
     }));
@@ -1206,6 +1215,10 @@ ipcMain.handle("db:getSelectedProjectDetails", async (_event, projectId) => {
       lastSelectedDiveId: doc.lastSelectedDiveId ?? null,
       lastSelectedTaskId: doc.lastSelectedTaskId ?? null,
       lastSelectedNodeId: doc.lastSelectedNodeId ?? null,
+      lastSelectedOverlayCh1Id: doc.lastSelectedOverlayCh1Id ?? null,
+      lastSelectedOverlayCh2Id: doc.lastSelectedOverlayCh2Id ?? null,
+      lastSelectedOverlayCh3Id: doc.lastSelectedOverlayCh3Id ?? null,
+      lastSelectedOverlayCh4Id: doc.lastSelectedOverlayCh4Id ?? null,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt
     };
@@ -1297,6 +1310,22 @@ async function editProject(projectId, updates) {
     const v3 = updates.lastSelectedNodeId;
     set.lastSelectedNodeId = typeof v3 === "string" ? v3.trim() || null : null;
   }
+  if (updates.hasOwnProperty("lastSelectedOverlayCh1Id")) {
+    const v4 = updates.lastSelectedOverlayCh1Id;
+    set.lastSelectedOverlayCh1Id = typeof v4 === "string" ? v4.trim() || null : null;
+  }
+  if (updates.hasOwnProperty("lastSelectedOverlayCh2Id")) {
+    const v5 = updates.lastSelectedOverlayCh2Id;
+    set.lastSelectedOverlayCh2Id = typeof v5 === "string" ? v5.trim() || null : null;
+  }
+  if (updates.hasOwnProperty("lastSelectedOverlayCh3Id")) {
+    const v6 = updates.lastSelectedOverlayCh3Id;
+    set.lastSelectedOverlayCh3Id = typeof v6 === "string" ? v6.trim() || null : null;
+  }
+  if (updates.hasOwnProperty("lastSelectedOverlayCh4Id")) {
+    const v7 = updates.lastSelectedOverlayCh4Id;
+    set.lastSelectedOverlayCh4Id = typeof v7 === "string" ? v7.trim() || null : null;
+  }
   const updated = await projects.findOneAndUpdate(
     { _id },
     { $set: set },
@@ -1321,6 +1350,10 @@ ipcMain.handle("db:editProject", async (_event, projectId, updates) => {
       lastSelectedDiveId: updated.lastSelectedDiveId ?? null,
       lastSelectedTaskId: updated.lastSelectedTaskId ?? null,
       lastSelectedNodeId: updated.lastSelectedNodeId ?? null,
+      lastSelectedOverlayCh1Id: updated.lastSelectedOverlayCh1Id ?? null,
+      lastSelectedOverlayCh2Id: updated.lastSelectedOverlayCh2Id ?? null,
+      lastSelectedOverlayCh3Id: updated.lastSelectedOverlayCh3Id ?? null,
+      lastSelectedOverlayCh4Id: updated.lastSelectedOverlayCh4Id ?? null,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt
     };

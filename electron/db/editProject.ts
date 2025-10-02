@@ -11,6 +11,10 @@ export interface EditProjectInput {
   lastSelectedDiveId?: string | null
   lastSelectedTaskId?: string | null
   lastSelectedNodeId?: string | null
+  lastSelectedOverlayCh1Id?: string | null
+  lastSelectedOverlayCh2Id?: string | null
+  lastSelectedOverlayCh3Id?: string | null
+  lastSelectedOverlayCh4Id?: string | null
 }
 
 type ProjectType = 'platform' | 'pipeline'
@@ -26,6 +30,10 @@ export interface ProjectDoc {
   lastSelectedDiveId?: string | null
   lastSelectedTaskId?: string | null
   lastSelectedNodeId?: string | null
+  lastSelectedOverlayCh1Id?: string | null
+  lastSelectedOverlayCh2Id?: string | null
+  lastSelectedOverlayCh3Id?: string | null
+  lastSelectedOverlayCh4Id?: string | null
   createdAt: Date
   updatedAt: Date
 }
@@ -74,6 +82,22 @@ export async function editProject(projectId: string, updates: EditProjectInput):
     const v3 = updates.lastSelectedNodeId
     ;(set as any).lastSelectedNodeId = (typeof v3 === 'string') ? (v3.trim() || null) : null
   }
+  if (updates.hasOwnProperty('lastSelectedOverlayCh1Id')) {
+    const v4 = updates.lastSelectedOverlayCh1Id
+    ;(set as any).lastSelectedOverlayCh1Id = (typeof v4 === 'string') ? (v4.trim() || null) : null
+  }
+  if (updates.hasOwnProperty('lastSelectedOverlayCh2Id')) {
+    const v5 = updates.lastSelectedOverlayCh2Id
+    ;(set as any).lastSelectedOverlayCh2Id = (typeof v5 === 'string') ? (v5.trim() || null) : null
+  }
+  if (updates.hasOwnProperty('lastSelectedOverlayCh3Id')) {
+    const v6 = updates.lastSelectedOverlayCh3Id
+    ;(set as any).lastSelectedOverlayCh3Id = (typeof v6 === 'string') ? (v6.trim() || null) : null
+  }
+  if (updates.hasOwnProperty('lastSelectedOverlayCh4Id')) {
+    const v7 = updates.lastSelectedOverlayCh4Id
+    ;(set as any).lastSelectedOverlayCh4Id = (typeof v7 === 'string') ? (v7.trim() || null) : null
+  }
 
   const updated = await projects.findOneAndUpdate(
     { _id },
@@ -102,6 +126,10 @@ ipcMain.handle('db:editProject', async (_event, projectId: string, updates: Edit
       lastSelectedDiveId: updated.lastSelectedDiveId ?? null,
       lastSelectedTaskId: updated.lastSelectedTaskId ?? null,
       lastSelectedNodeId: updated.lastSelectedNodeId ?? null,
+      lastSelectedOverlayCh1Id: updated.lastSelectedOverlayCh1Id ?? null,
+      lastSelectedOverlayCh2Id: updated.lastSelectedOverlayCh2Id ?? null,
+      lastSelectedOverlayCh3Id: updated.lastSelectedOverlayCh3Id ?? null,
+      lastSelectedOverlayCh4Id: updated.lastSelectedOverlayCh4Id ?? null,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     }
