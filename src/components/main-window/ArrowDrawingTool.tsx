@@ -29,6 +29,25 @@ export default function ArrowDrawingTool() {
         }
     }, [])
 
+    useEffect(() => {
+        const onDocMouseDown = async (e: any) => {
+            try {
+                if (!isActive) return
+                const el = (e?.target ?? null) as HTMLElement | null
+                const insideDrawUi = !!el?.closest?.('[data-draw-ui="true"]')
+                const insideSurface = !!el?.closest?.('[data-draw-surface="true"]')
+                if (insideDrawUi || insideSurface) return
+                await window.ipcRenderer.invoke('app:setSelectedDrawingTool', null)
+                setSelectedTool(null)
+                window.dispatchEvent(new CustomEvent('selectedDrawingToolChanged', { detail: null }))
+                window.dispatchEvent(new CustomEvent('app:toggle-draw-overlay', { detail: { enabled: false } }))
+                window.dispatchEvent(new CustomEvent('app:set-draw-tool', { detail: { tool: 'select' } }))
+            } catch {}
+        }
+        window.addEventListener('mousedown', onDocMouseDown as any)
+        return () => window.removeEventListener('mousedown', onDocMouseDown as any)
+    }, [isActive])
+
     return (
         <button
             disabled={isMultiView}

@@ -154,7 +154,7 @@ export default function PreviewVirtualCam() {
 
   return (
     // root MESTI ada height: penuh parent + relative supaya anak absolute boleh fill
-    <div ref={containerRef} className="relative h-full w-full min-h-0">
+    <div ref={containerRef} className="relative h-full w-full min-h-0" data-draw-surface="true">
       {deviceId ? (
         <>
           <Webcam
@@ -173,7 +173,7 @@ export default function PreviewVirtualCam() {
             onUserMediaError={(e) => setError((e as any)?.message || 'Failed to access camera')}
           />
           <canvas ref={canvasRef} className="absolute inset-0" />
-          <div className="absolute inset-0">
+          <div className="absolute inset-0" data-draw-surface="true">
             <VideoDrawOverlay enabled={drawEnabled} onRequestDisable={() => setDrawEnabled(false)} />
           </div>
         </>
