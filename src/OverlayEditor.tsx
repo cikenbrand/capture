@@ -22,11 +22,13 @@ import CreateDataButton from "./components/overlay-editor/CreateDataButton";
 import CreateDiveButton from "./components/overlay-editor/CreateDiveButton";
 import CreateNodeButton from "./components/overlay-editor/CreateNodeButton";
 import CreateTaskButton from "./components/overlay-editor/CreateTaskButton";
+import DeleteOverlayConfirmation from "./components/overlay-editor/DeleteOverlayConfirmation";
 
 export default function OverlayEditor() {
     const [newOverlayOpen, setNewOverlayOpen] = useState(false)
     const [renameOverlayOpen, setRenameOverlayOpen] = useState(false)
     const [editComponentOpen, setEditComponentOpen] = useState(false)
+    const [deleteOverlayOpen, setDeleteOverlayOpen] = useState(false)
     const [components, setComponents] = useState<any[]>([])
     const [selectedComponentIds, setSelectedComponentIds] = useState<string[]>([])
     const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
@@ -55,7 +57,7 @@ export default function OverlayEditor() {
         loadComponents()
         const onOverlayChanged = async () => {
             // Clear selected component when overlay changes
-            try { await window.ipcRenderer.invoke('app:setSelectedOverlayComponentIds', []) } catch {}
+            try { await window.ipcRenderer.invoke('app:setSelectedOverlayComponentIds', []) } catch { }
             setSelectedComponentIds([])
             loadComponents()
         }
@@ -64,7 +66,7 @@ export default function OverlayEditor() {
             try {
                 const ids = Array.isArray(e?.detail) ? e.detail : []
                 setSelectedComponentIds(ids)
-            } catch {}
+            } catch { }
         }
         const onOverlayRefresh = async () => {
             try {
@@ -76,27 +78,27 @@ export default function OverlayEditor() {
                     try {
                         const ws = new WebSocket(`ws://127.0.0.1:3620/overlay?ch=${ch}`)
                         ws.addEventListener('open', () => {
-                            try { ws.send(JSON.stringify({ overlayId, action: 'refresh' })) } catch {}
-                            try { ws.close() } catch {}
+                            try { ws.send(JSON.stringify({ overlayId, action: 'refresh' })) } catch { }
+                            try { ws.close() } catch { }
                         }, { once: true })
                         if (ws.readyState === WebSocket.OPEN) {
-                            try { ws.send(JSON.stringify({ overlayId, action: 'refresh' })) } catch {}
-                            try { ws.close() } catch {}
+                            try { ws.send(JSON.stringify({ overlayId, action: 'refresh' })) } catch { }
+                            try { ws.close() } catch { }
                         }
-                    } catch {}
+                    } catch { }
                 }
-            } catch {}
+            } catch { }
         }
         window.addEventListener('selectedOverlayLayerChanged', onOverlayChanged as any)
         window.addEventListener('overlayComponentsChanged', onComponentsChanged as any)
         window.addEventListener('selectedOverlayComponentIdsChanged', onSelectedComponentIdsChanged as any)
         window.addEventListener('overlay:refresh', onOverlayRefresh as any)
-        ;(async () => {
-            try {
-                const res = await window.ipcRenderer.invoke('app:getSelectedOverlayComponentIds')
-                if (res?.ok) setSelectedComponentIds(Array.isArray(res.data) ? res.data : [])
-            } catch {}
-        })()
+            ; (async () => {
+                try {
+                    const res = await window.ipcRenderer.invoke('app:getSelectedOverlayComponentIds')
+                    if (res?.ok) setSelectedComponentIds(Array.isArray(res.data) ? res.data : [])
+                } catch { }
+            })()
         return () => {
             window.removeEventListener('selectedOverlayLayerChanged', onOverlayChanged as any)
             window.removeEventListener('overlayComponentsChanged', onComponentsChanged as any)
@@ -121,6 +123,13 @@ export default function OverlayEditor() {
                                 <button onClick={() => setRenameOverlayOpen(true)} title="Rename Overlay" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                                     <MdEdit className="h-4.5 w-4.5" />
                                 </button>
+                                <button
+                                    title="Delete Overlay"
+                                    className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
+                                    onClick={() => setDeleteOverlayOpen(true)}
+                                >
+                                    <MdDelete className="h-4.5 w-4.5" />
+                                </button>
                             </div>
                             <OverlayList />
                         </TabsContent>
@@ -133,14 +142,14 @@ export default function OverlayEditor() {
                         </TabsList>
                         <TabsContent value="editor" className="flex flex-col gap-1 p-0">
                             <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
-                                <CreateCustomTextButton/>
-                                <CreateImageButton/>
-                                <CreateTimeButton/>
-                                <CreateDateButton/>
-                                <CreateDataButton/>
-                                <CreateDiveButton/>
-                                <CreateNodeButton/>
-                                <CreateTaskButton/>
+                                <CreateCustomTextButton />
+                                <CreateImageButton />
+                                <CreateTimeButton />
+                                <CreateDateButton />
+                                <CreateDataButton />
+                                <CreateDiveButton />
+                                <CreateNodeButton />
+                                <CreateTaskButton />
                             </div>
                             <div className="flex-1 bg-black">
                                 <OverlayEditorCanvas
@@ -171,8 +180,8 @@ export default function OverlayEditor() {
                                                 window.dispatchEvent(ev)
                                                 const ev2 = new CustomEvent('selectedOverlayComponentIdsChanged', { detail: ids })
                                                 window.dispatchEvent(ev2)
-                                            } catch {}
-                                        } catch {}
+                                            } catch { }
+                                        } catch { }
                                     }}
                                 >
                                     {components.map((c) => (
@@ -204,7 +213,7 @@ export default function OverlayEditor() {
                                             >
                                                 {c.type === 'image' ? (
                                                     c.imagePath ? (
-                                                        <img src={c.imagePath} className="max-w-full max-h-full object-contain" />
+                                                        <img src={c.imagePath} className="max-w-full max-h-full object-contain" draggable={false}/>
                                                     ) : (
                                                         <div className="text-white/60 text-xs">No image</div>
                                                     )
@@ -256,7 +265,7 @@ export default function OverlayEditor() {
                                     <MdDelete className="h-4.5 w-4.5" />
                                 </button>
                             </div>
-                            <ComponentList/>
+                            <ComponentList />
                         </TabsContent>
                     </Tabs>
                 </div>
@@ -282,6 +291,13 @@ export default function OverlayEditor() {
                 useBackdrop={false}
             >
                 <EditComponentForm onClose={() => setEditComponentOpen(false)} />
+            </DraggableDialog>
+            <DraggableDialog
+                open={deleteOverlayOpen}
+                onOpenChange={setDeleteOverlayOpen}
+                title="Delete Overlay"
+            >
+                <DeleteOverlayConfirmation onClose={() => setDeleteOverlayOpen(false)}/>
             </DraggableDialog>
         </div>
     )

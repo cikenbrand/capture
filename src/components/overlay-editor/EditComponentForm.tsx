@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
@@ -138,6 +138,10 @@ export default function EditComponentForm({ onClose }: Props) {
     const [twentyFourHour, setTwentyFourHour] = useState(true)
     const [useUTC, setUseUTC] = useState(false)
     const [nodeLevel, setNodeLevel] = useState(1)
+    const [imageUploading, setImageUploading] = useState(false)
+    const [imagesLoading, setImagesLoading] = useState(false)
+    const [overlayImages, setOverlayImages] = useState<Array<{ fileUrl: string; filename: string }>>([])
+    const fileInputRef = useRef<HTMLInputElement | null>(null)
 
     const canEdit = selectedIds.length === 1
     const canEditTextStyle = canEdit && componentType !== 'image'
@@ -350,6 +354,27 @@ export default function EditComponentForm({ onClose }: Props) {
         }
     }, [broadcastUpdate])
 
+    const updateComponentImagePath = useCallback(async (imagePath: string, ids: string[]) => {
+        try {
+            const res = await window.ipcRenderer.invoke('db:editOverlayComponent', {
+                ids,
+                updates: { imagePath }
+            })
+            if (res?.ok) {
+                setOverlayComponents((prev) => prev.map((component) => (
+                    ids.includes(component._id)
+                        ? { ...component, imagePath }
+                        : component
+                )))
+                broadcastUpdate(ids)
+                try {
+                    const ev = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev)
+                } catch {}
+            }
+        } catch {}
+    }, [broadcastUpdate])
+
     const updateComponentTimeSettings = useCallback(async (updates: Partial<{ twentyFourHour: boolean; useUTC: boolean }>, ids: string[]) => {
         try {
             const res = await window.ipcRenderer.invoke('db:editOverlayComponent', {
@@ -535,6 +560,55 @@ export default function EditComponentForm({ onClose }: Props) {
         void applyNodeLevelChange(sanitized)
     }
 
+    const handleUploadImageClick = () => {
+        try { fileInputRef.current?.click() } catch {}
+    }
+
+    const handleImageFileSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+        try {
+            const file = event.target.files && event.target.files[0]
+            // reset value to allow re-selecting same file next time
+            try { (event.target as HTMLInputElement).value = '' } catch {}
+            if (!file) return
+            const ext = (file.name.split('.').pop() || '').toLowerCase()
+            if (!['png', 'jpg', 'jpeg', 'webp', 'bmp'].includes(ext)) return
+            setImageUploading(true)
+            const arrayBuffer = await file.arrayBuffer()
+            const bytes = new Uint8Array(arrayBuffer)
+            let binary = ''
+            for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i])
+            const base64 = btoa(binary)
+            const res = await window.ipcRenderer.invoke('fs:uploadOverlayImage', { bytesBase64: base64, filename: file.name })
+            if (res?.ok && res.data?.fileUrl) {
+                void updateComponentImagePath(res.data.fileUrl, selectedIds)
+                try { await loadOverlayImages() } catch {}
+            }
+        } catch {
+            // ignore
+        } finally {
+            setImageUploading(false)
+        }
+    }
+
+    const loadOverlayImages = useCallback(async () => {
+        try {
+            setImagesLoading(true)
+            const res = await window.ipcRenderer.invoke('fs:getAllOverlayImages')
+            const items = res?.ok && Array.isArray(res.data) ? res.data : []
+            setOverlayImages(items.map((i: any) => ({ fileUrl: String(i.fileUrl || ''), filename: String(i.filename || '') })))
+        } catch {
+            setOverlayImages([])
+        } finally {
+            setImagesLoading(false)
+        }
+    }, [])
+
+    useEffect(() => {
+        if (componentType === 'image') {
+            void loadOverlayImages()
+        }
+    }, [componentType, loadOverlayImages])
+
     const handleApplyAllClick = useCallback(async () => {
         const targets = overlayComponents.filter((component) => component.type !== 'image')
         if (!targets.length) return
@@ -624,6 +698,43 @@ export default function EditComponentForm({ onClose }: Props) {
                     </div>
                 ) : null}
 
+                {componentType === 'image' ? (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                            <Button onClick={handleUploadImageClick} disabled={!canEdit || imageUploading}>{imageUploading ? 'Uploading…' : 'Upload Image'}</Button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp,image/bmp"
+                                className="hidden"
+                                onChange={handleImageFileSelected}
+                            />
+                        </div>
+                        <div>
+                            {imagesLoading ? (
+                                <div className="text-white/60 text-sm">Loading images…</div>
+                            ) : overlayImages.length === 0 ? (
+                                <div className="text-white/60 text-sm">No images uploaded yet.</div>
+                            ) : (
+                                <div className="grid grid-cols-4 gap-2">
+                                    {overlayImages.map((img, idx) => (
+                                        <button
+                                            key={`${img.filename}-${idx}`}
+                                            type="button"
+                                            className="w-full aspect-square bg-[#252B34] border border-[#4C525E] rounded overflow-hidden hover:border-[#71BCFC] focus:outline-none disabled:opacity-50"
+                                            onClick={() => { if (!canEdit) return; void updateComponentImagePath(img.fileUrl, selectedIds) }}
+                                            disabled={!canEdit}
+                                            title={img.filename}
+                                        >
+                                            <img src={img.fileUrl} className="w-full h-full object-cover" />
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ) : null}
+
                 {componentType === 'node' ? (
                     <div className="flex flex-col gap-1">
                         <span>Node Level</span>
@@ -639,140 +750,146 @@ export default function EditComponentForm({ onClose }: Props) {
                     </div>
                 ) : null}
 
-                <div className="flex flex-col gap-1">
-                    <span>Font Size</span>
-                    <Input
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={fontSize}
-                        onChange={handleFontSizeChange}
-                        disabled={!canEditTextStyle}
-                        placeholder={canEditTextStyle ? undefined : 'Font size available for text components only'}
-                    />
-                </div>
-                <div className="flex flex-col gap-1">
-                    <span>Font Weight</span>
-                    <Select
-                        value={fontWeight}
-                        onValueChange={handleFontWeightChange}
-                        disabled={!canEditTextStyle}
-                    >
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select font weight" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {FONT_WEIGHT_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex flex-col gap-1">
-                    <span>Font Family</span>
-                    <Select
-                        value={fontFamily}
-                        onValueChange={handleFontFamilyChange}
-                        disabled={!canEditTextStyle}
-                    >
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select font family" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {FONT_FAMILY_OPTIONS.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex flex-col gap-1">
-                    <span>Horizontal Align</span>
-                    <Select
-                        value={horizontalAlign}
-                        onValueChange={handleHorizontalAlignChange}
-                        disabled={!canEditTextStyle}
-                    >
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select horizontal align" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {H_ALIGN_OPTIONS.map((option) => (
-                                <SelectItem key={`h-${option.value}`} value={option.value}>
-                                    {option.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex flex-col gap-1">
-                    <span>Vertical Align</span>
-                    <Select
-                        value={verticalAlign}
-                        onValueChange={handleVerticalAlignChange}
-                        disabled={!canEditTextStyle}
-                    >
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select vertical align" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {V_ALIGN_OPTIONS.map((option) => (
-                                <SelectItem key={`v-${option.value}`} value={option.value}>
-                                    {option.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex flex-col gap-1">
-                    <span>Letter Spacing</span>
-                    <Input
-                        type="number"
-                        step={0.1}
-                        value={letterSpacing}
-                        onChange={handleLetterSpacingChange}
-                        disabled={!canEditTextStyle}
-                        placeholder={canEditTextStyle ? undefined : 'Letter spacing available for text components only'}
-                    />
-                </div>
-                <div className="flex flex-col gap-1">
-                    <span>Font Color</span>
-                    <input
-                        type="color"
-                        value={fontColor}
-                        onChange={handleFontColorChange}
-                        disabled={!canEditTextStyle}
-                        className="h-9 w-full rounded border border-[#4C525E] bg-[#252B34] p-1 disabled:opacity-50"
-                    />
-                </div>
-                <div className="flex flex-col gap-1">
-                    <label className="flex gap-1 items-center">
-                        <Checkbox
-                            checked={backgroundEnabled}
-                            onCheckedChange={(checked) => {
-                                const enabled = checked === true
-                                setBackgroundEnabled(enabled)
-                                void applyBackgroundEnabledChange(enabled)
-                            }}
-                            disabled={!canEditTextStyle}
-                        />
-                        <span>Background Color</span>
-                    </label>
-                    <input
-                        type="color"
-                        value={backgroundColor}
-                        onChange={handleBackgroundColorChange}
-                        disabled={!canEditTextStyle || !backgroundEnabled}
-                        className="h-9 w-full rounded border border-[#4C525E] bg-[#252B34] p-1 disabled:opacity-50"
-                    />
-                </div>
+                {componentType !== 'image' ? (
+                    <>
+                        <div className="flex flex-col gap-1">
+                            <span>Font Size</span>
+                            <Input
+                                type="number"
+                                min={1}
+                                step={1}
+                                value={fontSize}
+                                onChange={handleFontSizeChange}
+                                disabled={!canEditTextStyle}
+                                placeholder={canEditTextStyle ? undefined : 'Font size available for text components only'}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span>Font Weight</span>
+                            <Select
+                                value={fontWeight}
+                                onValueChange={handleFontWeightChange}
+                                disabled={!canEditTextStyle}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select font weight" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {FONT_WEIGHT_OPTIONS.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span>Font Family</span>
+                            <Select
+                                value={fontFamily}
+                                onValueChange={handleFontFamilyChange}
+                                disabled={!canEditTextStyle}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select font family" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {FONT_FAMILY_OPTIONS.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span>Horizontal Align</span>
+                            <Select
+                                value={horizontalAlign}
+                                onValueChange={handleHorizontalAlignChange}
+                                disabled={!canEditTextStyle}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select horizontal align" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {H_ALIGN_OPTIONS.map((option) => (
+                                        <SelectItem key={`h-${option.value}`} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span>Vertical Align</span>
+                            <Select
+                                value={verticalAlign}
+                                onValueChange={handleVerticalAlignChange}
+                                disabled={!canEditTextStyle}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select vertical align" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {V_ALIGN_OPTIONS.map((option) => (
+                                        <SelectItem key={`v-${option.value}`} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span>Letter Spacing</span>
+                            <Input
+                                type="number"
+                                step={0.1}
+                                value={letterSpacing}
+                                onChange={handleLetterSpacingChange}
+                                disabled={!canEditTextStyle}
+                                placeholder={canEditTextStyle ? undefined : 'Letter spacing available for text components only'}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span>Font Color</span>
+                            <input
+                                type="color"
+                                value={fontColor}
+                                onChange={handleFontColorChange}
+                                disabled={!canEditTextStyle}
+                                className="h-9 w-full rounded border border-[#4C525E] bg-[#252B34] p-1 disabled:opacity-50"
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <label className="flex gap-1 items-center">
+                                <Checkbox
+                                    checked={backgroundEnabled}
+                                    onCheckedChange={(checked) => {
+                                        const enabled = checked === true
+                                        setBackgroundEnabled(enabled)
+                                        void applyBackgroundEnabledChange(enabled)
+                                    }}
+                                    disabled={!canEditTextStyle}
+                                />
+                                <span>Background Color</span>
+                            </label>
+                            <input
+                                type="color"
+                                value={backgroundColor}
+                                onChange={handleBackgroundColorChange}
+                                disabled={!canEditTextStyle || !backgroundEnabled}
+                                className="h-9 w-full rounded border border-[#4C525E] bg-[#252B34] p-1 disabled:opacity-50"
+                            />
+                        </div>
+                    </>
+                ) : null}
                 
             </div>
             <div className="mt-2 flex justify-end gap-2">
-                <Button onClick={handleApplyAllClick}>Apply to All Components</Button>
+                {componentType !== 'image' ? (
+                    <Button onClick={handleApplyAllClick}>Apply to All Components</Button>
+                ) : null}
                 <Button onClick={() => onClose?.()}>Close</Button>
             </div>
         </div>

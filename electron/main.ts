@@ -45,6 +45,8 @@ import './db/getAllOverlayComponents'
 import './db/editOverlayComponent'
 import './db/deleteOverlayComponent'
 import './db/getOverlayComponentsForRender'
+import './db/uploadOverlayImage'
+import './db/getAllOverlayImages'
 import './obs/websocket_functions/getLiveDevices'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))

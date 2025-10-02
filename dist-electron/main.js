@@ -66,7 +66,8 @@ function createOverlayEditorWindow() {
     webPreferences: {
       preload: path.join(process.env.APP_ROOT || path.join(__dirname, "..", ".."), "dist-electron", "preload.mjs"),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      webSecurity: false
     }
   });
   const devUrl = getDevUrl();
@@ -77,10 +78,11 @@ function createOverlayEditorWindow() {
   }
   return win2;
 }
+const USERDIR = "C:\\temp\\obs_chrome_dev";
 const OBS_EXECUTABLE_PATH = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\");
 const OBS_WORKING_DIR = "C:\\Program Files\\obs-studio\\bin\\64bit".replace(/\\/g, "\\");
 const OBS_WEBSOCKET_URL = "ws://127.0.0.1:4455";
-const OBS_LAUNCH_PARAMS = ["--startvirtualcam", "--disable-shutdown-check"];
+const OBS_LAUNCH_PARAMS = ["--startvirtualcam", "--disable-shutdown-check", "--disable-web-security", `--user-data-dir=${USERDIR}`, "--allow-file-access-from-files"];
 path.join(
   process.env.APPDATA || path.join(process.env.USERPROFILE || "", "AppData", "Roaming"),
   "obs-studio",
@@ -1727,6 +1729,124 @@ ipcMain.handle("db:getOverlayComponentsForRender", async (_event, input) => {
       updatedAt: i.updatedAt
     }));
     return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+function ensureImagesDir$1() {
+  if (process.platform !== "win32") {
+    throw new Error("This application supports Windows only");
+  }
+  const baseDir = app.getPath("userData");
+  const imagesDir = path.join(baseDir, "overlay-images");
+  try {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  } catch {
+  }
+  return imagesDir;
+}
+function isAllowedExt$1(ext) {
+  const e = ext.toLowerCase();
+  return e === ".png" || e === ".jpg" || e === ".jpeg" || e === ".webp" || e === ".bmp";
+}
+function buildTargetFilename(sourceName) {
+  const ext = path.extname(sourceName || "").toLowerCase();
+  if (!isAllowedExt$1(ext)) throw new Error("Unsupported image type");
+  const base = path.basename(sourceName, ext);
+  const safeBase = base.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80) || "image";
+  const stamp = /* @__PURE__ */ new Date();
+  const y = stamp.getFullYear();
+  const m = String(stamp.getMonth() + 1).padStart(2, "0");
+  const d = String(stamp.getDate()).padStart(2, "0");
+  const hh = String(stamp.getHours()).padStart(2, "0");
+  const mm = String(stamp.getMinutes()).padStart(2, "0");
+  const ss = String(stamp.getSeconds()).padStart(2, "0");
+  return `${safeBase}_${y}${m}${d}_${hh}${mm}${ss}${ext}`;
+}
+async function handleUpload(input) {
+  if (!input || typeof input !== "object") throw new Error("Invalid input");
+  const imagesDir = ensureImagesDir$1();
+  if (input.sourcePath) {
+    const src = path.resolve(input.sourcePath);
+    const stat = fs.statSync(src);
+    if (!stat.isFile()) throw new Error("Source is not a file");
+    const filename = buildTargetFilename(path.basename(src));
+    const dest = path.join(imagesDir, filename);
+    fs.copyFileSync(src, dest);
+    const fileUrl = `file://${dest.replace(/\\/g, "/")}`;
+    return { absolutePath: dest, fileUrl, filename };
+  }
+  if (input.bytesBase64) {
+    const rawName = input.filename && input.filename.trim() ? input.filename.trim() : "image.png";
+    const filename = buildTargetFilename(rawName);
+    const dest = path.join(imagesDir, filename);
+    const buffer = Buffer.from(input.bytesBase64, "base64");
+    fs.writeFileSync(dest, buffer);
+    const fileUrl = `file://${dest.replace(/\\/g, "/")}`;
+    return { absolutePath: dest, fileUrl, filename };
+  }
+  throw new Error("Provide either sourcePath or bytesBase64");
+}
+ipcMain.handle("fs:uploadOverlayImage", async (_event, input) => {
+  try {
+    const result = await handleUpload(input);
+    return { ok: true, data: result };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+function ensureImagesDir() {
+  if (process.platform !== "win32") {
+    throw new Error("This application supports Windows only");
+  }
+  const baseDir = app.getPath("userData");
+  const imagesDir = path.join(baseDir, "overlay-images");
+  try {
+    fs.mkdirSync(imagesDir, { recursive: true });
+  } catch {
+  }
+  return imagesDir;
+}
+function isAllowedExt(ext) {
+  const e = ext.toLowerCase();
+  return e === ".png" || e === ".jpg" || e === ".jpeg" || e === ".webp" || e === ".bmp";
+}
+function toFileUrl(p) {
+  return `file://${p.replace(/\\/g, "/")}`;
+}
+function listAllImages() {
+  const dir = ensureImagesDir();
+  let entries = [];
+  try {
+    const files = fs.readdirSync(dir);
+    for (const name of files) {
+      try {
+        const ext = path.extname(name);
+        if (!isAllowedExt(ext)) continue;
+        const full = path.join(dir, name);
+        const stat = fs.statSync(full);
+        if (!stat.isFile()) continue;
+        entries.push({
+          absolutePath: full,
+          fileUrl: toFileUrl(full),
+          filename: name,
+          size: stat.size,
+          modifiedAt: new Date(stat.mtimeMs).toISOString()
+        });
+      } catch {
+      }
+    }
+  } catch {
+  }
+  entries.sort((a, b) => a.modifiedAt < b.modifiedAt ? 1 : a.modifiedAt > b.modifiedAt ? -1 : 0);
+  return entries;
+}
+ipcMain.handle("fs:getAllOverlayImages", async () => {
+  try {
+    const items = listAllImages();
+    return { ok: true, data: items };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };

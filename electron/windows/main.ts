@@ -50,6 +50,7 @@ export function createOverlayEditorWindow() {
       preload: path.join(process.env.APP_ROOT || path.join(__dirname, '..', '..'), 'dist-electron', 'preload.mjs'),
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: false
     },
   })
 
