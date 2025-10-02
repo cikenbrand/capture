@@ -66,9 +66,31 @@ export default function OverlayEditor() {
                 setSelectedComponentIds(ids)
             } catch {}
         }
+        const onOverlayRefresh = async () => {
+            try {
+                const ovl = await window.ipcRenderer.invoke('app:getSelectedOverlayLayerId')
+                const overlayId: string | null = ovl?.ok ? (ovl.data ?? null) : null
+                if (!overlayId) return
+                // Broadcast refresh message to all channels in 1..4
+                for (let ch = 1; ch <= 4; ch++) {
+                    try {
+                        const ws = new WebSocket(`ws://127.0.0.1:3620/overlay?ch=${ch}`)
+                        ws.addEventListener('open', () => {
+                            try { ws.send(JSON.stringify({ overlayId, action: 'refresh' })) } catch {}
+                            try { ws.close() } catch {}
+                        }, { once: true })
+                        if (ws.readyState === WebSocket.OPEN) {
+                            try { ws.send(JSON.stringify({ overlayId, action: 'refresh' })) } catch {}
+                            try { ws.close() } catch {}
+                        }
+                    } catch {}
+                }
+            } catch {}
+        }
         window.addEventListener('selectedOverlayLayerChanged', onOverlayChanged as any)
         window.addEventListener('overlayComponentsChanged', onComponentsChanged as any)
         window.addEventListener('selectedOverlayComponentIdsChanged', onSelectedComponentIdsChanged as any)
+        window.addEventListener('overlay:refresh', onOverlayRefresh as any)
         ;(async () => {
             try {
                 const res = await window.ipcRenderer.invoke('app:getSelectedOverlayComponentIds')
@@ -79,6 +101,7 @@ export default function OverlayEditor() {
             window.removeEventListener('selectedOverlayLayerChanged', onOverlayChanged as any)
             window.removeEventListener('overlayComponentsChanged', onComponentsChanged as any)
             window.removeEventListener('selectedOverlayComponentIdsChanged', onSelectedComponentIdsChanged as any)
+            window.removeEventListener('overlay:refresh', onOverlayRefresh as any)
         }
     }, [])
     return (
@@ -132,6 +155,8 @@ export default function OverlayEditor() {
                                             try {
                                                 const ev = new CustomEvent('overlayComponentsChanged', { detail: { action: 'moved' } })
                                                 window.dispatchEvent(ev)
+                                                const refresh = new CustomEvent('overlay:refresh')
+                                                window.dispatchEvent(refresh)
                                             } catch { }
                                         } catch { }
                                     }}
@@ -221,6 +246,8 @@ export default function OverlayEditor() {
                                                 try {
                                                     const ev = new CustomEvent('overlayComponentsChanged', { detail: { ids, action: 'deleted' } })
                                                     window.dispatchEvent(ev)
+                                                    const refresh = new CustomEvent('overlay:refresh')
+                                                    window.dispatchEvent(refresh)
                                                 } catch { }
                                             }
                                         } catch { }
@@ -252,6 +279,7 @@ export default function OverlayEditor() {
                 open={editComponentOpen}
                 onOpenChange={setEditComponentOpen}
                 title="Edit Component"
+                useBackdrop={false}
             >
                 <EditComponentForm onClose={() => setEditComponentOpen(false)} />
             </DraggableDialog>

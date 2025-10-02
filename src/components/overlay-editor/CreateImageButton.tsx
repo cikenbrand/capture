@@ -37,6 +37,10 @@ export default function CreateImageButton() {
                     const ev = new CustomEvent('overlayComponentsChanged')
                     window.dispatchEvent(ev)
                 } catch { }
+                try {
+                    const ev2 = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev2)
+                } catch {}
             }
         } catch { }
     }

@@ -8,10 +8,12 @@ export type DraggableDialogProps = {
   width?: number
   /** When true, clicking outside or pressing Escape will not close the dialog, and the close button is hidden. */
   disableBackdropClose?: boolean
+  /** When true, show a dimmed backdrop; when false, keep backdrop transparent. Defaults to true. */
+  useBackdrop?: boolean
   children?: React.ReactNode
 }
 
-export function DraggableDialog({ open, onOpenChange, title, width = 520, disableBackdropClose = false, children }: DraggableDialogProps) {
+export function DraggableDialog({ open, onOpenChange, title, width = 520, disableBackdropClose = false, useBackdrop = true, children }: DraggableDialogProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 })
   const dragInfoRef = useRef<{ startX: number; startY: number; startLeft: number; startTop: number } | null>(null)
@@ -68,7 +70,7 @@ export function DraggableDialog({ open, onOpenChange, title, width = 520, disabl
 
   return createPortal(
     <div className="fixed inset-0 z-[50]">
-      <div className="absolute inset-0 bg-black/70 z-[7000]" onClick={disableBackdropClose ? undefined : () => onOpenChange(false)} />
+      <div className={`absolute inset-0 ${useBackdrop ? 'bg-black/70' : ''} z-[7000]`} onClick={disableBackdropClose ? undefined : () => onOpenChange(false)} />
       <div
         ref={panelRef}
         className="absolute w-[520px] max-w-[calc(100%-2rem)] border border-white/10 bg-[#1E1E1E] shadow-lg z-[7001]"

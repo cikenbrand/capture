@@ -133,6 +133,11 @@
                 if (typeof parsed.overlayId === 'string') {
                   candidate = parsed.overlayId;
                 }
+                if (parsed.action === 'refresh') {
+                  if (currentOverlayId) {
+                    fetchAndRenderComponents(currentOverlayId);
+                  }
+                }
                 if (Array.isArray(parsed.nodeLevels)) {
                   try { window.__nodeLevels = parsed.nodeLevels } catch {}
                   updateNodeTexts();
@@ -153,7 +158,8 @@
               if (/^[a-fA-F0-9]{24}$/.test(t)) candidate = t;
             }
 
-            if (candidate && candidate !== currentOverlayId) {
+            if (candidate) {
+              const changed = candidate !== currentOverlayId;
               currentOverlayId = candidate;
               fetchAndRenderComponents(candidate);
             }

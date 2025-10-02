@@ -1388,6 +1388,16 @@ ipcMain.handle("db:renameOverlay", async (_event, input) => {
     if (!(input == null ? void 0 : input.id) || !(input == null ? void 0 : input.name) || !input.name.trim()) throw new Error("Invalid input");
     const updated = await renameOverlay(input.id, input.name);
     const idStr = ((_b = (_a = updated == null ? void 0 : updated._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? input.id;
+    try {
+      const payload = { id: idStr, name: input.name, action: "renamed" };
+      for (const win2 of BrowserWindow.getAllWindows()) {
+        try {
+          win2.webContents.send("overlays:changed", payload);
+        } catch {
+        }
+      }
+    } catch {
+    }
     return { ok: true, data: idStr };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

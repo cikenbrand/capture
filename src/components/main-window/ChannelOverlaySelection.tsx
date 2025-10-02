@@ -45,7 +45,7 @@ export default function ChannelOverlaySelection() {
     function sendOverlaySelection(channelIndex: number, overlayId: string | null) {
 		try {
 			const ws = getSocket(channelIndex)
-			const payload = overlayId || ''
+			const payload = overlayId ? JSON.stringify({ overlayId }) : ''
 			if (!ws || typeof (ws as any).send !== 'function') return
 			if (ws.readyState === WebSocket.OPEN) {
 				ws.send(payload)
@@ -106,7 +106,16 @@ export default function ChannelOverlaySelection() {
         loadOverlays()
         const onChanged = () => loadOverlays()
         window.addEventListener('overlaysChanged', onChanged as any)
-        return () => window.removeEventListener('overlaysChanged', onChanged as any)
+        // Listen for Electron-level overlay rename events
+        try {
+            (window as any).ipcRenderer?.on('overlays:changed', () => {
+                try { loadOverlays() } catch {}
+            })
+        } catch {}
+        return () => {
+            window.removeEventListener('overlaysChanged', onChanged as any)
+            try { (window as any).ipcRenderer?.off('overlays:changed') } catch {}
+        }
     }, [])
 
     useEffect(() => {

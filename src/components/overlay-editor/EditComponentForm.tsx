@@ -132,19 +132,15 @@ export default function EditComponentForm({ onClose }: Props) {
     const [verticalAlign, setVerticalAlign] = useState<VerticalAlign>(DEFAULT_VERTICAL_ALIGN)
     const [fontColor, setFontColor] = useState(DEFAULT_FONT_COLOR)
     const [backgroundColor, setBackgroundColor] = useState(DEFAULT_BACKGROUND_COLOR)
+    const [backgroundEnabled, setBackgroundEnabled] = useState(false)
     const [fontWeight, setFontWeight] = useState<string | undefined>(undefined)
     const [customText, setCustomText] = useState('')
-    const [applyStyleToAll, setApplyStyleToAll] = useState(false)
     const [twentyFourHour, setTwentyFourHour] = useState(true)
     const [useUTC, setUseUTC] = useState(false)
     const [nodeLevel, setNodeLevel] = useState(1)
 
     const canEdit = selectedIds.length === 1
     const canEditTextStyle = canEdit && componentType !== 'image'
-
-    useEffect(() => {
-        if (!canEditTextStyle && applyStyleToAll) setApplyStyleToAll(false)
-    }, [canEditTextStyle, applyStyleToAll])
 
     useEffect(() => {
         let active = true
@@ -160,6 +156,7 @@ export default function EditComponentForm({ onClose }: Props) {
             setVerticalAlign(DEFAULT_VERTICAL_ALIGN)
             setFontColor(DEFAULT_FONT_COLOR)
             setBackgroundColor(DEFAULT_BACKGROUND_COLOR)
+            setBackgroundEnabled(false)
             setFontWeight(undefined)
             setCustomText('')
             setTwentyFourHour(true)
@@ -216,6 +213,7 @@ export default function EditComponentForm({ onClose }: Props) {
                     }
 
                     setBackgroundColor(normalizeHexColor(match?.backgroundColor, DEFAULT_BACKGROUND_COLOR))
+                    setBackgroundEnabled(typeof match?.backgroundColor === 'string' && match.backgroundColor.trim().toLowerCase() !== 'transparent')
                     setCustomText(match?.type === 'custom-text' || match?.type === 'task' ? (match?.customText ?? '') : '')
                     setTwentyFourHour(match?.twentyFourHour ?? true)
                     setUseUTC(match?.useUTC ?? false)
@@ -226,15 +224,15 @@ export default function EditComponentForm({ onClose }: Props) {
             }
         }
 
-        ; (async () => {
-            try {
-                const res = await window.ipcRenderer.invoke('app:getSelectedOverlayComponentIds')
-                const ids = res?.ok && Array.isArray(res.data) ? res.data : []
-                await syncFromIds(ids)
-            } catch {
-                await syncFromIds([])
-            }
-        })()
+            ; (async () => {
+                try {
+                    const res = await window.ipcRenderer.invoke('app:getSelectedOverlayComponentIds')
+                    const ids = res?.ok && Array.isArray(res.data) ? res.data : []
+                    await syncFromIds(ids)
+                } catch {
+                    await syncFromIds([])
+                }
+            })()
 
         const onSelectedIdsChanged = (e: any) => {
             try {
@@ -273,6 +271,10 @@ export default function EditComponentForm({ onClose }: Props) {
                         : component
                 )))
                 broadcastUpdate(ids)
+                try {
+                    const ev = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev)
+                } catch {}
             }
         } catch {
             // ignore errors during live editing
@@ -292,6 +294,10 @@ export default function EditComponentForm({ onClose }: Props) {
                         : component
                 )))
                 broadcastUpdate(ids)
+                try {
+                    const ev = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev)
+                } catch {}
             }
         } catch {
             // ignore errors during live editing
@@ -311,6 +317,10 @@ export default function EditComponentForm({ onClose }: Props) {
                         : component
                 )))
                 broadcastUpdate(ids)
+                try {
+                    const ev = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev)
+                } catch {}
             }
         } catch {
             // ignore errors during live editing
@@ -330,6 +340,10 @@ export default function EditComponentForm({ onClose }: Props) {
                         : component
                 )))
                 broadcastUpdate(ids)
+                try {
+                    const ev = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev)
+                } catch {}
             }
         } catch {
             // ignore errors during live editing
@@ -349,6 +363,10 @@ export default function EditComponentForm({ onClose }: Props) {
                         : component
                 )))
                 broadcastUpdate(ids)
+                try {
+                    const ev = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev)
+                } catch {}
             }
         } catch {
             // ignore errors during live editing
@@ -368,133 +386,36 @@ export default function EditComponentForm({ onClose }: Props) {
                         : component
                 )))
                 broadcastUpdate(ids)
+                try {
+                    const ev = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev)
+                } catch {}
             }
         } catch {
             // ignore errors during live editing
         }
     }, [broadcastUpdate])
 
-    const applyTextStyleChange = useCallback(async (stylePatch: TextStyleShape, nextSelectedStyle: TextStyleShape) => {
+    const applyTextStyleChange = useCallback(async (nextSelectedStyle: TextStyleShape) => {
         if (!canEditTextStyle) return
         setTextStyle(nextSelectedStyle)
-        if (applyStyleToAll) {
-            const targets = overlayComponents.filter((component) => component.type !== 'image')
-            if (!targets.length) {
-                void updateComponentTextStyle(nextSelectedStyle, selectedIds)
-                return
-            }
-            const targetIds = targets.map((component) => component._id)
-            await Promise.all(targets.map(async (component) => {
-                const baseStyle = { ...(component.textStyle ?? {}), ...stylePatch }
-                try {
-                    await window.ipcRenderer.invoke('db:editOverlayComponent', {
-                        ids: [component._id],
-                        updates: { textStyle: baseStyle }
-                    })
-                } catch {
-                    // ignore errors during live editing
-                }
-            }))
-            setOverlayComponents((prev) => prev.map((component) => (
-                targetIds.includes(component._id)
-                    ? { ...component, textStyle: { ...(component.textStyle ?? {}), ...stylePatch } }
-                    : component
-            )))
-            broadcastUpdate(targetIds)
-        } else {
-            void updateComponentTextStyle(nextSelectedStyle, selectedIds)
-        }
-    }, [applyStyleToAll, broadcastUpdate, canEditTextStyle, componentType, overlayComponents, selectedIds, updateComponentTextStyle])
+        void updateComponentTextStyle(nextSelectedStyle, selectedIds)
+    }, [canEditTextStyle, selectedIds, updateComponentTextStyle])
 
     const applyBackgroundColorChange = useCallback(async (color: string) => {
         if (!canEditTextStyle) return
-        if (applyStyleToAll) {
-            const targets = overlayComponents.filter((component) => component.type !== 'image')
-            if (!targets.length) {
-                void updateComponentBackgroundColor(color, selectedIds)
-                return
-            }
-            const targetIds = targets.map((component) => component._id)
-            await Promise.all(targets.map(async (component) => {
-                try {
-                    await window.ipcRenderer.invoke('db:editOverlayComponent', {
-                        ids: [component._id],
-                        updates: { backgroundColor: color }
-                    })
-                } catch {
-                    // ignore errors during live editing
-                }
-            }))
-            setOverlayComponents((prev) => prev.map((component) => (
-                targetIds.includes(component._id)
-                    ? { ...component, backgroundColor: color }
-                    : component
-            )))
-            broadcastUpdate(targetIds)
-        } else {
-            void updateComponentBackgroundColor(color, selectedIds)
-        }
-    }, [applyStyleToAll, broadcastUpdate, canEditTextStyle, componentType, overlayComponents, selectedIds, updateComponentBackgroundColor])
+        void updateComponentBackgroundColor(color, selectedIds)
+    }, [broadcastUpdate, canEditTextStyle, componentType, overlayComponents, selectedIds, updateComponentBackgroundColor])
 
     const applyTimeSettingChange = useCallback(async (updates: Partial<{ twentyFourHour: boolean; useUTC: boolean }>) => {
         if (!canEdit || componentType !== 'time') return
-        if (applyStyleToAll) {
-            const targets = overlayComponents.filter((component) => component.type === 'time')
-            if (!targets.length) {
-                void updateComponentTimeSettings(updates, selectedIds)
-                return
-            }
-            const targetIds = targets.map((component) => component._id)
-            await Promise.all(targetIds.map(async (id) => {
-                try {
-                    await window.ipcRenderer.invoke('db:editOverlayComponent', {
-                        ids: [id],
-                        updates,
-                    })
-                } catch {
-                    // ignore errors during live editing
-                }
-            }))
-            setOverlayComponents((prev) => prev.map((component) => (
-                targetIds.includes(component._id)
-                    ? { ...component, ...updates }
-                    : component
-            )))
-            broadcastUpdate(targetIds)
-        } else {
-            void updateComponentTimeSettings(updates, selectedIds)
-        }
-    }, [applyStyleToAll, broadcastUpdate, canEdit, componentType, overlayComponents, selectedIds, updateComponentTimeSettings])
+        void updateComponentTimeSettings(updates, selectedIds)
+    }, [broadcastUpdate, canEdit, componentType, selectedIds, updateComponentTimeSettings])
 
     const applyNodeLevelChange = useCallback(async (level: number) => {
         if (!canEdit || componentType !== 'node') return
-        if (applyStyleToAll) {
-            const targets = overlayComponents.filter((component) => component.type === 'node')
-            if (!targets.length) {
-                void updateComponentNodeLevel(level, selectedIds)
-                return
-            }
-            const targetIds = targets.map((component) => component._id)
-            await Promise.all(targetIds.map(async (id) => {
-                try {
-                    await window.ipcRenderer.invoke('db:editOverlayComponent', {
-                        ids: [id],
-                        updates: { nodeLevel: level },
-                    })
-                } catch {
-                    // ignore errors during live editing
-                }
-            }))
-            setOverlayComponents((prev) => prev.map((component) => (
-                targetIds.includes(component._id)
-                    ? { ...component, nodeLevel: level }
-                    : component
-            )))
-            broadcastUpdate(targetIds)
-        } else {
-            void updateComponentNodeLevel(level, selectedIds)
-        }
-    }, [applyStyleToAll, broadcastUpdate, canEdit, componentType, overlayComponents, selectedIds, updateComponentNodeLevel])
+        void updateComponentNodeLevel(level, selectedIds)
+    }, [broadcastUpdate, canEdit, componentType, selectedIds, updateComponentNodeLevel])
 
     const handleCustomTextChange = (event: ChangeEvent<HTMLInputElement>) => {
         const nextValue = event.target.value
@@ -518,7 +439,7 @@ export default function EditComponentForm({ onClose }: Props) {
         if (!Number.isFinite(parsed) || parsed <= 0) return
         const stylePatch: TextStyleShape = { fontSize: parsed }
         const nextStyle = { ...(textStyle ?? DEFAULT_TEXT_STYLE), ...stylePatch }
-        void applyTextStyleChange(stylePatch, nextStyle)
+        void applyTextStyleChange(nextStyle)
     }
 
     const handleLetterSpacingChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -531,7 +452,7 @@ export default function EditComponentForm({ onClose }: Props) {
         if (!Number.isFinite(parsed)) return
         const stylePatch: TextStyleShape = { letterSpacing: parsed }
         const nextStyle = { ...(textStyle ?? DEFAULT_TEXT_STYLE), ...stylePatch }
-        void applyTextStyleChange(stylePatch, nextStyle)
+        void applyTextStyleChange(nextStyle)
     }
 
     const handleHorizontalAlignChange = (value: HorizontalAlign) => {
@@ -540,7 +461,7 @@ export default function EditComponentForm({ onClose }: Props) {
         if (!canEditTextStyle) return
         const stylePatch: TextStyleShape = { align: normalized }
         const nextStyle = { ...(textStyle ?? DEFAULT_TEXT_STYLE), ...stylePatch }
-        void applyTextStyleChange(stylePatch, nextStyle)
+        void applyTextStyleChange(nextStyle)
     }
 
     const handleVerticalAlignChange = (value: VerticalAlign) => {
@@ -549,7 +470,7 @@ export default function EditComponentForm({ onClose }: Props) {
         if (!canEditTextStyle) return
         const stylePatch: TextStyleShape = { verticalAlign: normalized }
         const nextStyle = { ...(textStyle ?? DEFAULT_TEXT_STYLE), ...stylePatch }
-        void applyTextStyleChange(stylePatch, nextStyle)
+        void applyTextStyleChange(nextStyle)
     }
 
     const handleFontFamilyChange = (value: string) => {
@@ -558,7 +479,7 @@ export default function EditComponentForm({ onClose }: Props) {
         if (!canEditTextStyle) return
         const stylePatch: TextStyleShape = { fontFamily: normalized }
         const nextStyle = { ...(textStyle ?? DEFAULT_TEXT_STYLE), ...stylePatch }
-        void applyTextStyleChange(stylePatch, nextStyle)
+        void applyTextStyleChange(nextStyle)
     }
 
     const handleFontColorChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -568,7 +489,7 @@ export default function EditComponentForm({ onClose }: Props) {
         if (!/^#[0-9A-Fa-f]{6}$/.test(nextValue)) return
         const stylePatch: TextStyleShape = { color: nextValue }
         const nextStyle = { ...(textStyle ?? DEFAULT_TEXT_STYLE), ...stylePatch }
-        void applyTextStyleChange(stylePatch, nextStyle)
+        void applyTextStyleChange(nextStyle)
     }
 
     const handleBackgroundColorChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -579,6 +500,12 @@ export default function EditComponentForm({ onClose }: Props) {
         void applyBackgroundColorChange(nextValue)
     }
 
+    const applyBackgroundEnabledChange = useCallback(async (enabled: boolean) => {
+        if (!canEditTextStyle) return
+        const colorToApply = enabled ? backgroundColor : 'transparent'
+        await applyBackgroundColorChange(colorToApply)
+    }, [applyBackgroundColorChange, backgroundColor, canEditTextStyle])
+
     const handleFontWeightChange = (value: string) => {
         setFontWeight(value)
         if (!canEditTextStyle) return
@@ -586,7 +513,7 @@ export default function EditComponentForm({ onClose }: Props) {
         if (parsed === null) return
         const stylePatch: TextStyleShape = { fontWeight: parsed }
         const nextStyle = { ...(textStyle ?? DEFAULT_TEXT_STYLE), ...stylePatch }
-        void applyTextStyleChange(stylePatch, nextStyle)
+        void applyTextStyleChange(nextStyle)
     }
 
     const handleTwentyFourHourChange = (value: '24' | '12') => {
@@ -608,7 +535,41 @@ export default function EditComponentForm({ onClose }: Props) {
         void applyNodeLevelChange(sanitized)
     }
 
-    const checkboxLabel = 'Apply to all components'
+    const handleApplyAllClick = useCallback(async () => {
+        const targets = overlayComponents.filter((component) => component.type !== 'image')
+        if (!targets.length) return
+        const targetIds = targets.map((component) => component._id)
+
+        const stylePatch: TextStyleShape = {}
+        const parsedFontSize = Number(fontSize)
+        if (Number.isFinite(parsedFontSize) && parsedFontSize > 0) stylePatch.fontSize = parsedFontSize
+        const parsedWeight = fontWeight ? parseFontWeight(fontWeight) : null
+        if (parsedWeight !== null && parsedWeight !== undefined) stylePatch.fontWeight = parsedWeight
+        const parsedLetterSpacing = Number(letterSpacing)
+        if (letterSpacing !== '' && Number.isFinite(parsedLetterSpacing)) stylePatch.letterSpacing = parsedLetterSpacing
+        if (fontFamily) stylePatch.fontFamily = normalizeFontFamily(fontFamily)
+        if (fontColor) stylePatch.color = normalizeHexColor(fontColor, DEFAULT_FONT_COLOR)
+        stylePatch.align = normalizeHorizontalAlign(horizontalAlign)
+        stylePatch.verticalAlign = normalizeVerticalAlign(verticalAlign)
+
+        await Promise.all(targets.map(async (component) => {
+            const baseStyle = { ...(component.textStyle ?? {}), ...stylePatch }
+            try {
+                await window.ipcRenderer.invoke('db:editOverlayComponent', {
+                    ids: [component._id],
+                    updates: { textStyle: baseStyle }
+                })
+            } catch {}
+        }))
+        setOverlayComponents((prev) => prev.map((component) => (
+            targetIds.includes(component._id)
+                ? { ...component, textStyle: { ...(component.textStyle ?? {}), ...stylePatch } }
+                : component
+        )))
+
+        const colorToApply = backgroundEnabled ? backgroundColor : 'transparent'
+        await updateComponentBackgroundColor(colorToApply, targetIds)
+    }, [overlayComponents, fontSize, fontWeight, letterSpacing, fontFamily, fontColor, horizontalAlign, verticalAlign, backgroundEnabled, backgroundColor, updateComponentBackgroundColor])
 
     return (
         <div className="flex flex-col gap-3">
@@ -788,26 +749,30 @@ export default function EditComponentForm({ onClose }: Props) {
                     />
                 </div>
                 <div className="flex flex-col gap-1">
-                    <span>Background Color</span>
+                    <label className="flex gap-1 items-center">
+                        <Checkbox
+                            checked={backgroundEnabled}
+                            onCheckedChange={(checked) => {
+                                const enabled = checked === true
+                                setBackgroundEnabled(enabled)
+                                void applyBackgroundEnabledChange(enabled)
+                            }}
+                            disabled={!canEditTextStyle}
+                        />
+                        <span>Background Color</span>
+                    </label>
                     <input
                         type="color"
                         value={backgroundColor}
                         onChange={handleBackgroundColorChange}
-                        disabled={!canEditTextStyle}
+                        disabled={!canEditTextStyle || !backgroundEnabled}
                         className="h-9 w-full rounded border border-[#4C525E] bg-[#252B34] p-1 disabled:opacity-50"
                     />
                 </div>
-                <label className="flex items-center gap-2 text-sm text-white/80" htmlFor="apply-text-style-all">
-                    <Checkbox
-                        id="apply-text-style-all"
-                        checked={applyStyleToAll}
-                        onCheckedChange={(checked) => setApplyStyleToAll(checked === true)}
-                        disabled={!canEditTextStyle || componentType === 'image'}
-                    />
-                    <span>{checkboxLabel}</span>
-                </label>
+                
             </div>
             <div className="mt-2 flex justify-end gap-2">
+                <Button onClick={handleApplyAllClick}>Apply to All Components</Button>
                 <Button onClick={() => onClose?.()}>Close</Button>
             </div>
         </div>

@@ -54,7 +54,7 @@ export default function RenameOverlayForm({ onClose }: Props) {
             })
             if (result?.ok) {
                 try {
-                    const ev = new CustomEvent('overlaysChanged', { detail: { id: overlayId, action: 'renamed' } })
+                    const ev = new CustomEvent('overlaysChanged', { detail: { id: overlayId, action: 'renamed', name } })
                     window.dispatchEvent(ev)
                 } catch { }
                 onClose()

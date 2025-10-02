@@ -39,6 +39,10 @@ export default function CreateTaskButton() {
                     const ev = new CustomEvent('overlayComponentsChanged', { detail: { action: 'created', type: 'task' } })
                     window.dispatchEvent(ev)
                 } catch { }
+                try {
+                    const ev2 = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev2)
+                } catch {}
             }
         } catch { }
     }

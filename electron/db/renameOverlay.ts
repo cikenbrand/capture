@@ -1,6 +1,6 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import type { OverlayDoc } from './createOverlay'
 
 let cachedClient: MongoClient | null = null
@@ -36,6 +36,12 @@ ipcMain.handle('db:renameOverlay', async (_event, input: { id: string; name: str
     if (!input?.id || !input?.name || !input.name.trim()) throw new Error('Invalid input')
     const updated = await renameOverlay(input.id, input.name)
     const idStr = (updated as any)?._id?.toString?.() ?? input.id
+    try {
+      const payload = { id: idStr, name: input.name, action: 'renamed' }
+      for (const win of BrowserWindow.getAllWindows()) {
+        try { win.webContents.send('overlays:changed', payload) } catch {}
+      }
+    } catch {}
     return { ok: true, data: idStr }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
