@@ -2027,6 +2027,113 @@ ipcMain.handle("obs:get-live-devices", async () => {
     return [];
   }
 });
+async function getRecordingDirectory() {
+  const obs = getObsClient();
+  if (!obs) return "";
+  try {
+    const { recordDirectory } = await obs.call("GetRecordDirectory");
+    return typeof recordDirectory === "string" ? recordDirectory : "";
+  } catch {
+    return "";
+  }
+}
+ipcMain.handle("obs:get-recording-directory", async () => {
+  try {
+    const dir = await getRecordingDirectory();
+    return dir;
+  } catch {
+    return "";
+  }
+});
+async function getFileNameFormatting() {
+  const obs = getObsClient();
+  if (!obs) {
+    return { preview: "", ch1: "", ch2: "", ch3: "", ch4: "" };
+  }
+  let preview = "";
+  try {
+    const { parameterValue } = await obs.call("GetProfileParameter", {
+      parameterCategory: "Output",
+      parameterName: "FilenameFormatting"
+    });
+    preview = typeof parameterValue === "string" ? parameterValue : "";
+  } catch {
+    preview = "";
+  }
+  const sources = ["channel 1", "channel 2", "channel 3", "channel 4"];
+  const results = ["", "", "", ""];
+  for (let i = 0; i < sources.length; i++) {
+    const sourceName = sources[i];
+    try {
+      const { filterSettings } = await obs.call("GetSourceFilter", {
+        sourceName,
+        filterName: "source record"
+      });
+      const value = filterSettings && typeof filterSettings.filename_formatting === "string" ? filterSettings.filename_formatting : "";
+      results[i] = value;
+    } catch {
+      results[i] = "";
+    }
+  }
+  return {
+    preview,
+    ch1: results[0] || "",
+    ch2: results[1] || "",
+    ch3: results[2] || "",
+    ch4: results[3] || ""
+  };
+}
+ipcMain.handle("obs:get-file-name-formatting", async () => {
+  try {
+    const value = await getFileNameFormatting();
+    return value;
+  } catch {
+    return { preview: "", ch1: "", ch2: "", ch3: "", ch4: "" };
+  }
+});
+async function setFileNameFormatting(format) {
+  const obs = getObsClient();
+  if (!obs) return false;
+  let allOk = true;
+  try {
+    await obs.call("SetProfileParameter", {
+      parameterCategory: "Output",
+      parameterName: "FilenameFormatting",
+      parameterValue: `preview-${format}`
+    });
+  } catch {
+    allOk = false;
+  }
+  const sources = [
+    "channel 1",
+    "channel 2",
+    "channel 3",
+    "channel 4"
+  ];
+  for (let i = 0; i < sources.length; i++) {
+    const sourceName = sources[i];
+    const channelIndex = i + 1;
+    try {
+      await obs.call("SetSourceFilterSettings", {
+        sourceName,
+        filterName: "source record",
+        filterSettings: { filename_formatting: `ch${channelIndex}-${format}` },
+        overlay: true
+      });
+    } catch {
+      allOk = false;
+    }
+  }
+  return allOk;
+}
+ipcMain.handle("obs:set-file-name-formatting", async (_e, format) => {
+  try {
+    const ok = await setFileNameFormatting(format);
+    return ok;
+  } catch {
+    return false;
+  }
+});
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];

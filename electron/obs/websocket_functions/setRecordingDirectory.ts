@@ -36,7 +36,6 @@ export async function setRecordingDirectory(targetPath: string): Promise<boolean
   return allOk
 }
 
-// IPC: set recording directory in basic.ini
 ipcMain.handle('obs:set-recording-directory', async (_e, targetPath: string) => {
   try {
     const ok = await setRecordingDirectory(targetPath)

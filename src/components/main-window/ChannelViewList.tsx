@@ -217,7 +217,7 @@ export default function ChannelViewList() {
         <MdSettings className="h-4.5 w-4.5" />
         <span className="font-semibold text-[14px]">Open Video Configurations</span>
       </button>
-      <DraggableDialog open={isVideoConfigOpen} onOpenChange={setIsVideoConfigOpen} title="Video Configurations">
+      <DraggableDialog open={isVideoConfigOpen} onOpenChange={setIsVideoConfigOpen} title="Video Configurations" width={800}>
         <VideoDeviceConfigurations />
       </DraggableDialog>
       <div className="flex flex-col gap-1">

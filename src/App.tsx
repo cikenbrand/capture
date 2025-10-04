@@ -20,7 +20,7 @@ import EditNodeDetailsForm from "./components/main-window/EditNodeDetailsForm"
 import DeleteNodeConfirmation from "./components/main-window/DeleteNodeConfirmation"
 import PreviewVirtualCam from "./components/main-window/PreviewVirtualCam"
 import { FaCircle, FaMicrophone, FaPause, FaPlay, FaStop } from "react-icons/fa"
-import { BsArrowUpRight, BsCameraFill } from "react-icons/bs";
+import { BsCameraFill } from "react-icons/bs";
 import AudioMeter from "./components/main-window/AudioMeter"
 import CursorToolButton from "./components/main-window/CursorToolButton"
 import FreeDrawToolButton from "./components/main-window/FreeDrawToolButton"
@@ -30,6 +30,8 @@ import AllLogsTable from "./components/main-window/AllLogsTable"
 import ChannelViewList from "./components/main-window/ChannelViewList"
 import ChannelOverlaySelection from "./components/main-window/ChannelOverlaySelection"
 import ShowNodesRemarks from "./components/main-window/ShowNodesRemarks"
+import StartSessionForm from "./components/main-window/StartSessionForm"
+import StopSessionForm from "./components/main-window/StopSessionForm"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -44,6 +46,8 @@ function App() {
   const [isEditNodeDialogOpen, setIsEditNodeDialogOpen] = useState(false)
   const [isDeleteNodeDialogOpen, setIsDeleteNodeDialogOpen] = useState(false)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [isStartSessionDialogOpen, setIsStartSessionDialogOpen] = useState(false)
+  const [isStopSessionDialogOpen, setIsStopSessionDialogOpen] = useState(false)
 
   const isSessionActionDisabled = !(
     selectedProjectId && selectedTaskId && selectedDiveId && selectedNodeId
@@ -194,10 +198,10 @@ function App() {
               </TabsList>
               <TabsContent value="preview" className="flex flex-col gap-1 p-0">
                 <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
-                  <button title="Start Session" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Start Session" disabled={isSessionActionDisabled} onClick={() => setIsStartSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaCircle className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Stop Session" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Stop Session" disabled={isSessionActionDisabled} onClick={() => setIsStopSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaStop className="h-3.5 w-3.5" />
                   </button>
                   <button title="Pause Session" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
@@ -288,6 +292,12 @@ function App() {
       </DraggableDialog>
       <DraggableDialog open={isDeleteNodeDialogOpen} onOpenChange={setIsDeleteNodeDialogOpen} title="Delete Node">
         <DeleteNodeConfirmation onClose={() => setIsDeleteNodeDialogOpen(false)} />
+      </DraggableDialog>
+      <DraggableDialog open={isStartSessionDialogOpen} onOpenChange={setIsStartSessionDialogOpen} title="Start Session">
+        <StartSessionForm onClose={() => setIsStartSessionDialogOpen(false)} />
+      </DraggableDialog>
+      <DraggableDialog open={isStopSessionDialogOpen} onOpenChange={setIsStopSessionDialogOpen} title="Stop Session">
+        <StopSessionForm />
       </DraggableDialog>
     </div>
   )

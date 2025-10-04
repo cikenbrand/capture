@@ -48,6 +48,9 @@ import './db/getOverlayComponentsForRender'
 import './db/uploadOverlayImage'
 import './db/getAllOverlayImages'
 import './obs/websocket_functions/getLiveDevices'
+import './obs/websocket_functions/getRecordingDirectory'
+import './obs/websocket_functions/getFileNameFormatting'
+import './obs/websocket_functions/setFileNameFormatting'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')

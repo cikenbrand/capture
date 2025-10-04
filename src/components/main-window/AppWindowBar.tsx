@@ -16,12 +16,14 @@ import { Button } from "../ui/button";
 import CreateProjectForm from "./CreateProjectForm";
 import OpenProject from "./OpenProject";
 import EditProjectDetailsForm from "./EditProjectDetailsForm";
+import VideoDeviceConfigurations from "./VideoDeviceConfigurations";
 
 export default function AppWindowBar() {
     const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
     const [newProjectOpen, setNewProjectOpen] = useState(false)
     const [openProjectOpen, setOpenProjectOpen] = useState(false)
     const [editProjectOpen, setEditProjectOpen] = useState(false)
+    const [videoConfigOpen, setVideoConfigOpen] = useState(false)
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
     const [selectedProjectName, setSelectedProjectName] = useState<string | null>(null)
     const [recentProjects, setRecentProjects] = useState<{ _id: string; name: string; lastSelectedDiveId?: string | null; lastSelectedTaskId?: string | null; lastSelectedNodeId?: string | null }[]>([])
@@ -150,6 +152,12 @@ export default function AppWindowBar() {
                                             try {
                                                 const ev2 = new CustomEvent('selectedDiveChanged', { detail: null })
                                                 window.dispatchEvent(ev2)
+                                            // Clear selected task as well
+                                            await window.ipcRenderer.invoke('app:setSelectedTaskId', null)
+                                            try {
+                                                const ev3 = new CustomEvent('selectedTaskChanged', { detail: null })
+                                                window.dispatchEvent(ev3)
+                                            } catch { }
                                                 // Clear selected node as well
                                                 await window.ipcRenderer.invoke('app:setSelectedNodeId', null)
                                                 try {
@@ -170,6 +178,12 @@ export default function AppWindowBar() {
                         <MenubarContent>
                             <MenubarItem onClick={() => window.ipcRenderer.invoke('window:open-overlay-editor')}>Open Overlay Editor</MenubarItem>
                             <MenubarItem>Open Data Manager</MenubarItem>
+                        </MenubarContent>
+                    </MenubarMenu>
+                    <MenubarMenu>
+                        <MenubarTrigger className='px-2 py-1'>Settings</MenubarTrigger>
+                        <MenubarContent>
+                            <MenubarItem onClick={() => setVideoConfigOpen(true)}>Video Configurations</MenubarItem>
                         </MenubarContent>
                     </MenubarMenu>
                 </Menubar>
@@ -234,6 +248,14 @@ export default function AppWindowBar() {
                 width={800}
             >
                 <EditProjectDetailsForm onClose={() => setEditProjectOpen(false)} />
+            </DraggableDialog>
+            <DraggableDialog
+                open={videoConfigOpen}
+                onOpenChange={setVideoConfigOpen}
+                title="Video Configurations"
+                width={800}
+            >
+                <VideoDeviceConfigurations/>
             </DraggableDialog>
         </div >
     )
