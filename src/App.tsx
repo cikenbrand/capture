@@ -35,6 +35,8 @@ import StopSessionForm from "./components/main-window/StopSessionForm"
 import PauseSessionForm from "./components/main-window/PauseSessionForm"
 import StartClipRecordingForm from "./components/main-window/StartClipRecordingForm"
 import StopClipRecordingForm from "./components/main-window/StopClipRecordingForm"
+import SessionTimer from "./components/main-window/SessionTimer"
+import ClipTimer from "./components/main-window/ClipTimer"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -54,6 +56,7 @@ function App() {
   const [isPauseSessionDialogOpen, setIsPauseSessionDialogOpen] = useState(false)
   const [isStartClipDialogOpen, setIsStartClipDialogOpen] = useState(false)
   const [isStopClipDialogOpen, setIsStopClipDialogOpen] = useState(false)
+  const [recordingState, setRecordingState] = useState({ isRecordingStarted: false, isRecordingPaused: false, isRecordingStopped: false, isClipRecordingStarted: false })
 
   const isSessionActionDisabled = !(
     selectedProjectId && selectedTaskId && selectedDiveId && selectedNodeId
@@ -108,6 +111,30 @@ function App() {
       window.removeEventListener('selectedTaskChanged', onTaskChanged as any)
       window.removeEventListener('selectedNodeChanged', onNodeChanged as any)
     }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+      ; (async () => {
+        try {
+          const res = await window.ipcRenderer.invoke('recording:getState')
+          if (!cancelled && res?.ok) setRecordingState(res.data)
+        } catch { }
+      })()
+    return () => { cancelled = true }
+  }, [])
+
+  useEffect(() => {
+    const onRecordingStateChanged = () => {
+      ; (async () => {
+        try {
+          const res = await window.ipcRenderer.invoke('recording:getState')
+          if (res?.ok) setRecordingState(res.data)
+        } catch { }
+      })()
+    }
+    window.addEventListener('recordingStateChanged', onRecordingStateChanged as any)
+    return () => window.removeEventListener('recordingStateChanged', onRecordingStateChanged as any)
   }, [])
 
   useEffect(() => {
@@ -204,31 +231,27 @@ function App() {
               </TabsList>
               <TabsContent value="preview" className="flex flex-col gap-1 p-0">
                 <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
-                  <button title="Start Session" disabled={isSessionActionDisabled} onClick={() => setIsStartSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Start Session" disabled={isSessionActionDisabled || recordingState.isRecordingStarted} onClick={() => setIsStartSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaCircle className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Stop Session" disabled={isSessionActionDisabled} onClick={() => setIsStopSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Stop Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isRecordingStopped} onClick={() => setIsStopSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaStop className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Pause Session" disabled={isSessionActionDisabled} onClick={() => setIsPauseSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Pause Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isRecordingPaused || recordingState.isRecordingStopped} onClick={() => setIsPauseSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaPause className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Resume Session" disabled={isSessionActionDisabled} onClick={() => { try { window.ipcRenderer.invoke('obs:resume-recording') } catch {} }} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Resume Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || !recordingState.isRecordingPaused || recordingState.isRecordingStopped} onClick={() => { try { window.ipcRenderer.invoke('obs:resume-recording'); window.ipcRenderer.invoke('recording:updateState', { isRecordingPaused: false }); setRecordingState(prev => ({ ...prev, isRecordingPaused: false })); window.dispatchEvent(new Event('recordingStateChanged')) } catch { } }} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaPlay className="h-3.5 w-3.5" />
                   </button>
-                  <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
-                    <span className="tracking-[5px] font-bold text-lg">00:00:00</span>
-                  </div>
+                  <SessionTimer />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Start Clip" disabled={isSessionActionDisabled} onClick={() => setIsStartClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Start Clip" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isClipRecordingStarted} onClick={() => setIsStartClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <MdCameraRoll className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Stop Clip" disabled={isSessionActionDisabled} onClick={() => setIsStopClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Stop Clip" disabled={isSessionActionDisabled || !recordingState.isClipRecordingStarted} onClick={() => setIsStopClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaStop className="h-3.5 w-3.5" />
                   </button>
-                  <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
-                    <span className="tracking-[5px] font-bold text-lg">00:00:00</span>
-                  </div>
+                  <ClipTimer />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
                   <button title="Take Snapshot" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <BsCameraFill className="h-4 w-4" />
@@ -309,7 +332,7 @@ function App() {
         <PauseSessionForm onClose={() => setIsPauseSessionDialogOpen(false)} />
       </DraggableDialog>
       <DraggableDialog open={isStartClipDialogOpen} onOpenChange={setIsStartClipDialogOpen} title="Start Clip">
-        <StartClipRecordingForm onClose={() => setIsStartClipDialogOpen(false)}/>
+        <StartClipRecordingForm onClose={() => setIsStartClipDialogOpen(false)} />
       </DraggableDialog>
       <DraggableDialog open={isStopClipDialogOpen} onOpenChange={setIsStopClipDialogOpen} title="Stop Clip">
         <StopClipRecordingForm onClose={() => setIsStopClipDialogOpen(false)} />

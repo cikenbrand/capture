@@ -10,6 +10,14 @@ export default memo(function StopSessionForm({ onClose }: Props) {
     try {
       await window.ipcRenderer.invoke('obs:stop-recording')
     } catch {}
+    try {
+      await window.ipcRenderer.invoke('recording:updateState', {
+        isRecordingStarted: false,
+        isRecordingPaused: false,
+        isRecordingStopped: true,
+      })
+    } catch {}
+    try { window.dispatchEvent(new Event('recordingStateChanged')) } catch {}
     onClose()
   }
   return (

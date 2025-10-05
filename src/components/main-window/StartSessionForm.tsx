@@ -19,10 +19,10 @@ export default memo(function StartSessionForm({ onClose }: Props) {
     const [channel3FileName, setChannel3FileName] = useState("")
     const [channel4FileName, setChannel4FileName] = useState("")
   const [previewEnabled, setPreviewEnabled] = useState(true)
-  const [channel1Enabled, setChannel1Enabled] = useState(true)
-  const [channel2Enabled, setChannel2Enabled] = useState(true)
-  const [channel3Enabled, setChannel3Enabled] = useState(true)
-  const [channel4Enabled, setChannel4Enabled] = useState(true)
+  const [channel1Enabled, setChannel1Enabled] = useState(false)
+  const [channel2Enabled, setChannel2Enabled] = useState(false)
+  const [channel3Enabled, setChannel3Enabled] = useState(false)
+  const [channel4Enabled, setChannel4Enabled] = useState(false)
 
     useEffect(() => {
         let cancelled = false
@@ -74,6 +74,8 @@ export default memo(function StartSessionForm({ onClose }: Props) {
                 ch3: channel3Enabled,
                 ch4: channel4Enabled,
             })
+            try { await window.ipcRenderer.invoke('recording:updateState', { isRecordingStarted: true, isRecordingStopped: false, isRecordingPaused: false }) } catch {}
+            try { window.dispatchEvent(new Event('recordingStateChanged')) } catch {}
         } catch { }
         onClose()
     }

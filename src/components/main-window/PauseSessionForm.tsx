@@ -8,6 +8,8 @@ export default memo(function PauseSessionForm({ onClose }: Props) {
         try {
             await window.ipcRenderer.invoke('obs:pause-recording')
         } catch { }
+        try { await window.ipcRenderer.invoke('recording:updateState', { isRecordingPaused: true }) } catch {}
+        try { window.dispatchEvent(new Event('recordingStateChanged')) } catch {}
         onClose?.()
     }
     return (

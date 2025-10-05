@@ -2200,6 +2200,35 @@ ipcMain.handle("obs:stop-clip-recording", async () => {
     return false;
   }
 });
+let recordingState = {
+  isRecordingStarted: false,
+  isRecordingPaused: false,
+  isRecordingStopped: false,
+  isClipRecordingStarted: false
+};
+function getRecordingState() {
+  return recordingState;
+}
+function updateRecordingState(patch) {
+  recordingState = { ...recordingState, ...patch };
+}
+ipcMain.handle("recording:getState", async () => {
+  try {
+    return { ok: true, data: getRecordingState() };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("recording:updateState", async (_e, patch) => {
+  try {
+    updateRecordingState(patch || {});
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 async function startRecording(preview, ch1, ch2, ch3, ch4) {
   const obs = getObsClient();
   if (!obs) return false;

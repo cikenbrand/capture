@@ -8,6 +8,8 @@ export default memo(function StartClipRecordingForm({ onClose }: Props) {
         try {
             await window.ipcRenderer.invoke('obs:start-clip-recording')
         } catch {}
+        try { await window.ipcRenderer.invoke('recording:updateState', { isClipRecordingStarted: true }) } catch {}
+        try { window.dispatchEvent(new Event('recordingStateChanged')) } catch {}
         onClose?.()
     }
     useEffect(() => {
