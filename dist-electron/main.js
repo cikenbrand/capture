@@ -2199,6 +2199,60 @@ ipcMain.handle("obs:stop-recording", async () => {
     return false;
   }
 });
+async function pauseRecording() {
+  const obs = getObsClient();
+  if (!obs) return false;
+  let ok = true;
+  try {
+    await obs.call("ToggleRecordPause");
+  } catch {
+    ok = false;
+  }
+  try {
+    await obs.call("TriggerHotkeyByKeySequence", {
+      keyId: "OBS_KEY_P",
+      keyModifiers: { shift: false, control: true, alt: false, command: false }
+    });
+  } catch {
+    ok = false;
+  }
+  return ok;
+}
+ipcMain.handle("obs:pause-recording", async () => {
+  try {
+    const ok = await pauseRecording();
+    return ok;
+  } catch {
+    return false;
+  }
+});
+async function resumeRecording() {
+  const obs = getObsClient();
+  if (!obs) return false;
+  let ok = true;
+  try {
+    await obs.call("ResumeRecord");
+  } catch {
+    ok = false;
+  }
+  try {
+    await obs.call("TriggerHotkeyByKeySequence", {
+      keyId: "OBS_KEY_R",
+      keyModifiers: { shift: false, control: true, alt: false, command: false }
+    });
+  } catch {
+    ok = false;
+  }
+  return ok;
+}
+ipcMain.handle("obs:resume-recording", async () => {
+  try {
+    const ok = await resumeRecording();
+    return ok;
+  } catch {
+    return false;
+  }
+});
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];

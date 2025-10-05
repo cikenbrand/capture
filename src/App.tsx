@@ -33,6 +33,8 @@ import ShowNodesRemarks from "./components/main-window/ShowNodesRemarks"
 import StartSessionForm from "./components/main-window/StartSessionForm"
 import StopSessionForm from "./components/main-window/StopSessionForm"
 import PauseSessionForm from "./components/main-window/PauseSessionForm"
+import StartClipRecordingForm from "./components/main-window/StartClipRecordingForm"
+import StopClipRecordingForm from "./components/main-window/StopClipRecordingForm"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -50,6 +52,8 @@ function App() {
   const [isStartSessionDialogOpen, setIsStartSessionDialogOpen] = useState(false)
   const [isStopSessionDialogOpen, setIsStopSessionDialogOpen] = useState(false)
   const [isPauseSessionDialogOpen, setIsPauseSessionDialogOpen] = useState(false)
+  const [isStartClipDialogOpen, setIsStartClipDialogOpen] = useState(false)
+  const [isStopClipDialogOpen, setIsStopClipDialogOpen] = useState(false)
 
   const isSessionActionDisabled = !(
     selectedProjectId && selectedTaskId && selectedDiveId && selectedNodeId
@@ -216,10 +220,10 @@ function App() {
                     <span className="tracking-[5px] font-bold text-lg">00:00:00</span>
                   </div>
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Start Clip" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Start Clip" disabled={isSessionActionDisabled} onClick={() => setIsStartClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <MdCameraRoll className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Stop Clip" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Stop Clip" disabled={isSessionActionDisabled} onClick={() => setIsStopClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaStop className="h-3.5 w-3.5" />
                   </button>
                   <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
@@ -303,6 +307,12 @@ function App() {
       </DraggableDialog>
       <DraggableDialog open={isPauseSessionDialogOpen} onOpenChange={setIsPauseSessionDialogOpen} title="Pause Session">
         <PauseSessionForm onClose={() => setIsPauseSessionDialogOpen(false)} />
+      </DraggableDialog>
+      <DraggableDialog open={isStartClipDialogOpen} onOpenChange={setIsStartClipDialogOpen} title="Start Clip">
+        <StartClipRecordingForm />
+      </DraggableDialog>
+      <DraggableDialog open={isStopClipDialogOpen} onOpenChange={setIsStopClipDialogOpen} title="Stop Clip">
+        <StopClipRecordingForm />
       </DraggableDialog>
     </div>
   )
