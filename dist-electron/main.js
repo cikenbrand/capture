@@ -2134,6 +2134,72 @@ ipcMain.handle("obs:set-file-name-formatting", async (_e, format) => {
     return false;
   }
 });
+async function setClipRecordingFileNameFormatting(format) {
+  const obs = getObsClient();
+  if (!obs) return false;
+  let ok = true;
+  try {
+    await obs.call("SetSourceFilterSettings", {
+      sourceName: "clip recording",
+      filterName: "source record",
+      filterSettings: { filename_formatting: `clip-${format}` },
+      overlay: true
+    });
+  } catch {
+    ok = false;
+  }
+  return ok;
+}
+ipcMain.handle("obs:set-clip-file-name-formatting", async (_e, format) => {
+  try {
+    const ok = await setClipRecordingFileNameFormatting(format);
+    return ok;
+  } catch {
+    return false;
+  }
+});
+async function startClipRecording() {
+  const obs = getObsClient();
+  if (!obs) return false;
+  try {
+    await obs.call("TriggerHotkeyByKeySequence", {
+      keyId: "OBS_KEY_5",
+      keyModifiers: { shift: false, control: true, alt: false, command: false }
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+ipcMain.handle("obs:start-clip-recording", async () => {
+  try {
+    const ok = await startClipRecording();
+    return ok;
+  } catch {
+    return false;
+  }
+});
+async function stopClipRecording() {
+  const obs = getObsClient();
+  if (!obs) return false;
+  try {
+    await obs.call("TriggerHotkeyByKeySequence", {
+      keyId: "OBS_KEY_6",
+      keyModifiers: { shift: false, control: true, alt: false, command: false }
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+ipcMain.handle("obs:stop-clip-recording", async () => {
+  try {
+    const ok = await stopClipRecording();
+    return ok;
+  } catch {
+    return false;
+  }
+});
 async function startRecording(preview, ch1, ch2, ch3, ch4) {
   const obs = getObsClient();
   if (!obs) return false;

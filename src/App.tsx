@@ -309,10 +309,10 @@ function App() {
         <PauseSessionForm onClose={() => setIsPauseSessionDialogOpen(false)} />
       </DraggableDialog>
       <DraggableDialog open={isStartClipDialogOpen} onOpenChange={setIsStartClipDialogOpen} title="Start Clip">
-        <StartClipRecordingForm />
+        <StartClipRecordingForm onClose={() => setIsStartClipDialogOpen(false)}/>
       </DraggableDialog>
       <DraggableDialog open={isStopClipDialogOpen} onOpenChange={setIsStopClipDialogOpen} title="Stop Clip">
-        <StopClipRecordingForm />
+        <StopClipRecordingForm onClose={() => setIsStopClipDialogOpen(false)} />
       </DraggableDialog>
     </div>
   )

@@ -51,10 +51,16 @@ import './obs/websocket_functions/getLiveDevices'
 import './obs/websocket_functions/getRecordingDirectory'
 import './obs/websocket_functions/getFileNameFormatting'
 import './obs/websocket_functions/setFileNameFormatting'
+import './obs/websocket_functions/setClipRecordingFileNameFormatting'
+import './obs/websocket_functions/startClipRecording'
+import './obs/websocket_functions/stopClipRecording'
 import './obs/websocket_functions/startRecording'
 import './obs/websocket_functions/stopRecording'
 import './obs/websocket_functions/pauseRecording'
 import './obs/websocket_functions/resumeRecording'
+import './obs/websocket_functions/setClipRecordingFileNameFormatting'
+import './obs/websocket_functions/startClipRecording'
+import './obs/websocket_functions/stopClipRecording'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
