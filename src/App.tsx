@@ -32,6 +32,7 @@ import ChannelOverlaySelection from "./components/main-window/ChannelOverlaySele
 import ShowNodesRemarks from "./components/main-window/ShowNodesRemarks"
 import StartSessionForm from "./components/main-window/StartSessionForm"
 import StopSessionForm from "./components/main-window/StopSessionForm"
+import PauseSessionForm from "./components/main-window/PauseSessionForm"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -48,6 +49,7 @@ function App() {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [isStartSessionDialogOpen, setIsStartSessionDialogOpen] = useState(false)
   const [isStopSessionDialogOpen, setIsStopSessionDialogOpen] = useState(false)
+  const [isPauseSessionDialogOpen, setIsPauseSessionDialogOpen] = useState(false)
 
   const isSessionActionDisabled = !(
     selectedProjectId && selectedTaskId && selectedDiveId && selectedNodeId
@@ -204,10 +206,10 @@ function App() {
                   <button title="Stop Session" disabled={isSessionActionDisabled} onClick={() => setIsStopSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaStop className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Pause Session" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Pause Session" disabled={isSessionActionDisabled} onClick={() => setIsPauseSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaPause className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Pause Session" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Resume Session" disabled={isSessionActionDisabled} onClick={() => { try { window.ipcRenderer.invoke('obs:resume-recording') } catch {} }} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                     <FaPlay className="h-3.5 w-3.5" />
                   </button>
                   <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
@@ -297,7 +299,10 @@ function App() {
         <StartSessionForm onClose={() => setIsStartSessionDialogOpen(false)} />
       </DraggableDialog>
       <DraggableDialog open={isStopSessionDialogOpen} onOpenChange={setIsStopSessionDialogOpen} title="Stop Session">
-        <StopSessionForm />
+        <StopSessionForm onClose={() => setIsStopSessionDialogOpen(false)} />
+      </DraggableDialog>
+      <DraggableDialog open={isPauseSessionDialogOpen} onOpenChange={setIsPauseSessionDialogOpen} title="Pause Session">
+        <PauseSessionForm onClose={() => setIsPauseSessionDialogOpen(false)} />
       </DraggableDialog>
     </div>
   )

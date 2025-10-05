@@ -18,6 +18,11 @@ export default memo(function StartSessionForm({ onClose }: Props) {
     const [channel2FileName, setChannel2FileName] = useState("")
     const [channel3FileName, setChannel3FileName] = useState("")
     const [channel4FileName, setChannel4FileName] = useState("")
+  const [previewEnabled, setPreviewEnabled] = useState(true)
+  const [channel1Enabled, setChannel1Enabled] = useState(true)
+  const [channel2Enabled, setChannel2Enabled] = useState(true)
+  const [channel3Enabled, setChannel3Enabled] = useState(true)
+  const [channel4Enabled, setChannel4Enabled] = useState(true)
 
     useEffect(() => {
         let cancelled = false
@@ -60,11 +65,24 @@ export default memo(function StartSessionForm({ onClose }: Props) {
         return () => { cancelled = true }
     }, [])
 
+    async function handleStart() {
+        try {
+            await window.ipcRenderer.invoke('obs:start-recording', {
+                preview: previewEnabled,
+                ch1: channel1Enabled,
+                ch2: channel2Enabled,
+                ch3: channel3Enabled,
+                ch4: channel4Enabled,
+            })
+        } catch { }
+        onClose()
+    }
+
     return (
         <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1">
                 <div className="flex gap-2 items-center">
-                    <Checkbox />
+                    <Checkbox checked={previewEnabled} onCheckedChange={(v) => setPreviewEnabled(v === true)} />
                     <span className="font-bold">Preview</span>
                 </div>
                 <div className="flex gap-2 items-center text-nowrap">
@@ -80,7 +98,7 @@ export default memo(function StartSessionForm({ onClose }: Props) {
             </div>
             <div className="flex flex-col gap-1">
                 <div className="flex gap-2 items-center">
-                    <Checkbox />
+                    <Checkbox checked={channel1Enabled} onCheckedChange={(v) => setChannel1Enabled(v === true)} />
                     <span className="font-bold">Channel 1</span>
                 </div>
                 <div className="flex gap-2 items-center text-nowrap">
@@ -96,7 +114,7 @@ export default memo(function StartSessionForm({ onClose }: Props) {
             </div>
             <div className="flex flex-col gap-1">
                 <div className="flex gap-2 items-center">
-                    <Checkbox />
+                    <Checkbox checked={channel2Enabled} onCheckedChange={(v) => setChannel2Enabled(v === true)} />
                     <span className="font-bold">Channel 2</span>
                 </div>
                 <div className="flex gap-2 items-center text-nowrap">
@@ -112,7 +130,7 @@ export default memo(function StartSessionForm({ onClose }: Props) {
             </div>
             <div className="flex flex-col gap-1">
                 <div className="flex gap-2 items-center">
-                    <Checkbox />
+                    <Checkbox checked={channel3Enabled} onCheckedChange={(v) => setChannel3Enabled(v === true)} />
                     <span className="font-bold">Channel 3</span>
                 </div>
                 <div className="flex gap-2 items-center text-nowrap">
@@ -128,7 +146,7 @@ export default memo(function StartSessionForm({ onClose }: Props) {
             </div>
             <div className="flex flex-col gap-1">
                 <div className="flex gap-2 items-center">
-                    <Checkbox />
+                    <Checkbox checked={channel4Enabled} onCheckedChange={(v) => setChannel4Enabled(v === true)} />
                     <span className="font-bold">Channel 4</span>
                 </div>
                 <div className="flex gap-2 items-center text-nowrap">
@@ -144,7 +162,7 @@ export default memo(function StartSessionForm({ onClose }: Props) {
             </div>
             <div className="mt-2 flex justify-end gap-2">
                 <Button onClick={onClose}>Cancel</Button>
-                <Button onClick={onClose}>Start Session</Button>
+                <Button onClick={handleStart}>Start Session</Button>
             </div>
         </div>
     )

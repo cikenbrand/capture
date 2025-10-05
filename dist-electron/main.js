@@ -2134,6 +2134,71 @@ ipcMain.handle("obs:set-file-name-formatting", async (_e, format) => {
     return false;
   }
 });
+async function startRecording(preview, ch1, ch2, ch3, ch4) {
+  const obs = getObsClient();
+  if (!obs) return false;
+  let allOk = true;
+  if (preview) {
+    try {
+      await obs.call("StartRecord");
+    } catch {
+      allOk = false;
+    }
+  }
+  async function triggerCtrlNumber(numberKey) {
+    const keyId = `OBS_KEY_${numberKey}`;
+    try {
+      await obs.call("TriggerHotkeyByKeySequence", {
+        keyId,
+        keyModifiers: { shift: false, control: true, alt: false, command: false }
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  if (ch1) allOk = await triggerCtrlNumber(1) && allOk;
+  if (ch2) allOk = await triggerCtrlNumber(2) && allOk;
+  if (ch3) allOk = await triggerCtrlNumber(3) && allOk;
+  if (ch4) allOk = await triggerCtrlNumber(4) && allOk;
+  return allOk;
+}
+ipcMain.handle("obs:start-recording", async (_e, args) => {
+  try {
+    const { preview, ch1, ch2, ch3, ch4 } = args || {};
+    const ok = await startRecording(!!preview, !!ch1, !!ch2, !!ch3, !!ch4);
+    return ok;
+  } catch {
+    return false;
+  }
+});
+async function stopRecording() {
+  const obs = getObsClient();
+  if (!obs) return false;
+  let ok = true;
+  try {
+    await obs.call("StopRecord");
+  } catch {
+    ok = false;
+  }
+  try {
+    await obs.call("TriggerHotkeyByKeySequence", {
+      keyId: "OBS_KEY_0",
+      keyModifiers: { shift: false, control: true, alt: false, command: false }
+    });
+  } catch {
+    ok = false;
+  }
+  return ok;
+}
+ipcMain.handle("obs:stop-recording", async () => {
+  try {
+    const ok = await stopRecording();
+    return ok;
+  } catch {
+    return false;
+  }
+});
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
