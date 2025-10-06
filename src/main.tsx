@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
 import OverlayEditor from './OverlayEditor'
+import ExportProject from './ExportProject'
 import './index.css'
 
 const params = new URLSearchParams(location.search)
@@ -9,7 +10,7 @@ const which = params.get('window')
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {which === 'overlay-editor' ? <OverlayEditor /> : <App />}
+    {which === 'overlay-editor' ? <OverlayEditor /> : which === 'export-project' ? <ExportProject /> : <App />}
   </React.StrictMode>,
 )
 

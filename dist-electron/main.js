@@ -95,6 +95,29 @@ function createOverlayEditorWindow() {
   }
   return win2;
 }
+function createExportProjectWindow() {
+  const win2 = new BrowserWindow({
+    width: 900,
+    height: 650,
+    show: true,
+    frame: false,
+    backgroundColor: "#0f0f0f",
+    icon: path$m.join(process.env.VITE_PUBLIC || getRendererDist(), "dc.ico"),
+    webPreferences: {
+      preload: path$m.join(process.env.APP_ROOT || path$m.join(__dirname, "..", ".."), "dist-electron", "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: false
+    }
+  });
+  const devUrl = getDevUrl();
+  if (devUrl) {
+    win2.loadURL(`${devUrl}?window=export-project`);
+  } else {
+    win2.loadFile(path$m.join(getRendererDist(), "index.html"), { query: { window: "export-project" } });
+  }
+  return win2;
+}
 const OBS_EXECUTABLE_PATH = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\");
 const OBS_WORKING_DIR = "C:\\Program Files\\obs-studio\\bin\\64bit".replace(/\\/g, "\\");
 const OBS_WEBSOCKET_URL = "ws://127.0.0.1:4455";
@@ -16863,6 +16886,52 @@ ipcMain.handle("window:open-overlay-editor", async () => {
     overlayEditorWin.on("closed", () => {
       overlayEditorWin = null;
     });
+    return true;
+  } catch {
+    return false;
+  }
+});
+let exportProjectWin = null;
+ipcMain.handle("window:open-export-project", async () => {
+  try {
+    if (exportProjectWin && !exportProjectWin.isDestroyed()) {
+      exportProjectWin.show();
+      exportProjectWin.focus();
+      return true;
+    }
+    exportProjectWin = createExportProjectWindow();
+    exportProjectWin.on("closed", () => {
+      exportProjectWin = null;
+    });
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("export-window:minimize", async () => {
+  try {
+    exportProjectWin == null ? void 0 : exportProjectWin.minimize();
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("export-window:toggle-maximize", async () => {
+  try {
+    if (!exportProjectWin || exportProjectWin.isDestroyed()) return false;
+    if (exportProjectWin.isMaximized()) {
+      exportProjectWin.unmaximize();
+    } else {
+      exportProjectWin.maximize();
+    }
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("export-window:close", async () => {
+  try {
+    exportProjectWin == null ? void 0 : exportProjectWin.close();
     return true;
   } catch {
     return false;

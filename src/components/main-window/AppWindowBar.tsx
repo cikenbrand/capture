@@ -198,6 +198,12 @@ export default function AppWindowBar() {
                             <MenubarItem onClick={() => setVideoConfigOpen(true)}>Video Configurations</MenubarItem>
                         </MenubarContent>
                     </MenubarMenu>
+                    <MenubarMenu>
+                        <MenubarTrigger className='px-2 py-1'>Export</MenubarTrigger>
+                        <MenubarContent>
+                            <MenubarItem onClick={() => window.ipcRenderer.invoke('window:open-export-project')}>Export Project Settings</MenubarItem>
+                        </MenubarContent>
+                    </MenubarMenu>
                 </Menubar>
             </div>
             <div className="w-full flex items-center relative top-1">

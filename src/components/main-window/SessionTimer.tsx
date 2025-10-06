@@ -87,7 +87,7 @@ export default function SessionTimer() {
   }, [isStarted, isPaused, isStopped])
 
   return (
-    <div className="h-[30px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
+    <div className="h-[26px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
       <span className={`tracking-[5px] font-bold text-lg ${isStarted && !isStopped ? 'text-[#93E05F]' : ''}`}>{formatHhMmSs(elapsedSeconds)}</span>
     </div>
   )

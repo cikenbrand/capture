@@ -64,3 +64,29 @@ export function createOverlayEditorWindow() {
 
   return win
 }
+
+export function createExportProjectWindow() {
+  const win = new BrowserWindow({
+    width: 900,
+    height: 650,
+    show: true,
+    frame: false,
+    backgroundColor: '#0f0f0f',
+    icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), 'dc.ico'),
+    webPreferences: {
+      preload: path.join(process.env.APP_ROOT || path.join(__dirname, '..', '..'), 'dist-electron', 'preload.mjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: false
+    },
+  })
+
+  const devUrl = getDevUrl()
+  if (devUrl) {
+    win.loadURL(`${devUrl}?window=export-project`)
+  } else {
+    win.loadFile(path.join(getRendererDist(), 'index.html'), { query: { window: 'export-project' } as any })
+  }
+
+  return win
+}

@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createSplashWindow } from './windows/splashscreen'
-import { createMainWindow, createOverlayEditorWindow } from './windows/main'
+import { createMainWindow, createOverlayEditorWindow, createExportProjectWindow } from './windows/main'
 import { openObs } from './obs/openOBS'
 import { exitOBS } from './obs/websocket_functions/exitOBS'
 import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
@@ -270,6 +270,54 @@ ipcMain.handle('window:open-overlay-editor', async () => {
     }
     overlayEditorWin = createOverlayEditorWindow()
     overlayEditorWin.on('closed', () => { overlayEditorWin = null })
+    return true
+  } catch {
+    return false
+  }
+})
+
+let exportProjectWin: BrowserWindow | null = null
+ipcMain.handle('window:open-export-project', async () => {
+  try {
+    if (exportProjectWin && !exportProjectWin.isDestroyed()) {
+      exportProjectWin.show()
+      exportProjectWin.focus()
+      return true
+    }
+    exportProjectWin = createExportProjectWindow()
+    exportProjectWin.on('closed', () => { exportProjectWin = null })
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('export-window:minimize', async () => {
+  try {
+    exportProjectWin?.minimize()
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('export-window:toggle-maximize', async () => {
+  try {
+    if (!exportProjectWin || exportProjectWin.isDestroyed()) return false
+    if (exportProjectWin.isMaximized()) {
+      exportProjectWin.unmaximize()
+    } else {
+      exportProjectWin.maximize()
+    }
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('export-window:close', async () => {
+  try {
+    exportProjectWin?.close()
     return true
   } catch {
     return false
