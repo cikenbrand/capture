@@ -1,4 +1,5 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
+import { ipcMain } from 'electron'
 import { MONGODB_URI } from '../settings'
 
 export interface SessionSnapshotsInput {
@@ -94,4 +95,15 @@ export async function editSession(sessionId: string, snapshots: SessionSnapshots
   if (!updated) throw new Error('Session not found')
   return updated
 }
+
+// IPC: append snapshots/clips to a session
+ipcMain.handle('db:editSession', async (_event, sessionId: string, snapshots: SessionSnapshotsInput) => {
+  try {
+    const updated = await editSession(sessionId, snapshots || {})
+    return { ok: true, data: String(updated._id) }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
 

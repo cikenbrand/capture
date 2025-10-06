@@ -1,384 +1,307 @@
-import { BrowserWindow, ipcMain, app } from "electron";
-import path from "node:path";
-import { pathToFileURL, fileURLToPath } from "node:url";
-import { spawn, spawnSync } from "node:child_process";
-import fs from "node:fs";
-import OBSWebSocket from "obs-websocket-js";
-import http from "node:http";
-import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
-import fsp from "node:fs/promises";
-let splash = null;
-function createSplashWindow(timeoutMs) {
-  splash = new BrowserWindow({
+import { BrowserWindow as $, ipcMain as d, app as A } from "electron";
+import u from "node:path";
+import { pathToFileURL as Ve, fileURLToPath as qe } from "node:url";
+import { spawn as Te, spawnSync as be } from "node:child_process";
+import I from "node:fs";
+import We from "obs-websocket-js";
+import Ye from "node:http";
+import { MongoClient as y, ServerApiVersion as h, ObjectId as f } from "mongodb";
+import Ge from "node:fs/promises";
+let _ = null;
+function Ke(e) {
+  _ = new $({
     width: 360,
     height: 240,
-    frame: false,
-    resizable: false,
-    movable: true,
-    show: false,
-    transparent: false,
+    frame: !1,
+    resizable: !1,
+    movable: !0,
+    show: !1,
+    transparent: !1,
     backgroundColor: "#121212",
-    alwaysOnTop: true,
-    skipTaskbar: true
+    alwaysOnTop: !0,
+    skipTaskbar: !0
   });
-  const publicRoot = process.env.VITE_PUBLIC || path.join(process.env.APP_ROOT || process.cwd(), "public");
-  const splashFile = path.join(publicRoot, "htmls", "splashscreen.html");
-  splash.loadFile(splashFile);
-  splash.once("ready-to-show", () => splash == null ? void 0 : splash.show());
-  splash.timeoutMs = timeoutMs;
-  return splash;
+  const t = process.env.VITE_PUBLIC || u.join(process.env.APP_ROOT || process.cwd(), "public"), r = u.join(t, "htmls", "splashscreen.html");
+  return _.loadFile(r), _.once("ready-to-show", () => _ == null ? void 0 : _.show()), _.timeoutMs = e, _;
 }
-function getRendererDist() {
-  return process.env.APP_ROOT ? path.join(process.env.APP_ROOT, "dist") : path.join(__dirname, "..", "..", "dist");
+function N() {
+  return process.env.APP_ROOT ? u.join(process.env.APP_ROOT, "dist") : u.join(__dirname, "..", "..", "dist");
 }
-function getDevUrl() {
-  return process.env["VITE_DEV_SERVER_URL"] || "";
+function je() {
+  return process.env.VITE_DEV_SERVER_URL || "";
 }
-function createMainWindow() {
-  const win2 = new BrowserWindow({
+function ze() {
+  const e = new $({
     width: 1280,
     height: 800,
-    show: false,
+    show: !1,
     title: "Deepstrim Capture",
-    frame: false,
+    frame: !1,
     backgroundColor: "#0f0f0f",
-    icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), "dc.ico"),
+    icon: u.join(process.env.VITE_PUBLIC || N(), "dc.ico"),
     webPreferences: {
-      preload: path.join(process.env.APP_ROOT || path.join(__dirname, "..", ".."), "dist-electron", "preload.mjs"),
-      contextIsolation: true,
-      nodeIntegration: false
+      preload: u.join(process.env.APP_ROOT || u.join(__dirname, "..", ".."), "dist-electron", "preload.mjs"),
+      contextIsolation: !0,
+      nodeIntegration: !1
     }
-  });
-  const devUrl = getDevUrl();
-  if (devUrl) {
-    win2.loadURL(devUrl);
-  } else {
-    win2.loadFile(path.join(getRendererDist(), "index.html"));
-  }
-  return win2;
+  }), t = je();
+  return t ? e.loadURL(t) : e.loadFile(u.join(N(), "index.html")), e;
 }
-function createOverlayEditorWindow() {
-  const win2 = new BrowserWindow({
+function Xe() {
+  const e = new $({
     width: 1e3,
     height: 700,
-    show: true,
-    frame: false,
+    show: !0,
+    frame: !1,
     backgroundColor: "#0f0f0f",
-    icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), "dc.ico"),
+    icon: u.join(process.env.VITE_PUBLIC || N(), "dc.ico"),
     webPreferences: {
-      preload: path.join(process.env.APP_ROOT || path.join(__dirname, "..", ".."), "dist-electron", "preload.mjs"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      webSecurity: false
+      preload: u.join(process.env.APP_ROOT || u.join(__dirname, "..", ".."), "dist-electron", "preload.mjs"),
+      contextIsolation: !0,
+      nodeIntegration: !1,
+      webSecurity: !1
     }
-  });
-  const devUrl = getDevUrl();
-  if (devUrl) {
-    win2.loadURL(`${devUrl}?window=overlay-editor`);
-  } else {
-    win2.loadFile(path.join(getRendererDist(), "index.html"), { query: { window: "overlay-editor" } });
-  }
-  return win2;
+  }), t = je();
+  return t ? e.loadURL(`${t}?window=overlay-editor`) : e.loadFile(u.join(N(), "index.html"), { query: { window: "overlay-editor" } }), e;
 }
-const OBS_EXECUTABLE_PATH = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\");
-const OBS_WORKING_DIR = "C:\\Program Files\\obs-studio\\bin\\64bit".replace(/\\/g, "\\");
-const OBS_WEBSOCKET_URL = "ws://127.0.0.1:4455";
-const OBS_LAUNCH_PARAMS = ["--startvirtualcam", "--disable-shutdown-check"];
-path.join(
-  process.env.APPDATA || path.join(process.env.USERPROFILE || "", "AppData", "Roaming"),
+const L = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\"), B = "C:\\Program Files\\obs-studio\\bin\\64bit".replace(/\\/g, "\\"), Je = "ws://127.0.0.1:4455", Qe = ["--startvirtualcam", "--disable-shutdown-check"];
+u.join(
+  process.env.APPDATA || u.join(process.env.USERPROFILE || "", "AppData", "Roaming"),
   "obs-studio",
   "basic",
   "profiles",
   "Default",
   "basic.ini"
 );
-const OVERLAY_WS_PORT = 3620;
-const MONGODB_URI = "mongodb://localhost:27017/capture";
-const SPLASHSCREEN_DURATION_MS = 5e3;
-function openObs() {
-  if (!fs.existsSync(OBS_EXECUTABLE_PATH)) {
-    throw new Error(`OBS executable not found at: ${OBS_EXECUTABLE_PATH}`);
-  }
-  if (!fs.existsSync(OBS_WORKING_DIR)) {
-    throw new Error(`Working directory does not exist: ${OBS_WORKING_DIR}`);
-  }
-  const child = spawn(OBS_EXECUTABLE_PATH, OBS_LAUNCH_PARAMS, {
-    cwd: OBS_WORKING_DIR,
-    detached: true,
+const ke = 3620, g = "mongodb://localhost:27017/capture", Ie = 5e3;
+function Ze() {
+  if (!I.existsSync(L))
+    throw new Error(`OBS executable not found at: ${L}`);
+  if (!I.existsSync(B))
+    throw new Error(`Working directory does not exist: ${B}`);
+  const e = Te(L, Qe, {
+    cwd: B,
+    detached: !0,
     stdio: "ignore",
-    windowsHide: true
+    windowsHide: !0
   });
-  child.unref();
-  return child.pid ?? -1;
+  return e.unref(), e.pid ?? -1;
 }
-let obsClient = null;
-function getObsClient() {
-  return obsClient;
+let C = null;
+function v() {
+  return C;
 }
-async function connectToOBSWebsocket(timeoutMs = 4e3) {
+async function et(e = 4e3) {
   try {
-    if (obsClient) {
-      return true;
-    }
-    const client = new OBSWebSocket();
-    const connectPromise = client.connect(OBS_WEBSOCKET_URL);
-    const timeoutPromise = new Promise((_, reject) => {
-      const t = setTimeout(() => {
-        clearTimeout(t);
-        reject(new Error("OBS connect timeout"));
-      }, timeoutMs);
+    if (C)
+      return !0;
+    const t = new We(), r = t.connect(Je), o = new Promise((n, a) => {
+      const s = setTimeout(() => {
+        clearTimeout(s), a(new Error("OBS connect timeout"));
+      }, e);
     });
-    await Promise.race([connectPromise, timeoutPromise]);
-    obsClient = client;
-    return true;
+    return await Promise.race([r, o]), C = t, !0;
   } catch {
     try {
-      await (obsClient == null ? void 0 : obsClient.disconnect());
+      await (C == null ? void 0 : C.disconnect());
     } catch {
     }
-    obsClient = null;
-    return false;
+    return C = null, !1;
   }
 }
-async function exitOBS() {
-  const obs = getObsClient();
-  if (!obs) return false;
-  const force = true;
-  const timeoutMs = 3e3;
-  const requestData = {
-    reason: `requested by ${path.basename(process.execPath)}`,
+async function tt() {
+  const e = v();
+  if (!e) return !1;
+  const t = !0, r = 3e3, o = {
+    reason: `requested by ${u.basename(process.execPath)}`,
     support_url: "https://github.com/norihiro/obs-shutdown-plugin/issues",
-    force,
+    force: t,
     exit_timeout: 0
-  };
-  const vendorCall = obs.call("CallVendorRequest", {
+  }, n = e.call("CallVendorRequest", {
     vendorName: "obs-shutdown-plugin",
     requestType: "shutdown",
-    requestData
-  });
-  const timeout = new Promise((_, reject) => {
-    const t = setTimeout(() => {
-      clearTimeout(t);
-      reject(new Error("exitOBS timed out"));
-    }, timeoutMs);
+    requestData: o
+  }), a = new Promise((s, c) => {
+    const l = setTimeout(() => {
+      clearTimeout(l), c(new Error("exitOBS timed out"));
+    }, r);
   });
   try {
-    await Promise.race([vendorCall, timeout]);
-    return true;
-  } catch (err) {
-    return false;
+    return await Promise.race([n, a]), !0;
+  } catch {
+    return !1;
   }
 }
-function checkIfOBSOpenOrNot() {
+function Ae() {
   try {
     if (process.platform === "win32") {
-      const result = spawnSync("tasklist", [], { encoding: "utf8" });
-      const output = (result.stdout || "").toLowerCase();
-      if (!output) return false;
-      return output.includes("obs64.exe") || output.includes("obs.exe");
+      const t = (be("tasklist", [], { encoding: "utf8" }).stdout || "").toLowerCase();
+      return t ? t.includes("obs64.exe") || t.includes("obs.exe") : !1;
     }
-    if (process.platform === "darwin" || process.platform === "linux") {
-      const result = spawnSync("ps", ["-A", "-o", "comm="], { encoding: "utf8" });
-      const lines = (result.stdout || "").toLowerCase().split("\n");
-      return lines.some((name) => name.includes("obs"));
-    }
-    return false;
-  } catch (_err) {
-    return false;
+    return process.platform === "darwin" || process.platform === "linux" ? (be("ps", ["-A", "-o", "comm="], { encoding: "utf8" }).stdout || "").toLowerCase().split(`
+`).some((r) => r.includes("obs")) : !1;
+  } catch {
+    return !1;
   }
 }
-async function getCurrentSceneName() {
+async function rt() {
   try {
-    const obs = getObsClient();
-    if (!obs) return "";
-    const res = await obs.call("GetCurrentProgramScene");
-    const name = (res == null ? void 0 : res.currentProgramSceneName) ?? "";
-    return typeof name === "string" ? name : "";
+    const e = v();
+    if (!e) return "";
+    const t = await e.call("GetCurrentProgramScene"), r = (t == null ? void 0 : t.currentProgramSceneName) ?? "";
+    return typeof r == "string" ? r : "";
   } catch {
     return "";
   }
 }
-ipcMain.handle("obs:get-current-scene", async () => {
+d.handle("obs:get-current-scene", async () => {
   try {
-    const name = await getCurrentSceneName();
-    return name;
+    return await rt();
   } catch {
     return "";
   }
 });
-async function setSelectedScene(sceneName) {
+async function nt(e) {
   try {
-    const obs = getObsClient();
-    if (!obs) return false;
-    await obs.call("SetCurrentProgramScene", { sceneName });
-    return true;
+    const t = v();
+    return t ? (await t.call("SetCurrentProgramScene", { sceneName: e }), !0) : !1;
   } catch {
-    return false;
+    return !1;
   }
 }
-ipcMain.handle("obs:set-current-scene", async (_event, sceneName) => {
+d.handle("obs:set-current-scene", async (e, t) => {
   try {
-    if (typeof sceneName !== "string" || !sceneName.trim()) return false;
-    return await setSelectedScene(sceneName);
+    return typeof t != "string" || !t.trim() ? !1 : await nt(t);
   } catch {
-    return false;
+    return !1;
   }
 });
-let browserSourceProc = null;
-let browserSourceInProcess = false;
-let currentPort = null;
-function resolveServerPath() {
-  const appRoot = process.env.APP_ROOT || path.join(__dirname, "..", "..");
-  const asarPath = path.join(appRoot, "drawing-service", "server.js");
-  const unpackedPath = asarPath.replace(/\.asar(\\|\/)/, ".asar.unpacked$1");
+let P = null, we = !1, R = null;
+function ot() {
+  const e = process.env.APP_ROOT || u.join(__dirname, "..", ".."), t = u.join(e, "drawing-service", "server.js"), r = t.replace(/\.asar(\\|\/)/, ".asar.unpacked$1");
   try {
-    return require("fs").existsSync(unpackedPath) ? unpackedPath : asarPath;
+    return require("fs").existsSync(r) ? r : t;
   } catch {
-    return asarPath;
+    return t;
   }
 }
-function waitForHealth(port, timeoutMs) {
-  const deadline = Date.now() + timeoutMs;
-  return new Promise((resolve) => {
-    const tryOnce = () => {
+function _e(e, t) {
+  const r = Date.now() + t;
+  return new Promise((o) => {
+    const n = () => {
       try {
-        const req = http.get({ host: "127.0.0.1", port, path: "/health", timeout: 1e3 }, (res) => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+        const a = Ye.get({ host: "127.0.0.1", port: e, path: "/health", timeout: 1e3 }, (s) => {
+          if (s.statusCode && s.statusCode >= 200 && s.statusCode < 300) {
             try {
-              res.resume();
+              s.resume();
             } catch {
             }
-            resolve(true);
+            o(!0);
           } else {
             try {
-              res.resume();
+              s.resume();
             } catch {
             }
-            if (Date.now() >= deadline) return resolve(false);
-            setTimeout(tryOnce, 300);
+            if (Date.now() >= r) return o(!1);
+            setTimeout(n, 300);
           }
         });
-        req.on("error", () => {
-          if (Date.now() >= deadline) return resolve(false);
-          setTimeout(tryOnce, 300);
-        });
-        req.on("timeout", () => {
+        a.on("error", () => {
+          if (Date.now() >= r) return o(!1);
+          setTimeout(n, 300);
+        }), a.on("timeout", () => {
           try {
-            req.destroy();
+            a.destroy();
           } catch {
           }
-          if (Date.now() >= deadline) return resolve(false);
-          setTimeout(tryOnce, 300);
+          if (Date.now() >= r) return o(!1);
+          setTimeout(n, 300);
         });
       } catch {
-        if (Date.now() >= deadline) return resolve(false);
-        setTimeout(tryOnce, 300);
+        if (Date.now() >= r) return o(!1);
+        setTimeout(n, 300);
       }
     };
-    tryOnce();
+    n();
   });
 }
-async function startBrowserSourceService(port) {
+async function at(e) {
   try {
-    if (browserSourceProc || browserSourceInProcess) return true;
-    const resolvedPort = Number(port || OVERLAY_WS_PORT || 3620) || 3620;
-    const serverPath = resolveServerPath();
-    let overlayImagesDir = "";
+    if (P || we) return !0;
+    const t = Number(e || ke || 3620) || 3620, r = ot();
+    let o = "";
     try {
-      overlayImagesDir = path.join(app.getPath("userData"), "overlay-images");
+      o = u.join(A.getPath("userData"), "overlay-images");
     } catch {
-      overlayImagesDir = "";
+      o = "";
     }
-    process.env.OVERLAY_WS_PORT = String(resolvedPort);
-    process.env.OVERLAY_IMAGES_DIR = overlayImagesDir;
+    process.env.OVERLAY_WS_PORT = String(t), process.env.OVERLAY_IMAGES_DIR = o;
     try {
-      const url = pathToFileURL(serverPath).href;
-      await import(url);
-      browserSourceInProcess = true;
-      currentPort = resolvedPort;
-      const ok = await waitForHealth(resolvedPort, 5e3);
-      if (!ok) {
+      if (await import(Ve(r).href), we = !0, R = t, !await _e(t, 5e3))
         try {
           console.warn("[browser-source-service] did not become healthy in time");
         } catch {
         }
-      }
-      return true;
-    } catch (impErr) {
-      const exec = process.execPath;
-      const args = [serverPath];
-      browserSourceProc = spawn(exec, args, {
-        cwd: path.dirname(serverPath),
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", OVERLAY_WS_PORT: String(resolvedPort), OVERLAY_IMAGES_DIR: overlayImagesDir },
+      return !0;
+    } catch {
+      const a = process.execPath;
+      if (P = Te(a, [r], {
+        cwd: u.dirname(r),
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: "1", OVERLAY_WS_PORT: String(t), OVERLAY_IMAGES_DIR: o },
         stdio: "ignore",
-        detached: false
-      });
-      browserSourceProc.on("exit", (code, signal) => {
+        detached: !1
+      }), P.on("exit", (l, i) => {
         try {
-          console.log(`[browser-source-service] exited code=${code} signal=${signal}`);
+          console.log(`[browser-source-service] exited code=${l} signal=${i}`);
         } catch {
         }
-        browserSourceProc = null;
-        currentPort = null;
-      });
-      currentPort = resolvedPort;
-      const ok = await waitForHealth(resolvedPort, 5e3);
-      if (!ok) {
+        P = null, R = null;
+      }), R = t, !await _e(t, 5e3))
         try {
           console.warn("[browser-source-service] did not become healthy in time");
         } catch {
         }
-      }
-      return true;
+      return !0;
     }
-  } catch (err) {
+  } catch (t) {
     try {
-      console.error("[browser-source-service] failed to start:", err);
+      console.error("[browser-source-service] failed to start:", t);
     } catch {
     }
-    return false;
+    return !1;
   }
 }
-async function stopBrowserSourceService() {
+async function st() {
   try {
-    const p = browserSourceProc;
-    browserSourceProc = null;
-    currentPort = null;
-    browserSourceInProcess = false;
-    if (!p) return;
+    const e = P;
+    if (P = null, R = null, we = !1, !e) return;
     try {
-      p.kill();
+      e.kill();
     } catch {
     }
   } catch {
   }
 }
-let cachedClient$q = null;
-async function getClient$q() {
-  if (cachedClient$q) return cachedClient$q;
-  const client = new MongoClient(MONGODB_URI, {
+let M = null;
+async function ct() {
+  if (M) return M;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$q = client;
-  return client;
+  return await e.connect(), M = e, e;
 }
-async function createProject(input) {
-  const client = await getClient$q();
-  const db = client.db("capture");
-  const projects = db.collection("projects");
-  const now = /* @__PURE__ */ new Date();
-  const doc = {
-    name: input.name.trim(),
-    client: input.client.trim(),
-    contractor: input.contractor.trim(),
-    vessel: input.vessel.trim(),
-    location: input.location.trim(),
-    projectType: input.projectType,
+async function it(e) {
+  const o = (await ct()).db("capture").collection("projects"), n = /* @__PURE__ */ new Date(), a = {
+    name: e.name.trim(),
+    client: e.client.trim(),
+    contractor: e.contractor.trim(),
+    vessel: e.vessel.trim(),
+    location: e.location.trim(),
+    projectType: e.projectType,
     // initialize with no last selected dive
     lastSelectedDiveId: null,
     // initialize with no last selected task
@@ -390,1324 +313,1062 @@ async function createProject(input) {
     lastSelectedOverlayCh2Id: null,
     lastSelectedOverlayCh3Id: null,
     lastSelectedOverlayCh4Id: null,
-    createdAt: now,
-    updatedAt: now
+    createdAt: n,
+    updatedAt: n
   };
-  const result = await projects.insertOne(doc);
-  return { _id: result.insertedId, ...doc };
+  return { _id: (await o.insertOne(a)).insertedId, ...a };
 }
-ipcMain.handle("db:createProject", async (_event, input) => {
-  var _a, _b;
+d.handle("db:createProject", async (e, t) => {
+  var r, o;
   try {
-    const created = await createProject(input);
-    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
-    return { ok: true, data: id };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    const n = await it(t);
+    return { ok: !0, data: ((o = (r = n == null ? void 0 : n._id) == null ? void 0 : r.toString) == null ? void 0 : o.call(r)) ?? n };
+  } catch (n) {
+    return { ok: !1, error: n instanceof Error ? n.message : "Unknown error" };
   }
 });
-let cachedClient$p = null;
-async function getClient$p() {
-  if (cachedClient$p) return cachedClient$p;
-  const client = new MongoClient(MONGODB_URI, {
+let H = null;
+async function lt() {
+  if (H) return H;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$p = client;
-  return client;
+  return await e.connect(), H = e, e;
 }
-async function createOverlay(input) {
-  const client = await getClient$p();
-  const db = client.db("capture");
-  const overlays = db.collection("overlays");
-  const now = /* @__PURE__ */ new Date();
-  const trimmedName = input.name.trim();
-  if (!trimmedName) throw new Error("Overlay name is required");
-  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const existing = await overlays.findOne({ name: { $regex: `^${escapeRegex(trimmedName)}$`, $options: "i" } });
-  if (existing) throw new Error("An overlay with this name already exists");
-  const doc = {
-    name: trimmedName,
-    createdAt: now,
-    updatedAt: now
+async function dt(e) {
+  const o = (await lt()).db("capture").collection("overlays"), n = /* @__PURE__ */ new Date(), a = e.name.trim();
+  if (!a) throw new Error("Overlay name is required");
+  const s = (m) => m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (await o.findOne({ name: { $regex: `^${s(a)}$`, $options: "i" } })) throw new Error("An overlay with this name already exists");
+  const l = {
+    name: a,
+    createdAt: n,
+    updatedAt: n
   };
-  const result = await overlays.insertOne(doc);
-  return { _id: result.insertedId, ...doc };
+  return { _id: (await o.insertOne(l)).insertedId, ...l };
 }
-ipcMain.handle("db:createOverlay", async (_event, input) => {
-  var _a, _b, _c, _d;
+d.handle("db:createOverlay", async (e, t) => {
+  var r, o, n, a;
   try {
-    const created = await createOverlay(input);
-    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
+    const s = await dt(t), c = ((o = (r = s == null ? void 0 : s._id) == null ? void 0 : r.toString) == null ? void 0 : o.call(r)) ?? s;
     try {
-      const payload = { id, action: "created", name: ((_d = (_c = input == null ? void 0 : input.name) == null ? void 0 : _c.trim) == null ? void 0 : _d.call(_c)) || "" };
-      for (const win2 of BrowserWindow.getAllWindows()) {
+      const l = { id: c, action: "created", name: ((a = (n = t == null ? void 0 : t.name) == null ? void 0 : n.trim) == null ? void 0 : a.call(n)) || "" };
+      for (const i of $.getAllWindows())
         try {
-          win2.webContents.send("overlays:changed", payload);
+          i.webContents.send("overlays:changed", l);
         } catch {
         }
-      }
     } catch {
     }
-    return { ok: true, data: id };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: c };
+  } catch (s) {
+    return { ok: !1, error: s instanceof Error ? s.message : "Unknown error" };
   }
 });
-let cachedClient$o = null;
-async function getClient$o() {
-  if (cachedClient$o) return cachedClient$o;
-  const client = new MongoClient(MONGODB_URI, {
+let V = null;
+async function ut() {
+  if (V) return V;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$o = client;
-  return client;
+  return await e.connect(), V = e, e;
 }
-async function getAllOverlay() {
-  const client = await getClient$o();
-  const db = client.db("capture");
-  const overlays = db.collection("overlays");
-  return overlays.find({}).sort({ createdAt: -1 }).toArray();
+async function ft() {
+  return (await ut()).db("capture").collection("overlays").find({}).sort({ createdAt: -1 }).toArray();
 }
-ipcMain.handle("db:getAllOverlay", async () => {
+d.handle("db:getAllOverlay", async () => {
   try {
-    const overlays = await getAllOverlay();
-    const plain = overlays.map((o) => ({
-      _id: o._id.toString(),
-      name: o.name,
-      createdAt: o.createdAt,
-      updatedAt: o.updatedAt
-    }));
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: (await ft()).map((r) => ({
+      _id: r._id.toString(),
+      name: r.name,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt
+    })) };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-let cachedClient$n = null;
-async function getClient$n() {
-  if (cachedClient$n) return cachedClient$n;
-  const client = new MongoClient(MONGODB_URI, {
+let q = null;
+async function mt() {
+  if (q) return q;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$n = client;
-  return client;
+  return await e.connect(), q = e, e;
 }
-async function createTask(input) {
-  const client = await getClient$n();
-  const db = client.db("capture");
-  const tasks = db.collection("tasks");
-  const now = /* @__PURE__ */ new Date();
-  const remarks = typeof input.remarks === "string" ? input.remarks.trim() : void 0;
-  const trimmedName = input.name.trim();
-  if (!trimmedName) {
+async function yt(e) {
+  const o = (await mt()).db("capture").collection("tasks"), n = /* @__PURE__ */ new Date(), a = typeof e.remarks == "string" ? e.remarks.trim() : void 0, s = e.name.trim();
+  if (!s)
     throw new Error("Task name is required");
-  }
-  const existing = await tasks.findOne({
-    projectId: new ObjectId(input.projectId),
-    name: { $regex: `^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" }
-  });
-  if (existing) {
+  if (await o.findOne({
+    projectId: new f(e.projectId),
+    name: { $regex: `^${s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" }
+  }))
     throw new Error("A task with this name already exists in this project");
-  }
-  const doc = {
-    projectId: new ObjectId(input.projectId),
-    name: trimmedName,
-    ...remarks ? { remarks } : {},
-    createdAt: now,
-    updatedAt: now
+  const l = {
+    projectId: new f(e.projectId),
+    name: s,
+    ...a ? { remarks: a } : {},
+    createdAt: n,
+    updatedAt: n
   };
-  const result = await tasks.insertOne(doc);
-  return { _id: result.insertedId, ...doc };
+  return { _id: (await o.insertOne(l)).insertedId, ...l };
 }
-ipcMain.handle("db:createTask", async (_event, input) => {
-  var _a, _b;
+d.handle("db:createTask", async (e, t) => {
+  var r, o;
   try {
-    const created = await createTask(input);
-    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
-    return { ok: true, data: id };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    const n = await yt(t);
+    return { ok: !0, data: ((o = (r = n == null ? void 0 : n._id) == null ? void 0 : r.toString) == null ? void 0 : o.call(r)) ?? n };
+  } catch (n) {
+    return { ok: !1, error: n instanceof Error ? n.message : "Unknown error" };
   }
 });
-let cachedClient$m = null;
-async function getClient$m() {
-  if (cachedClient$m) return cachedClient$m;
-  const client = new MongoClient(MONGODB_URI, {
+let W = null;
+async function ht() {
+  if (W) return W;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$m = client;
-  return client;
+  return await e.connect(), W = e, e;
 }
-async function getAllTasks(projectId) {
-  const client = await getClient$m();
-  const db = client.db("capture");
-  const tasks = db.collection("tasks");
-  return tasks.find({ projectId: new ObjectId(projectId) }).sort({ createdAt: -1 }).toArray();
+async function gt(e) {
+  return (await ht()).db("capture").collection("tasks").find({ projectId: new f(e) }).sort({ createdAt: -1 }).toArray();
 }
-ipcMain.handle("db:getAllTasks", async (_event, projectId) => {
+d.handle("db:getAllTasks", async (e, t) => {
   try {
-    if (!projectId || typeof projectId !== "string") {
-      return { ok: false, error: "projectId is required" };
-    }
-    const items = await getAllTasks(projectId);
-    const plain = items.map((t) => {
-      var _a, _b, _c, _d;
+    return !t || typeof t != "string" ? { ok: !1, error: "projectId is required" } : { ok: !0, data: (await gt(t)).map((n) => {
+      var a, s, c, l;
       return {
-        _id: ((_b = (_a = t._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? t._id,
-        projectId: ((_d = (_c = t.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? t.projectId,
-        name: t.name,
-        remarks: t.remarks,
-        createdAt: t.createdAt,
-        updatedAt: t.updatedAt
+        _id: ((s = (a = n._id) == null ? void 0 : a.toString) == null ? void 0 : s.call(a)) ?? n._id,
+        projectId: ((l = (c = n.projectId) == null ? void 0 : c.toString) == null ? void 0 : l.call(c)) ?? n.projectId,
+        name: n.name,
+        remarks: n.remarks,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt
       };
-    });
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    }) };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$l = null;
-async function getClient$l() {
-  if (cachedClient$l) return cachedClient$l;
-  const client = new MongoClient(MONGODB_URI, {
+let Y = null;
+async function wt() {
+  if (Y) return Y;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$l = client;
-  return client;
+  return await e.connect(), Y = e, e;
 }
-async function getSelectedTaskDetails(taskId) {
-  const client = await getClient$l();
-  const db = client.db("capture");
-  const tasks = db.collection("tasks");
-  const _id = new ObjectId(taskId);
-  const doc = await tasks.findOne({ _id });
-  return doc;
+async function pt(e) {
+  const o = (await wt()).db("capture").collection("tasks"), n = new f(e);
+  return await o.findOne({ _id: n });
 }
-ipcMain.handle("db:getSelectedTaskDetails", async (_event, taskId) => {
+d.handle("db:getSelectedTaskDetails", async (e, t) => {
   try {
-    if (!taskId || typeof taskId !== "string") {
-      return { ok: false, error: "Invalid taskId" };
-    }
-    const doc = await getSelectedTaskDetails(taskId);
-    if (!doc) return { ok: true, data: null };
-    const plain = {
-      _id: doc._id.toString(),
-      projectId: doc.projectId.toString(),
-      name: doc.name,
-      remarks: doc.remarks ?? void 0,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt
-    };
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    if (!t || typeof t != "string")
+      return { ok: !1, error: "Invalid taskId" };
+    const r = await pt(t);
+    return r ? { ok: !0, data: {
+      _id: r._id.toString(),
+      projectId: r.projectId.toString(),
+      name: r.name,
+      remarks: r.remarks ?? void 0,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt
+    } } : { ok: !0, data: null };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$k = null;
-async function getClient$k() {
-  if (cachedClient$k) return cachedClient$k;
-  const client = new MongoClient(MONGODB_URI, {
+let G = null;
+async function vt() {
+  if (G) return G;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$k = client;
-  return client;
+  return await e.connect(), G = e, e;
 }
-async function editTask(taskId, updates) {
-  const client = await getClient$k();
-  const db = client.db("capture");
-  const tasks = db.collection("tasks");
-  const _id = new ObjectId(taskId);
-  const now = /* @__PURE__ */ new Date();
-  const set = { updatedAt: now };
-  if (typeof updates.name === "string") set.name = updates.name.trim();
-  if (typeof updates.remarks === "string") set.remarks = updates.remarks.trim();
-  const updated = await tasks.findOneAndUpdate(
-    { _id },
-    { $set: set },
-    { returnDocument: "after", includeResultMetadata: false }
+async function kt(e, t) {
+  const n = (await vt()).db("capture").collection("tasks"), a = new f(e), c = { updatedAt: /* @__PURE__ */ new Date() };
+  typeof t.name == "string" && (c.name = t.name.trim()), typeof t.remarks == "string" && (c.remarks = t.remarks.trim());
+  const l = await n.findOneAndUpdate(
+    { _id: a },
+    { $set: c },
+    { returnDocument: "after", includeResultMetadata: !1 }
   );
-  if (!updated) {
+  if (!l)
     throw new Error("Task not found");
-  }
-  return updated;
+  return l;
 }
-ipcMain.handle("db:editTask", async (_event, taskId, updates) => {
+d.handle("db:editTask", async (e, t, r) => {
   try {
-    const updated = await editTask(taskId, updates);
-    return { ok: true, data: updated };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: await kt(t, r) };
+  } catch (o) {
+    return { ok: !1, error: o instanceof Error ? o.message : "Unknown error" };
   }
 });
-let cachedClient$j = null;
-async function getClient$j() {
-  if (cachedClient$j) return cachedClient$j;
-  const client = new MongoClient(MONGODB_URI, {
+let K = null;
+async function St() {
+  if (K) return K;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$j = client;
-  return client;
+  return await e.connect(), K = e, e;
 }
-async function createDive(input) {
-  const client = await getClient$j();
-  const db = client.db("capture");
-  const dives = db.collection("dives");
-  const now = /* @__PURE__ */ new Date();
-  const remarks = typeof input.remarks === "string" ? input.remarks.trim() : void 0;
-  const trimmedName = input.name.trim();
-  if (!trimmedName) {
+async function bt(e) {
+  const o = (await St()).db("capture").collection("dives"), n = /* @__PURE__ */ new Date(), a = typeof e.remarks == "string" ? e.remarks.trim() : void 0, s = e.name.trim();
+  if (!s)
     throw new Error("Dive name is required");
-  }
-  const existing = await dives.findOne({
-    projectId: new ObjectId(input.projectId),
-    name: { $regex: `^${trimmedName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" }
-  });
-  if (existing) {
+  if (await o.findOne({
+    projectId: new f(e.projectId),
+    name: { $regex: `^${s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" }
+  }))
     throw new Error("A dive with this name already exists in this project");
-  }
-  const doc = {
-    projectId: new ObjectId(input.projectId),
-    name: trimmedName,
-    ...remarks ? { remarks } : {},
-    started: false,
-    createdAt: now,
-    updatedAt: now
+  const l = {
+    projectId: new f(e.projectId),
+    name: s,
+    ...a ? { remarks: a } : {},
+    started: !1,
+    createdAt: n,
+    updatedAt: n
   };
-  const result = await dives.insertOne(doc);
-  return { _id: result.insertedId, ...doc };
+  return { _id: (await o.insertOne(l)).insertedId, ...l };
 }
-ipcMain.handle("db:createDive", async (_event, input) => {
-  var _a, _b;
+d.handle("db:createDive", async (e, t) => {
+  var r, o;
   try {
-    const created = await createDive(input);
-    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
-    return { ok: true, data: id };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    const n = await bt(t);
+    return { ok: !0, data: ((o = (r = n == null ? void 0 : n._id) == null ? void 0 : r.toString) == null ? void 0 : o.call(r)) ?? n };
+  } catch (n) {
+    return { ok: !1, error: n instanceof Error ? n.message : "Unknown error" };
   }
 });
-let cachedClient$i = null;
-async function getClient$i() {
-  if (cachedClient$i) return cachedClient$i;
-  const client = new MongoClient(MONGODB_URI, {
+let z = null;
+async function It() {
+  if (z) return z;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$i = client;
-  return client;
+  return await e.connect(), z = e, e;
 }
-async function createSession(input) {
-  const client = await getClient$i();
-  const db = client.db("capture");
-  const sessions = db.collection("sessions");
-  const now = /* @__PURE__ */ new Date();
-  const hasAnyVideo = [input.preview, input.ch1, input.ch2, input.ch3, input.ch4].some((v) => typeof v === "string" && v.trim().length > 0);
-  if (!hasAnyVideo) {
+async function At(e) {
+  const r = (await It()).db("capture"), o = r.collection("sessions"), n = /* @__PURE__ */ new Date();
+  if (![e.preview, e.ch1, e.ch2, e.ch3, e.ch4].some((b) => typeof b == "string" && b.trim().length > 0))
     throw new Error("At least one of preview/ch1/ch2/ch3/ch4 must be provided");
-  }
-  const nodeObjectId = typeof input.nodeId === "string" && input.nodeId.trim() ? new ObjectId(input.nodeId.trim()) : null;
-  const diveObjectId = new ObjectId(input.diveId);
-  const taskObjectId = new ObjectId(input.taskId);
-  const [diveDoc, taskDoc] = await Promise.all([
-    db.collection("dives").findOne({ _id: diveObjectId }, { projection: { name: 1 } }),
-    db.collection("tasks").findOne({ _id: taskObjectId }, { projection: { name: 1 } })
+  const s = typeof e.nodeId == "string" && e.nodeId.trim() ? new f(e.nodeId.trim()) : null, c = new f(e.diveId), l = new f(e.taskId), [i, m] = await Promise.all([
+    r.collection("dives").findOne({ _id: c }, { projection: { name: 1 } }),
+    r.collection("tasks").findOne({ _id: l }, { projection: { name: 1 } })
   ]);
-  let nodesWithNames = [];
-  if (nodeObjectId) {
-    const nodesCol = db.collection("nodes");
-    const chain = [];
-    let currentId = nodeObjectId;
-    while (currentId) {
-      const nd = await nodesCol.findOne({ _id: currentId }, { projection: { name: 1, parentId: 1 } });
-      if (!nd) break;
-      chain.push({ id: currentId, name: String(nd.name || "") });
-      const parentId = nd.parentId;
-      if (!parentId) break;
-      currentId = parentId;
+  let w = [];
+  if (s) {
+    const b = r.collection("nodes"), D = [];
+    let U = s;
+    for (; U; ) {
+      const F = await b.findOne({ _id: U }, { projection: { name: 1, parentId: 1 } });
+      if (!F) break;
+      D.push({ id: U, name: String(F.name || "") });
+      const Se = F.parentId;
+      if (!Se) break;
+      U = Se;
     }
-    nodesWithNames = chain.reverse();
+    w = D.reverse();
   }
-  let nodesHierarchy = void 0;
-  if (nodesWithNames.length > 0) {
-    for (let i = nodesWithNames.length - 1; i >= 0; i--) {
-      const entry = nodesWithNames[i];
-      if (!nodesHierarchy) {
-        nodesHierarchy = { id: entry.id, name: entry.name };
-      } else {
-        nodesHierarchy = { id: nodesWithNames[i].id, name: nodesWithNames[i].name, children: nodesHierarchy };
-      }
+  let p;
+  if (w.length > 0)
+    for (let b = w.length - 1; b >= 0; b--) {
+      const D = w[b];
+      p ? p = { id: w[b].id, name: w[b].name, children: p } : p = { id: D.id, name: D.name };
     }
-  }
-  const doc = {
-    projectId: new ObjectId(input.projectId),
-    diveId: diveObjectId,
-    taskId: taskObjectId,
-    dive: { id: diveObjectId, name: String((diveDoc == null ? void 0 : diveDoc.name) || "") },
-    task: { id: taskObjectId, name: String((taskDoc == null ? void 0 : taskDoc.name) || "") },
-    ...nodesHierarchy ? { nodesHierarchy } : {},
-    ...input.preview && input.preview.trim() ? { preview: input.preview.trim() } : {},
-    ...input.ch1 && input.ch1.trim() ? { ch1: input.ch1.trim() } : {},
-    ...input.ch2 && input.ch2.trim() ? { ch2: input.ch2.trim() } : {},
-    ...input.ch3 && input.ch3.trim() ? { ch3: input.ch3.trim() } : {},
-    ...input.ch4 && input.ch4.trim() ? { ch4: input.ch4.trim() } : {},
-    createdAt: now,
-    updatedAt: now
+  const T = {
+    projectId: new f(e.projectId),
+    diveId: c,
+    taskId: l,
+    dive: { id: c, name: String((i == null ? void 0 : i.name) || "") },
+    task: { id: l, name: String((m == null ? void 0 : m.name) || "") },
+    ...p ? { nodesHierarchy: p } : {},
+    ...e.preview && e.preview.trim() ? { preview: e.preview.trim() } : {},
+    ...e.ch1 && e.ch1.trim() ? { ch1: e.ch1.trim() } : {},
+    ...e.ch2 && e.ch2.trim() ? { ch2: e.ch2.trim() } : {},
+    ...e.ch3 && e.ch3.trim() ? { ch3: e.ch3.trim() } : {},
+    ...e.ch4 && e.ch4.trim() ? { ch4: e.ch4.trim() } : {},
+    createdAt: n,
+    updatedAt: n
   };
-  const result = await sessions.insertOne(doc);
-  return { _id: result.insertedId, ...doc };
+  return { _id: (await o.insertOne(T)).insertedId, ...T };
 }
-ipcMain.handle("db:createSession", async (_event, input) => {
-  var _a, _b;
+d.handle("db:createSession", async (e, t) => {
+  var r, o;
   try {
-    const created = await createSession(input);
-    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
-    return { ok: true, data: id };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    const n = await At(t);
+    return { ok: !0, data: ((o = (r = n == null ? void 0 : n._id) == null ? void 0 : r.toString) == null ? void 0 : o.call(r)) ?? n };
+  } catch (n) {
+    return { ok: !1, error: n instanceof Error ? n.message : "Unknown error" };
   }
 });
-let cachedClient$h = null;
-async function getClient$h() {
-  if (cachedClient$h) return cachedClient$h;
-  const client = new MongoClient(MONGODB_URI, {
+let X = null;
+async function _t() {
+  if (X) return X;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$h = client;
-  return client;
+  return await e.connect(), X = e, e;
 }
-async function editDive(diveId, updates) {
-  const client = await getClient$h();
-  const db = client.db("capture");
-  const dives = db.collection("dives");
-  const _id = new ObjectId(diveId);
-  const now = /* @__PURE__ */ new Date();
-  const set = { updatedAt: now };
-  if (typeof updates.name === "string") set.name = updates.name.trim();
-  if (typeof updates.remarks === "string") set.remarks = updates.remarks.trim();
-  if (typeof updates.started === "boolean") set.started = updates.started;
-  const updated = await dives.findOneAndUpdate(
-    { _id },
-    { $set: set },
-    { returnDocument: "after", includeResultMetadata: false }
+async function Ot(e, t) {
+  const n = (await _t()).db("capture").collection("dives"), a = new f(e), c = { updatedAt: /* @__PURE__ */ new Date() };
+  typeof t.name == "string" && (c.name = t.name.trim()), typeof t.remarks == "string" && (c.remarks = t.remarks.trim()), typeof t.started == "boolean" && (c.started = t.started);
+  const l = await n.findOneAndUpdate(
+    { _id: a },
+    { $set: c },
+    { returnDocument: "after", includeResultMetadata: !1 }
   );
-  if (!updated) {
+  if (!l)
     throw new Error("Dive not found");
-  }
-  return updated;
+  return l;
 }
-ipcMain.handle("db:editDive", async (_event, diveId, updates) => {
+d.handle("db:editDive", async (e, t, r) => {
   try {
-    const updated = await editDive(diveId, updates);
-    return { ok: true, data: updated };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: await Ot(t, r) };
+  } catch (o) {
+    return { ok: !1, error: o instanceof Error ? o.message : "Unknown error" };
   }
 });
-let cachedClient$g = null;
-async function getClient$g() {
-  if (cachedClient$g) return cachedClient$g;
-  const client = new MongoClient(MONGODB_URI, {
+let J = null;
+async function Ct() {
+  if (J) return J;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$g = client;
-  return client;
+  return await e.connect(), J = e, e;
 }
-async function createNode(input) {
-  const client = await getClient$g();
-  const db = client.db("capture");
-  const nodes = db.collection("nodes");
-  const now = /* @__PURE__ */ new Date();
-  const projectObjectId = new ObjectId(input.projectId);
-  let level = 0;
-  let parentObjectId = void 0;
-  if (input.parentId) {
-    parentObjectId = new ObjectId(input.parentId);
-    const parent = await nodes.findOne({ _id: parentObjectId });
-    if (!parent) throw new Error("Parent node not found");
-    if (!parent.projectId.equals(projectObjectId)) {
+async function Et(e) {
+  const o = (await Ct()).db("capture").collection("nodes"), n = /* @__PURE__ */ new Date(), a = new f(e.projectId);
+  let s = 0, c;
+  if (e.parentId) {
+    c = new f(e.parentId);
+    const w = await o.findOne({ _id: c });
+    if (!w) throw new Error("Parent node not found");
+    if (!w.projectId.equals(a))
       throw new Error("Parent node belongs to a different project");
-    }
-    level = (parent.level ?? 0) + 1;
+    s = (w.level ?? 0) + 1;
   }
-  const remarks = typeof input.remarks === "string" ? input.remarks.trim() : void 0;
-  const doc = {
-    projectId: projectObjectId,
-    name: input.name.trim(),
-    ...parentObjectId ? { parentId: parentObjectId } : {},
-    ...remarks ? { remarks } : {},
-    level,
-    createdAt: now,
-    updatedAt: now
+  const l = typeof e.remarks == "string" ? e.remarks.trim() : void 0, i = {
+    projectId: a,
+    name: e.name.trim(),
+    ...c ? { parentId: c } : {},
+    ...l ? { remarks: l } : {},
+    level: s,
+    createdAt: n,
+    updatedAt: n
   };
-  const result = await nodes.insertOne(doc);
-  return { _id: result.insertedId, ...doc };
+  return { _id: (await o.insertOne(i)).insertedId, ...i };
 }
-ipcMain.handle("db:createNode", async (_event, input) => {
+d.handle("db:createNode", async (e, t) => {
   try {
-    const created = await createNode(input);
-    return { ok: true, data: created };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: await Et(t) };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$f = null;
-async function getClient$f() {
-  if (cachedClient$f) return cachedClient$f;
-  const client = new MongoClient(MONGODB_URI, {
+let Q = null;
+async function $t() {
+  if (Q) return Q;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$f = client;
-  return client;
+  return await e.connect(), Q = e, e;
 }
-async function editNode(nodeId, updates) {
-  const client = await getClient$f();
-  const db = client.db("capture");
-  const nodes = db.collection("nodes");
-  const _id = new ObjectId(nodeId);
-  const now = /* @__PURE__ */ new Date();
-  const set = { updatedAt: now };
-  if (typeof updates.name === "string") set.name = updates.name.trim();
-  if (typeof updates.remarks === "string") set.remarks = updates.remarks.trim();
-  const updated = await nodes.findOneAndUpdate(
-    { _id },
-    { $set: set },
-    { returnDocument: "after", includeResultMetadata: false }
+async function Tt(e, t) {
+  const n = (await $t()).db("capture").collection("nodes"), a = new f(e), c = { updatedAt: /* @__PURE__ */ new Date() };
+  typeof t.name == "string" && (c.name = t.name.trim()), typeof t.remarks == "string" && (c.remarks = t.remarks.trim());
+  const l = await n.findOneAndUpdate(
+    { _id: a },
+    { $set: c },
+    { returnDocument: "after", includeResultMetadata: !1 }
   );
-  if (!updated) {
+  if (!l)
     throw new Error("Node not found");
-  }
-  return updated;
+  return l;
 }
-ipcMain.handle("db:editNode", async (_event, nodeId, updates) => {
+d.handle("db:editNode", async (e, t, r) => {
   try {
-    const updated = await editNode(nodeId, updates);
-    return { ok: true, data: updated };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: await Tt(t, r) };
+  } catch (o) {
+    return { ok: !1, error: o instanceof Error ? o.message : "Unknown error" };
   }
 });
-let cachedClient$e = null;
-async function getClient$e() {
-  if (cachedClient$e) return cachedClient$e;
-  const client = new MongoClient(MONGODB_URI, {
+let Z = null;
+async function jt() {
+  if (Z) return Z;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$e = client;
-  return client;
+  return await e.connect(), Z = e, e;
 }
-async function getAllNodes(projectId) {
-  const client = await getClient$e();
-  const db = client.db("capture");
-  const nodesCol = db.collection("nodes");
-  const projectObjectId = new ObjectId(projectId);
-  const nodes = await nodesCol.find({ projectId: projectObjectId }).sort({ level: 1, createdAt: 1, name: 1 }).toArray();
-  const idToNode = /* @__PURE__ */ new Map();
-  const roots = [];
-  for (const n of nodes) {
-    idToNode.set(n._id.toHexString(), { ...n, children: [] });
+async function Pt(e) {
+  const o = (await jt()).db("capture").collection("nodes"), n = new f(e), a = await o.find({ projectId: n }).sort({ level: 1, createdAt: 1, name: 1 }).toArray(), s = /* @__PURE__ */ new Map(), c = [];
+  for (const l of a)
+    s.set(l._id.toHexString(), { ...l, children: [] });
+  for (const l of a) {
+    const i = s.get(l._id.toHexString());
+    if (l.parentId) {
+      const m = s.get(l.parentId.toHexString());
+      m ? m.children.push(i) : c.push(i);
+    } else
+      c.push(i);
   }
-  for (const n of nodes) {
-    const current = idToNode.get(n._id.toHexString());
-    if (n.parentId) {
-      const parent = idToNode.get(n.parentId.toHexString());
-      if (parent) parent.children.push(current);
-      else roots.push(current);
-    } else {
-      roots.push(current);
-    }
-  }
-  return roots;
+  return c;
 }
-ipcMain.handle("db:getAllNodes", async (_event, projectId) => {
+d.handle("db:getAllNodes", async (e, t) => {
   try {
-    const roots = await getAllNodes(projectId);
-    const toPlain = (n) => {
-      var _a, _b, _c, _d, _e, _f;
+    const r = await Pt(t), o = (n) => {
+      var a, s, c, l, i, m;
       return {
-        _id: ((_b = (_a = n._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? n._id,
-        projectId: ((_d = (_c = n.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? n.projectId,
-        parentId: n.parentId ? ((_f = (_e = n.parentId).toString) == null ? void 0 : _f.call(_e)) ?? n.parentId : void 0,
+        _id: ((s = (a = n._id) == null ? void 0 : a.toString) == null ? void 0 : s.call(a)) ?? n._id,
+        projectId: ((l = (c = n.projectId) == null ? void 0 : c.toString) == null ? void 0 : l.call(c)) ?? n.projectId,
+        parentId: n.parentId ? ((m = (i = n.parentId).toString) == null ? void 0 : m.call(i)) ?? n.parentId : void 0,
         name: n.name,
         level: n.level,
         createdAt: n.createdAt,
         updatedAt: n.updatedAt,
-        children: Array.isArray(n.children) ? n.children.map(toPlain) : []
+        children: Array.isArray(n.children) ? n.children.map(o) : []
       };
     };
-    return { ok: true, data: roots.map(toPlain) };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: r.map(o) };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$d = null;
-async function getClient$d() {
-  if (cachedClient$d) return cachedClient$d;
-  const client = new MongoClient(MONGODB_URI, {
+let ee = null;
+async function Dt() {
+  if (ee) return ee;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$d = client;
-  return client;
+  return await e.connect(), ee = e, e;
 }
-async function deleteNode(nodeId) {
-  const client = await getClient$d();
-  const db = client.db("capture");
-  const nodes = db.collection("nodes");
-  const rootId = new ObjectId(nodeId);
-  const gathered = /* @__PURE__ */ new Set([rootId.toHexString()]);
-  let frontier = [rootId];
-  while (frontier.length) {
-    const children = await nodes.find({ parentId: { $in: frontier } }, { projection: { _id: 1 } }).toArray();
-    const next = [];
-    for (const c of children) {
-      const idHex = c._id.toHexString();
-      if (!gathered.has(idHex)) {
-        gathered.add(idHex);
-        next.push(c._id);
-      }
+async function Ut(e) {
+  const o = (await Dt()).db("capture").collection("nodes"), n = new f(e), a = /* @__PURE__ */ new Set([n.toHexString()]);
+  let s = [n];
+  for (; s.length; ) {
+    const i = await o.find({ parentId: { $in: s } }, { projection: { _id: 1 } }).toArray(), m = [];
+    for (const w of i) {
+      const p = w._id.toHexString();
+      a.has(p) || (a.add(p), m.push(w._id));
     }
-    frontier = next;
+    s = m;
   }
-  const idsToDelete = Array.from(gathered).map((hex) => new ObjectId(hex));
-  const result = await nodes.deleteMany({ _id: { $in: idsToDelete } });
-  return result.deletedCount ?? 0;
+  const c = Array.from(a).map((i) => new f(i));
+  return (await o.deleteMany({ _id: { $in: c } })).deletedCount ?? 0;
 }
-ipcMain.handle("db:deleteNode", async (_event, nodeId) => {
+d.handle("db:deleteNode", async (e, t) => {
   try {
-    const deletedCount = await deleteNode(nodeId);
-    return { ok: true, data: { deletedCount } };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: { deletedCount: await Ut(t) } };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$c = null;
-async function getClient$c() {
-  if (cachedClient$c) return cachedClient$c;
-  const client = new MongoClient(MONGODB_URI, {
+let te = null;
+async function Rt() {
+  if (te) return te;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$c = client;
-  return client;
+  return await e.connect(), te = e, e;
 }
-async function getSelectedNodeDetails(nodeId) {
-  const client = await getClient$c();
-  const db = client.db("capture");
-  const nodes = db.collection("nodes");
-  const _id = new ObjectId(nodeId);
-  const doc = await nodes.findOne({ _id });
-  return doc;
+async function Nt(e) {
+  const o = (await Rt()).db("capture").collection("nodes"), n = new f(e);
+  return await o.findOne({ _id: n });
 }
-ipcMain.handle("db:getSelectedNodeDetails", async (_event, nodeId) => {
+d.handle("db:getSelectedNodeDetails", async (e, t) => {
   try {
-    if (!nodeId || typeof nodeId !== "string") {
-      return { ok: false, error: "Invalid nodeId" };
-    }
-    const doc = await getSelectedNodeDetails(nodeId);
-    if (!doc) return { ok: true, data: null };
-    const plain = {
-      _id: doc._id.toString(),
-      projectId: doc.projectId.toString(),
-      parentId: doc.parentId ? doc.parentId.toString() : void 0,
-      name: doc.name,
-      remarks: doc.remarks ?? void 0,
-      level: doc.level,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt
-    };
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    if (!t || typeof t != "string")
+      return { ok: !1, error: "Invalid nodeId" };
+    const r = await Nt(t);
+    return r ? { ok: !0, data: {
+      _id: r._id.toString(),
+      projectId: r.projectId.toString(),
+      parentId: r.parentId ? r.parentId.toString() : void 0,
+      name: r.name,
+      remarks: r.remarks ?? void 0,
+      level: r.level,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt
+    } } : { ok: !0, data: null };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$b = null;
-async function getClient$b() {
-  if (cachedClient$b) return cachedClient$b;
-  const client = new MongoClient(MONGODB_URI, {
+let re = null;
+async function xt() {
+  if (re) return re;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$b = client;
-  return client;
+  return await e.connect(), re = e, e;
 }
-async function getAllProjects() {
-  const client = await getClient$b();
-  const db = client.db("capture");
-  const projects = db.collection("projects");
-  return projects.find({}).sort({ createdAt: -1 }).toArray();
+async function Ft() {
+  return (await xt()).db("capture").collection("projects").find({}).sort({ createdAt: -1 }).toArray();
 }
-ipcMain.handle("db:getAllProjects", async () => {
+d.handle("db:getAllProjects", async () => {
   try {
-    const projects = await getAllProjects();
-    const plain = projects.map((p) => ({
-      _id: p._id.toString(),
-      name: p.name,
-      client: p.client,
-      contractor: p.contractor,
-      vessel: p.vessel,
-      location: p.location,
-      projectType: p.projectType,
-      lastSelectedDiveId: p.lastSelectedDiveId ?? null,
-      lastSelectedTaskId: p.lastSelectedTaskId ?? null,
-      lastSelectedNodeId: p.lastSelectedNodeId ?? null,
-      lastSelectedOverlayCh1Id: p.lastSelectedOverlayCh1Id ?? null,
-      lastSelectedOverlayCh2Id: p.lastSelectedOverlayCh2Id ?? null,
-      lastSelectedOverlayCh3Id: p.lastSelectedOverlayCh3Id ?? null,
-      lastSelectedOverlayCh4Id: p.lastSelectedOverlayCh4Id ?? null,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt
-    }));
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: (await Ft()).map((r) => ({
+      _id: r._id.toString(),
+      name: r.name,
+      client: r.client,
+      contractor: r.contractor,
+      vessel: r.vessel,
+      location: r.location,
+      projectType: r.projectType,
+      lastSelectedDiveId: r.lastSelectedDiveId ?? null,
+      lastSelectedTaskId: r.lastSelectedTaskId ?? null,
+      lastSelectedNodeId: r.lastSelectedNodeId ?? null,
+      lastSelectedOverlayCh1Id: r.lastSelectedOverlayCh1Id ?? null,
+      lastSelectedOverlayCh2Id: r.lastSelectedOverlayCh2Id ?? null,
+      lastSelectedOverlayCh3Id: r.lastSelectedOverlayCh3Id ?? null,
+      lastSelectedOverlayCh4Id: r.lastSelectedOverlayCh4Id ?? null,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt
+    })) };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-let selectedProjectId = null;
-function setSelectedProjectId(id) {
-  selectedProjectId = id ? id.trim() || null : null;
+let Pe = null;
+function Lt(e) {
+  Pe = e && e.trim() || null;
 }
-function getSelectedProjectId() {
-  return selectedProjectId;
+function Bt() {
+  return Pe;
 }
-ipcMain.handle("app:setSelectedProjectId", async (_event, id) => {
+d.handle("app:setSelectedProjectId", async (e, t) => {
   try {
-    setSelectedProjectId(id);
-    return { ok: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return Lt(t), { ok: !0 };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-ipcMain.handle("app:getSelectedProjectId", async () => {
+d.handle("app:getSelectedProjectId", async () => {
   try {
-    return { ok: true, data: getSelectedProjectId() };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: Bt() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-let selectedDiveId = null;
-function setSelectedDiveId(id) {
-  selectedDiveId = id ? id.trim() || null : null;
+let De = null;
+function Mt(e) {
+  De = e && e.trim() || null;
 }
-function getSelectedDiveId() {
-  return selectedDiveId;
+function Ht() {
+  return De;
 }
-ipcMain.handle("app:setSelectedDiveId", async (_event, id) => {
+d.handle("app:setSelectedDiveId", async (e, t) => {
   try {
-    setSelectedDiveId(id);
-    return { ok: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return Mt(t), { ok: !0 };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-ipcMain.handle("app:getSelectedDiveId", async () => {
+d.handle("app:getSelectedDiveId", async () => {
   try {
-    return { ok: true, data: getSelectedDiveId() };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: Ht() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-let startedDiveId = null;
-function getStartedDiveId() {
-  return startedDiveId;
+let E = null;
+function Vt() {
+  return E;
 }
-function setDiveStarted(diveId, started) {
-  if (started) {
-    startedDiveId = diveId ? diveId.trim() || null : null;
-  } else {
-    if (startedDiveId && diveId && startedDiveId === diveId.trim()) {
-      startedDiveId = null;
-    } else if (!diveId) {
-      startedDiveId = null;
-    }
-  }
+function qt(e, t) {
+  t ? E = e && e.trim() || null : E && e && E === e.trim() ? E = null : e || (E = null);
 }
-ipcMain.handle("dive:getStartedDiveId", async () => {
+d.handle("dive:getStartedDiveId", async () => {
   try {
-    return { ok: true, data: getStartedDiveId() };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: Vt() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-ipcMain.handle("dive:isStarted", async (_event, diveId) => {
+d.handle("dive:isStarted", async (e, t) => {
   try {
-    const id = typeof diveId === "string" ? diveId.trim() || null : null;
-    return { ok: true, data: !!(id && startedDiveId === id) };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    const r = typeof t == "string" && t.trim() || null;
+    return { ok: !0, data: !!(r && E === r) };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-ipcMain.handle("dive:setStarted", async (_event, diveId, started) => {
+d.handle("dive:setStarted", async (e, t, r) => {
   try {
-    setDiveStarted(typeof diveId === "string" ? diveId : null, !!started);
-    return { ok: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return qt(typeof t == "string" ? t : null, !!r), { ok: !0 };
+  } catch (o) {
+    return { ok: !1, error: o instanceof Error ? o.message : "Unknown error" };
   }
 });
-let selectedTaskId = null;
-function setSelectedTaskId(id) {
-  selectedTaskId = id ? id.trim() || null : null;
+let Ue = null;
+function Wt(e) {
+  Ue = e && e.trim() || null;
 }
-function getSelectedTaskId() {
-  return selectedTaskId;
+function Yt() {
+  return Ue;
 }
-ipcMain.handle("app:setSelectedTaskId", async (_event, id) => {
+d.handle("app:setSelectedTaskId", async (e, t) => {
   try {
-    setSelectedTaskId(id);
-    return { ok: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return Wt(t), { ok: !0 };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-ipcMain.handle("app:getSelectedTaskId", async () => {
+d.handle("app:getSelectedTaskId", async () => {
   try {
-    return { ok: true, data: getSelectedTaskId() };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: Yt() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-let selectedNodeId = null;
-function setSelectedNodeId(id) {
-  selectedNodeId = id ? id.trim() || null : null;
+let Re = null;
+function Gt(e) {
+  Re = e && e.trim() || null;
 }
-function getSelectedNodeId() {
-  return selectedNodeId;
+function Kt() {
+  return Re;
 }
-ipcMain.handle("app:setSelectedNodeId", async (_event, id) => {
+d.handle("app:setSelectedNodeId", async (e, t) => {
   try {
-    setSelectedNodeId(id);
-    return { ok: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return Gt(t), { ok: !0 };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-ipcMain.handle("app:getSelectedNodeId", async () => {
+d.handle("app:getSelectedNodeId", async () => {
   try {
-    return { ok: true, data: getSelectedNodeId() };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: Kt() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-let cachedClient$a = null;
-async function getClient$a() {
-  if (cachedClient$a) return cachedClient$a;
-  const client = new MongoClient(MONGODB_URI, {
+let ne = null;
+async function zt() {
+  if (ne) return ne;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$a = client;
-  return client;
+  return await e.connect(), ne = e, e;
 }
-async function getAllDives(projectId) {
-  const client = await getClient$a();
-  const db = client.db("capture");
-  const dives = db.collection("dives");
-  return dives.find({ projectId: new ObjectId(projectId) }).sort({ createdAt: -1 }).toArray();
+async function Xt(e) {
+  return (await zt()).db("capture").collection("dives").find({ projectId: new f(e) }).sort({ createdAt: -1 }).toArray();
 }
-ipcMain.handle("db:getAllDives", async (_event, projectId) => {
+d.handle("db:getAllDives", async (e, t) => {
   try {
-    if (!projectId || typeof projectId !== "string") {
-      return { ok: false, error: "projectId is required" };
-    }
-    const items = await getAllDives(projectId);
-    const plain = items.map((d) => {
-      var _a, _b, _c, _d;
+    return !t || typeof t != "string" ? { ok: !1, error: "projectId is required" } : { ok: !0, data: (await Xt(t)).map((n) => {
+      var a, s, c, l;
       return {
-        _id: ((_b = (_a = d._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? d._id,
-        projectId: ((_d = (_c = d.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? d.projectId,
-        name: d.name,
-        remarks: d.remarks,
-        started: !!d.started,
-        createdAt: d.createdAt,
-        updatedAt: d.updatedAt
+        _id: ((s = (a = n._id) == null ? void 0 : a.toString) == null ? void 0 : s.call(a)) ?? n._id,
+        projectId: ((l = (c = n.projectId) == null ? void 0 : c.toString) == null ? void 0 : l.call(c)) ?? n.projectId,
+        name: n.name,
+        remarks: n.remarks,
+        started: !!n.started,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt
       };
-    });
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    }) };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$9 = null;
-async function getClient$9() {
-  if (cachedClient$9) return cachedClient$9;
-  const client = new MongoClient(MONGODB_URI, {
+let oe = null;
+async function Jt() {
+  if (oe) return oe;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$9 = client;
-  return client;
+  return await e.connect(), oe = e, e;
 }
-async function getSelectedProjectDetails(projectId) {
-  const client = await getClient$9();
-  const db = client.db("capture");
-  const projects = db.collection("projects");
-  const _id = new ObjectId(projectId);
-  const doc = await projects.findOne({ _id });
-  return doc;
+async function Qt(e) {
+  const o = (await Jt()).db("capture").collection("projects"), n = new f(e);
+  return await o.findOne({ _id: n });
 }
-ipcMain.handle("db:getSelectedProjectDetails", async (_event, projectId) => {
+d.handle("db:getSelectedProjectDetails", async (e, t) => {
   try {
-    if (!projectId || typeof projectId !== "string") {
-      return { ok: false, error: "Invalid projectId" };
-    }
-    const doc = await getSelectedProjectDetails(projectId);
-    if (!doc) return { ok: true, data: null };
-    const plain = {
-      _id: doc._id.toString(),
-      name: doc.name,
-      client: doc.client,
-      contractor: doc.contractor,
-      vessel: doc.vessel,
-      location: doc.location,
-      projectType: doc.projectType,
-      lastSelectedDiveId: doc.lastSelectedDiveId ?? null,
-      lastSelectedTaskId: doc.lastSelectedTaskId ?? null,
-      lastSelectedNodeId: doc.lastSelectedNodeId ?? null,
-      lastSelectedOverlayCh1Id: doc.lastSelectedOverlayCh1Id ?? null,
-      lastSelectedOverlayCh2Id: doc.lastSelectedOverlayCh2Id ?? null,
-      lastSelectedOverlayCh3Id: doc.lastSelectedOverlayCh3Id ?? null,
-      lastSelectedOverlayCh4Id: doc.lastSelectedOverlayCh4Id ?? null,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt
-    };
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    if (!t || typeof t != "string")
+      return { ok: !1, error: "Invalid projectId" };
+    const r = await Qt(t);
+    return r ? { ok: !0, data: {
+      _id: r._id.toString(),
+      name: r.name,
+      client: r.client,
+      contractor: r.contractor,
+      vessel: r.vessel,
+      location: r.location,
+      projectType: r.projectType,
+      lastSelectedDiveId: r.lastSelectedDiveId ?? null,
+      lastSelectedTaskId: r.lastSelectedTaskId ?? null,
+      lastSelectedNodeId: r.lastSelectedNodeId ?? null,
+      lastSelectedOverlayCh1Id: r.lastSelectedOverlayCh1Id ?? null,
+      lastSelectedOverlayCh2Id: r.lastSelectedOverlayCh2Id ?? null,
+      lastSelectedOverlayCh3Id: r.lastSelectedOverlayCh3Id ?? null,
+      lastSelectedOverlayCh4Id: r.lastSelectedOverlayCh4Id ?? null,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt
+    } } : { ok: !0, data: null };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$8 = null;
-async function getClient$8() {
-  if (cachedClient$8) return cachedClient$8;
-  const client = new MongoClient(MONGODB_URI, {
+let ae = null;
+async function Zt() {
+  if (ae) return ae;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$8 = client;
-  return client;
+  return await e.connect(), ae = e, e;
 }
-async function getSelectedDiveDetails(diveId) {
-  const client = await getClient$8();
-  const db = client.db("capture");
-  const dives = db.collection("dives");
-  const _id = new ObjectId(diveId);
-  const doc = await dives.findOne({ _id });
-  return doc;
+async function er(e) {
+  const o = (await Zt()).db("capture").collection("dives"), n = new f(e);
+  return await o.findOne({ _id: n });
 }
-ipcMain.handle("db:getSelectedDiveDetails", async (_event, diveId) => {
+d.handle("db:getSelectedDiveDetails", async (e, t) => {
   try {
-    if (!diveId || typeof diveId !== "string") {
-      return { ok: false, error: "Invalid diveId" };
-    }
-    const doc = await getSelectedDiveDetails(diveId);
-    if (!doc) return { ok: true, data: null };
-    const plain = {
-      _id: doc._id.toString(),
-      projectId: doc.projectId.toString(),
-      name: doc.name,
-      remarks: doc.remarks ?? void 0,
-      started: !!doc.started,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt
-    };
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    if (!t || typeof t != "string")
+      return { ok: !1, error: "Invalid diveId" };
+    const r = await er(t);
+    return r ? { ok: !0, data: {
+      _id: r._id.toString(),
+      projectId: r.projectId.toString(),
+      name: r.name,
+      remarks: r.remarks ?? void 0,
+      started: !!r.started,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt
+    } } : { ok: !0, data: null };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$7 = null;
-async function getClient$7() {
-  if (cachedClient$7) return cachedClient$7;
-  const client = new MongoClient(MONGODB_URI, {
+let se = null;
+async function tr() {
+  if (se) return se;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$7 = client;
-  return client;
+  return await e.connect(), se = e, e;
 }
-async function editProject(projectId, updates) {
-  const client = await getClient$7();
-  const db = client.db("capture");
-  const projects = db.collection("projects");
-  const _id = new ObjectId(projectId);
-  const now = /* @__PURE__ */ new Date();
-  const set = { updatedAt: now };
-  if (typeof updates.name === "string") set.name = updates.name.trim();
-  if (typeof updates.client === "string") set.client = updates.client.trim();
-  if (typeof updates.contractor === "string") set.contractor = updates.contractor.trim();
-  if (typeof updates.vessel === "string") set.vessel = updates.vessel.trim();
-  if (typeof updates.location === "string") set.location = updates.location.trim();
-  if (updates.hasOwnProperty("lastSelectedDiveId")) {
-    const v = updates.lastSelectedDiveId;
-    set.lastSelectedDiveId = typeof v === "string" ? v.trim() || null : null;
+async function rr(e, t) {
+  const n = (await tr()).db("capture").collection("projects"), a = new f(e), c = { updatedAt: /* @__PURE__ */ new Date() };
+  if (typeof t.name == "string" && (c.name = t.name.trim()), typeof t.client == "string" && (c.client = t.client.trim()), typeof t.contractor == "string" && (c.contractor = t.contractor.trim()), typeof t.vessel == "string" && (c.vessel = t.vessel.trim()), typeof t.location == "string" && (c.location = t.location.trim()), t.hasOwnProperty("lastSelectedDiveId")) {
+    const i = t.lastSelectedDiveId;
+    c.lastSelectedDiveId = typeof i == "string" && i.trim() || null;
   }
-  if (updates.hasOwnProperty("lastSelectedTaskId")) {
-    const v2 = updates.lastSelectedTaskId;
-    set.lastSelectedTaskId = typeof v2 === "string" ? v2.trim() || null : null;
+  if (t.hasOwnProperty("lastSelectedTaskId")) {
+    const i = t.lastSelectedTaskId;
+    c.lastSelectedTaskId = typeof i == "string" && i.trim() || null;
   }
-  if (updates.hasOwnProperty("lastSelectedNodeId")) {
-    const v3 = updates.lastSelectedNodeId;
-    set.lastSelectedNodeId = typeof v3 === "string" ? v3.trim() || null : null;
+  if (t.hasOwnProperty("lastSelectedNodeId")) {
+    const i = t.lastSelectedNodeId;
+    c.lastSelectedNodeId = typeof i == "string" && i.trim() || null;
   }
-  if (updates.hasOwnProperty("lastSelectedOverlayCh1Id")) {
-    const v4 = updates.lastSelectedOverlayCh1Id;
-    set.lastSelectedOverlayCh1Id = typeof v4 === "string" ? v4.trim() || null : null;
+  if (t.hasOwnProperty("lastSelectedOverlayCh1Id")) {
+    const i = t.lastSelectedOverlayCh1Id;
+    c.lastSelectedOverlayCh1Id = typeof i == "string" && i.trim() || null;
   }
-  if (updates.hasOwnProperty("lastSelectedOverlayCh2Id")) {
-    const v5 = updates.lastSelectedOverlayCh2Id;
-    set.lastSelectedOverlayCh2Id = typeof v5 === "string" ? v5.trim() || null : null;
+  if (t.hasOwnProperty("lastSelectedOverlayCh2Id")) {
+    const i = t.lastSelectedOverlayCh2Id;
+    c.lastSelectedOverlayCh2Id = typeof i == "string" && i.trim() || null;
   }
-  if (updates.hasOwnProperty("lastSelectedOverlayCh3Id")) {
-    const v6 = updates.lastSelectedOverlayCh3Id;
-    set.lastSelectedOverlayCh3Id = typeof v6 === "string" ? v6.trim() || null : null;
+  if (t.hasOwnProperty("lastSelectedOverlayCh3Id")) {
+    const i = t.lastSelectedOverlayCh3Id;
+    c.lastSelectedOverlayCh3Id = typeof i == "string" && i.trim() || null;
   }
-  if (updates.hasOwnProperty("lastSelectedOverlayCh4Id")) {
-    const v7 = updates.lastSelectedOverlayCh4Id;
-    set.lastSelectedOverlayCh4Id = typeof v7 === "string" ? v7.trim() || null : null;
+  if (t.hasOwnProperty("lastSelectedOverlayCh4Id")) {
+    const i = t.lastSelectedOverlayCh4Id;
+    c.lastSelectedOverlayCh4Id = typeof i == "string" && i.trim() || null;
   }
-  const updated = await projects.findOneAndUpdate(
-    { _id },
-    { $set: set },
-    { returnDocument: "after", includeResultMetadata: false }
+  const l = await n.findOneAndUpdate(
+    { _id: a },
+    { $set: c },
+    { returnDocument: "after", includeResultMetadata: !1 }
   );
-  if (!updated) {
+  if (!l)
     throw new Error("Project not found");
-  }
-  return updated;
+  return l;
 }
-ipcMain.handle("db:editProject", async (_event, projectId, updates) => {
+d.handle("db:editProject", async (e, t, r) => {
   try {
-    const updated = await editProject(projectId, updates);
-    const plain = {
-      _id: updated._id.toString(),
-      name: updated.name,
-      client: updated.client,
-      contractor: updated.contractor,
-      vessel: updated.vessel,
-      location: updated.location,
-      projectType: updated.projectType,
-      lastSelectedDiveId: updated.lastSelectedDiveId ?? null,
-      lastSelectedTaskId: updated.lastSelectedTaskId ?? null,
-      lastSelectedNodeId: updated.lastSelectedNodeId ?? null,
-      lastSelectedOverlayCh1Id: updated.lastSelectedOverlayCh1Id ?? null,
-      lastSelectedOverlayCh2Id: updated.lastSelectedOverlayCh2Id ?? null,
-      lastSelectedOverlayCh3Id: updated.lastSelectedOverlayCh3Id ?? null,
-      lastSelectedOverlayCh4Id: updated.lastSelectedOverlayCh4Id ?? null,
-      createdAt: updated.createdAt,
-      updatedAt: updated.updatedAt
-    };
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    const o = await rr(t, r);
+    return { ok: !0, data: {
+      _id: o._id.toString(),
+      name: o.name,
+      client: o.client,
+      contractor: o.contractor,
+      vessel: o.vessel,
+      location: o.location,
+      projectType: o.projectType,
+      lastSelectedDiveId: o.lastSelectedDiveId ?? null,
+      lastSelectedTaskId: o.lastSelectedTaskId ?? null,
+      lastSelectedNodeId: o.lastSelectedNodeId ?? null,
+      lastSelectedOverlayCh1Id: o.lastSelectedOverlayCh1Id ?? null,
+      lastSelectedOverlayCh2Id: o.lastSelectedOverlayCh2Id ?? null,
+      lastSelectedOverlayCh3Id: o.lastSelectedOverlayCh3Id ?? null,
+      lastSelectedOverlayCh4Id: o.lastSelectedOverlayCh4Id ?? null,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt
+    } };
+  } catch (o) {
+    return { ok: !1, error: o instanceof Error ? o.message : "Unknown error" };
   }
 });
-let selectedDrawingTool = null;
-function setSelectedDrawingTool(tool) {
-  selectedDrawingTool = tool;
+let Ne = null;
+function nr(e) {
+  Ne = e;
 }
-function getSelectedDrawingTool() {
-  return selectedDrawingTool;
+function or() {
+  return Ne;
 }
-ipcMain.handle("app:setSelectedDrawingTool", async (_event, tool) => {
+d.handle("app:setSelectedDrawingTool", async (e, t) => {
   try {
-    setSelectedDrawingTool(tool);
-    return { ok: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return nr(t), { ok: !0 };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-ipcMain.handle("app:getSelectedDrawingTool", async () => {
+d.handle("app:getSelectedDrawingTool", async () => {
   try {
-    return { ok: true, data: getSelectedDrawingTool() };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: or() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-let selectedOverlayLayerId = null;
-function setSelectedOverlayLayerId(id) {
-  selectedOverlayLayerId = id ? id.trim() || null : null;
+let xe = null;
+function ar(e) {
+  xe = e && e.trim() || null;
 }
-function getSelectedOverlayLayerId() {
-  return selectedOverlayLayerId;
+function sr() {
+  return xe;
 }
-ipcMain.handle("app:setSelectedOverlayLayerId", async (_event, id) => {
+d.handle("app:setSelectedOverlayLayerId", async (e, t) => {
   try {
-    setSelectedOverlayLayerId(id);
-    return { ok: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return ar(t), { ok: !0 };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-ipcMain.handle("app:getSelectedOverlayLayerId", async () => {
+d.handle("app:getSelectedOverlayLayerId", async () => {
   try {
-    return { ok: true, data: getSelectedOverlayLayerId() };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: sr() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-let selectedOverlayComponentIds = [];
-function setSelectedOverlayComponentIds(ids) {
-  if (!ids || !Array.isArray(ids)) {
-    selectedOverlayComponentIds = [];
+let pe = [];
+function cr(e) {
+  if (!e || !Array.isArray(e)) {
+    pe = [];
     return;
   }
-  const cleaned = ids.map((s) => typeof s === "string" ? s.trim() : "").filter((s) => !!s);
-  selectedOverlayComponentIds = Array.from(new Set(cleaned));
+  const t = e.map((r) => typeof r == "string" ? r.trim() : "").filter((r) => !!r);
+  pe = Array.from(new Set(t));
 }
-function getSelectedOverlayComponentIds() {
-  return [...selectedOverlayComponentIds];
+function ir() {
+  return [...pe];
 }
-ipcMain.handle("app:setSelectedOverlayComponentIds", async (_event, ids) => {
+d.handle("app:setSelectedOverlayComponentIds", async (e, t) => {
   try {
-    setSelectedOverlayComponentIds(ids);
-    return { ok: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return cr(t), { ok: !0 };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-ipcMain.handle("app:getSelectedOverlayComponentIds", async () => {
+d.handle("app:getSelectedOverlayComponentIds", async () => {
   try {
-    return { ok: true, data: getSelectedOverlayComponentIds() };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: ir() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-let cachedClient$6 = null;
-async function getClient$6() {
-  if (cachedClient$6) return cachedClient$6;
-  const client = new MongoClient(MONGODB_URI, {
+let Fe = null;
+function lr(e) {
+  Fe = e && e.trim() || null;
+}
+function Le() {
+  return Fe;
+}
+d.handle("app:setActiveSessionId", async (e, t) => {
+  try {
+    return lr(t), { ok: !0 };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
+  }
+});
+d.handle("app:getActiveSessionId", async () => {
+  try {
+    return { ok: !0, data: Le() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
+  }
+});
+let ce = null;
+async function dr() {
+  if (ce) return ce;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$6 = client;
-  return client;
+  return await e.connect(), ce = e, e;
 }
-async function renameOverlay(id, name) {
-  const client = await getClient$6();
-  const db = client.db("capture");
-  const overlays = db.collection("overlays");
-  const _id = new ObjectId(id);
-  const now = /* @__PURE__ */ new Date();
-  const trimmed = name.trim();
-  if (!trimmed) throw new Error("Overlay name is required");
-  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const existing = await overlays.findOne({ _id: { $ne: _id }, name: { $regex: `^${escapeRegex(trimmed)}$`, $options: "i" } });
-  if (existing) throw new Error("An overlay with this name already exists");
-  await overlays.updateOne({ _id }, { $set: { name: trimmed, updatedAt: now } });
-  const updated = await overlays.findOne({ _id });
-  return updated;
+async function ur(e, t) {
+  const n = (await dr()).db("capture").collection("overlays"), a = new f(e), s = /* @__PURE__ */ new Date(), c = t.trim();
+  if (!c) throw new Error("Overlay name is required");
+  const l = (w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if (await n.findOne({ _id: { $ne: a }, name: { $regex: `^${l(c)}$`, $options: "i" } })) throw new Error("An overlay with this name already exists");
+  return await n.updateOne({ _id: a }, { $set: { name: c, updatedAt: s } }), await n.findOne({ _id: a });
 }
-ipcMain.handle("db:renameOverlay", async (_event, input) => {
-  var _a, _b;
+d.handle("db:renameOverlay", async (e, t) => {
+  var r, o;
   try {
-    if (!(input == null ? void 0 : input.id) || !(input == null ? void 0 : input.name) || !input.name.trim()) throw new Error("Invalid input");
-    const updated = await renameOverlay(input.id, input.name);
-    const idStr = ((_b = (_a = updated == null ? void 0 : updated._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? input.id;
+    if (!(t != null && t.id) || !(t != null && t.name) || !t.name.trim()) throw new Error("Invalid input");
+    const n = await ur(t.id, t.name), a = ((o = (r = n == null ? void 0 : n._id) == null ? void 0 : r.toString) == null ? void 0 : o.call(r)) ?? t.id;
     try {
-      const payload = { id: idStr, name: input.name, action: "renamed" };
-      for (const win2 of BrowserWindow.getAllWindows()) {
+      const s = { id: a, name: t.name, action: "renamed" };
+      for (const c of $.getAllWindows())
         try {
-          win2.webContents.send("overlays:changed", payload);
+          c.webContents.send("overlays:changed", s);
         } catch {
         }
-      }
     } catch {
     }
-    return { ok: true, data: idStr };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: a };
+  } catch (n) {
+    return { ok: !1, error: n instanceof Error ? n.message : "Unknown error" };
   }
 });
-let cachedClient$5 = null;
-async function getClient$5() {
-  if (cachedClient$5) return cachedClient$5;
-  const client = new MongoClient(MONGODB_URI, {
+let ie = null;
+async function fr() {
+  if (ie) return ie;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$5 = client;
-  return client;
+  return await e.connect(), ie = e, e;
 }
-async function deleteOverlay(id) {
-  const client = await getClient$5();
-  const db = client.db("capture");
-  const overlays = db.collection("overlays");
-  const _id = new ObjectId(id);
-  const res = await overlays.deleteOne({ _id });
-  return res.deletedCount === 1;
+async function mr(e) {
+  const o = (await fr()).db("capture").collection("overlays"), n = new f(e);
+  return (await o.deleteOne({ _id: n })).deletedCount === 1;
 }
-ipcMain.handle("db:deleteOverlay", async (_event, input) => {
+d.handle("db:deleteOverlay", async (e, t) => {
   try {
-    if (!(input == null ? void 0 : input.id)) throw new Error("Invalid id");
-    const ok = await deleteOverlay(input.id);
-    if (!ok) throw new Error("Overlay not found");
+    if (!(t != null && t.id)) throw new Error("Invalid id");
+    if (!await mr(t.id)) throw new Error("Overlay not found");
     try {
-      const payload = { id: input.id, action: "deleted" };
-      for (const win2 of BrowserWindow.getAllWindows()) {
+      const o = { id: t.id, action: "deleted" };
+      for (const n of $.getAllWindows())
         try {
-          win2.webContents.send("overlays:changed", payload);
+          n.webContents.send("overlays:changed", o);
         } catch {
         }
-      }
     } catch {
     }
-    return { ok: true, data: input.id };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: t.id };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$4 = null;
-async function getClient$4() {
-  if (cachedClient$4) return cachedClient$4;
-  const client = new MongoClient(MONGODB_URI, {
+let le = null;
+async function yr() {
+  if (le) return le;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$4 = client;
-  return client;
+  return await e.connect(), le = e, e;
 }
-async function createOverlayComponent(input) {
-  if (!(input == null ? void 0 : input.overlayId)) throw new Error("overlayId is required");
-  if (!(input == null ? void 0 : input.type)) throw new Error("type is required");
-  const overlayObjectId = new ObjectId(input.overlayId);
-  const isTextCapable = input.type !== "image";
-  const defaultTextStyle = isTextCapable ? {
+async function hr(e) {
+  if (!(e != null && e.overlayId)) throw new Error("overlayId is required");
+  if (!(e != null && e.type)) throw new Error("type is required");
+  const t = new f(e.overlayId), r = e.type !== "image", o = r ? {
     fontFamily: "Inter, ui-sans-serif, system-ui",
     fontSize: 16,
     fontWeight: "normal",
@@ -1715,217 +1376,154 @@ async function createOverlayComponent(input) {
     align: "left",
     letterSpacing: 0,
     lineHeight: 1.2,
-    italic: false,
-    underline: false,
-    uppercase: false
+    italic: !1,
+    underline: !1,
+    uppercase: !1
   } : void 0;
-  let customFields = {};
-  switch (input.type) {
+  let n = {};
+  switch (e.type) {
     case "custom-text":
-      customFields.customText = input.customText ?? "Text";
+      n.customText = e.customText ?? "Text";
       break;
     case "date":
-      customFields.dateFormat = input.dateFormat ?? "YYYY-MM-DD";
+      n.dateFormat = e.dateFormat ?? "YYYY-MM-DD";
       break;
     case "time":
-      customFields.twentyFourHour = input.twentyFourHour ?? true;
-      customFields.useUTC = input.useUTC ?? false;
+      n.twentyFourHour = e.twentyFourHour ?? !0, n.useUTC = e.useUTC ?? !1;
       break;
     case "data":
-      customFields.dataType = input.dataType ?? "string";
+      n.dataType = e.dataType ?? "string";
       break;
     case "node":
-      customFields.nodeLevel = input.nodeLevel ?? 1;
+      n.nodeLevel = e.nodeLevel ?? 1;
       break;
     case "image":
-      customFields.imagePath = input.imagePath ?? "";
+      n.imagePath = e.imagePath ?? "";
       break;
   }
-  const client = await getClient$4();
-  const db = client.db("capture");
-  const components = db.collection("overlay_components");
-  const existingCount = await components.countDocuments({ overlayId: overlayObjectId });
-  const defaultName = `${input.type}-${existingCount + 1}`;
-  const defaultX = 100;
-  const defaultY = 100;
-  const defaultWidth = 320;
-  const defaultHeight = 64;
-  const doc = {
-    overlayId: overlayObjectId,
-    name: input.name && input.name.trim() ? input.name.trim() : defaultName,
-    type: input.type,
-    x: Number.isFinite(Number(input.x)) ? Number(input.x) : defaultX,
-    y: Number.isFinite(Number(input.y)) ? Number(input.y) : defaultY,
-    width: Math.max(1, Number.isFinite(Number(input.width)) ? Number(input.width) : defaultWidth),
-    height: Math.max(1, Number.isFinite(Number(input.height)) ? Number(input.height) : defaultHeight),
-    backgroundColor: input.backgroundColor ?? "transparent",
-    borderColor: input.borderColor ?? "transparent",
-    radius: typeof input.radius === "number" ? input.radius : 0,
-    textStyle: isTextCapable ? { ...defaultTextStyle, ...input.textStyle ?? {} } : void 0,
-    ...customFields,
+  const c = (await yr()).db("capture").collection("overlay_components"), l = await c.countDocuments({ overlayId: t }), i = `${e.type}-${l + 1}`, x = {
+    overlayId: t,
+    name: e.name && e.name.trim() ? e.name.trim() : i,
+    type: e.type,
+    x: Number.isFinite(Number(e.x)) ? Number(e.x) : 100,
+    y: Number.isFinite(Number(e.y)) ? Number(e.y) : 100,
+    width: Math.max(1, Number.isFinite(Number(e.width)) ? Number(e.width) : 320),
+    height: Math.max(1, Number.isFinite(Number(e.height)) ? Number(e.height) : 64),
+    backgroundColor: e.backgroundColor ?? "transparent",
+    borderColor: e.borderColor ?? "transparent",
+    radius: typeof e.radius == "number" ? e.radius : 0,
+    textStyle: r ? { ...o, ...e.textStyle ?? {} } : void 0,
+    ...n,
     createdAt: /* @__PURE__ */ new Date(),
     updatedAt: /* @__PURE__ */ new Date()
   };
-  const result = await components.insertOne(doc);
-  return { _id: result.insertedId, ...doc };
+  return { _id: (await c.insertOne(x)).insertedId, ...x };
 }
-ipcMain.handle("db:createOverlayComponent", async (_event, input) => {
-  var _a, _b;
+d.handle("db:createOverlayComponent", async (e, t) => {
+  var r, o;
   try {
-    const created = await createOverlayComponent(input);
-    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
-    return { ok: true, data: id };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    const n = await hr(t);
+    return { ok: !0, data: ((o = (r = n == null ? void 0 : n._id) == null ? void 0 : r.toString) == null ? void 0 : o.call(r)) ?? n };
+  } catch (n) {
+    return { ok: !1, error: n instanceof Error ? n.message : "Unknown error" };
   }
 });
-let cachedClient$3 = null;
-async function getClient$3() {
-  if (cachedClient$3) return cachedClient$3;
-  const client = new MongoClient(MONGODB_URI, {
+let de = null;
+async function gr() {
+  if (de) return de;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$3 = client;
-  return client;
+  return await e.connect(), de = e, e;
 }
-async function getAllOverlayComponents(overlayId) {
-  const client = await getClient$3();
-  const db = client.db("capture");
-  const components = db.collection("overlay_components");
-  const filter = overlayId ? { overlayId: new ObjectId(overlayId) } : {};
-  const cursor = components.find(filter, { projection: { _id: 1, name: 1 } }).sort({ createdAt: -1 });
-  return cursor.toArray();
+async function wr(e) {
+  const o = (await gr()).db("capture").collection("overlay_components"), n = e ? { overlayId: new f(e) } : {};
+  return o.find(n, { projection: { _id: 1, name: 1 } }).sort({ createdAt: -1 }).toArray();
 }
-ipcMain.handle("db:getAllOverlayComponents", async (_event, input) => {
+d.handle("db:getAllOverlayComponents", async (e, t) => {
   try {
-    const items = await getAllOverlayComponents(input == null ? void 0 : input.overlayId);
-    const plain = items.map((i) => ({ _id: i._id.toString(), name: i.name }));
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: (await wr(t == null ? void 0 : t.overlayId)).map((n) => ({ _id: n._id.toString(), name: n.name })) };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$2 = null;
-async function getClient$2() {
-  if (cachedClient$2) return cachedClient$2;
-  const client = new MongoClient(MONGODB_URI, {
+let ue = null;
+async function pr() {
+  if (ue) return ue;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$2 = client;
-  return client;
+  return await e.connect(), ue = e, e;
 }
-function buildSetObject(updates) {
-  const $set = { updatedAt: /* @__PURE__ */ new Date() };
-  if (typeof updates.overlayId === "string" && updates.overlayId.trim()) {
-    $set.overlayId = new ObjectId(updates.overlayId);
-  }
-  if (typeof updates.name === "string") $set.name = updates.name.trim();
-  if (typeof updates.type === "string") $set.type = updates.type;
-  if (typeof updates.x === "number") $set.x = updates.x;
-  if (typeof updates.y === "number") $set.y = updates.y;
-  if (typeof updates.width === "number") $set.width = Math.max(1, updates.width);
-  if (typeof updates.height === "number") $set.height = Math.max(1, updates.height);
-  if (typeof updates.backgroundColor === "string") $set.backgroundColor = updates.backgroundColor;
-  if (typeof updates.borderColor === "string") $set.borderColor = updates.borderColor;
-  if (typeof updates.radius === "number") $set.radius = updates.radius;
-  if (typeof updates.textStyle === "object" && updates.textStyle) $set.textStyle = updates.textStyle;
-  if (typeof updates.customText === "string") $set.customText = updates.customText;
-  if (typeof updates.dateFormat === "string") $set.dateFormat = updates.dateFormat;
-  if (typeof updates.twentyFourHour === "boolean") $set.twentyFourHour = updates.twentyFourHour;
-  if (typeof updates.useUTC === "boolean") $set.useUTC = updates.useUTC;
-  if (typeof updates.dataType === "string") $set.dataType = updates.dataType;
-  if (typeof updates.nodeLevel === "number") $set.nodeLevel = updates.nodeLevel;
-  if (typeof updates.imagePath === "string") $set.imagePath = updates.imagePath;
-  return $set;
+function vr(e) {
+  const t = { updatedAt: /* @__PURE__ */ new Date() };
+  return typeof e.overlayId == "string" && e.overlayId.trim() && (t.overlayId = new f(e.overlayId)), typeof e.name == "string" && (t.name = e.name.trim()), typeof e.type == "string" && (t.type = e.type), typeof e.x == "number" && (t.x = e.x), typeof e.y == "number" && (t.y = e.y), typeof e.width == "number" && (t.width = Math.max(1, e.width)), typeof e.height == "number" && (t.height = Math.max(1, e.height)), typeof e.backgroundColor == "string" && (t.backgroundColor = e.backgroundColor), typeof e.borderColor == "string" && (t.borderColor = e.borderColor), typeof e.radius == "number" && (t.radius = e.radius), typeof e.textStyle == "object" && e.textStyle && (t.textStyle = e.textStyle), typeof e.customText == "string" && (t.customText = e.customText), typeof e.dateFormat == "string" && (t.dateFormat = e.dateFormat), typeof e.twentyFourHour == "boolean" && (t.twentyFourHour = e.twentyFourHour), typeof e.useUTC == "boolean" && (t.useUTC = e.useUTC), typeof e.dataType == "string" && (t.dataType = e.dataType), typeof e.nodeLevel == "number" && (t.nodeLevel = e.nodeLevel), typeof e.imagePath == "string" && (t.imagePath = e.imagePath), t;
 }
-async function editOverlayComponents(ids, updates) {
-  const client = await getClient$2();
-  const db = client.db("capture");
-  const components = db.collection("overlay_components");
-  const cleaned = Array.from(new Set((ids || []).map((s) => typeof s === "string" ? s.trim() : "").filter(Boolean)));
-  if (!cleaned.length) return 0;
-  const objectIds = cleaned.map((id) => new ObjectId(id));
-  const $set = buildSetObject(updates);
-  const res = await components.updateMany({ _id: { $in: objectIds } }, { $set });
-  return res.modifiedCount ?? 0;
+async function kr(e, t) {
+  const n = (await pr()).db("capture").collection("overlay_components"), a = Array.from(new Set((e || []).map((i) => typeof i == "string" ? i.trim() : "").filter(Boolean)));
+  if (!a.length) return 0;
+  const s = a.map((i) => new f(i)), c = vr(t);
+  return (await n.updateMany({ _id: { $in: s } }, { $set: c })).modifiedCount ?? 0;
 }
-ipcMain.handle("db:editOverlayComponent", async (_event, input) => {
+d.handle("db:editOverlayComponent", async (e, t) => {
   try {
-    if (!input || !Array.isArray(input.ids) || !input.updates || typeof input.updates !== "object") throw new Error("Invalid input");
-    const modified = await editOverlayComponents(input.ids, input.updates);
-    if (modified === 0) throw new Error("Overlay component(s) not found");
-    return { ok: true, data: { ids: input.ids, modified } };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    if (!t || !Array.isArray(t.ids) || !t.updates || typeof t.updates != "object") throw new Error("Invalid input");
+    const r = await kr(t.ids, t.updates);
+    if (r === 0) throw new Error("Overlay component(s) not found");
+    return { ok: !0, data: { ids: t.ids, modified: r } };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient$1 = null;
-async function getClient$1() {
-  if (cachedClient$1) return cachedClient$1;
-  const client = new MongoClient(MONGODB_URI, {
+let fe = null;
+async function Sr() {
+  if (fe) return fe;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient$1 = client;
-  return client;
+  return await e.connect(), fe = e, e;
 }
-async function deleteOverlayComponents(ids) {
-  const cleanedIds = Array.from(new Set((ids || []).map((s) => typeof s === "string" ? s.trim() : "").filter(Boolean)));
-  if (!cleanedIds.length) return 0;
-  const client = await getClient$1();
-  const db = client.db("capture");
-  const components = db.collection("overlay_components");
-  const objectIds = cleanedIds.map((id) => new ObjectId(id));
-  const res = await components.deleteMany({ _id: { $in: objectIds } });
-  return res.deletedCount ?? 0;
+async function br(e) {
+  const t = Array.from(new Set((e || []).map((c) => typeof c == "string" ? c.trim() : "").filter(Boolean)));
+  if (!t.length) return 0;
+  const n = (await Sr()).db("capture").collection("overlay_components"), a = t.map((c) => new f(c));
+  return (await n.deleteMany({ _id: { $in: a } })).deletedCount ?? 0;
 }
-ipcMain.handle("db:deleteOverlayComponent", async (_event, input) => {
+d.handle("db:deleteOverlayComponent", async (e, t) => {
   try {
-    if (!input || !Array.isArray(input.ids)) throw new Error("Invalid ids");
-    const deleted = await deleteOverlayComponents(input.ids);
-    return { ok: true, data: { ids: input.ids, deleted } };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    if (!t || !Array.isArray(t.ids)) throw new Error("Invalid ids");
+    const r = await br(t.ids);
+    return { ok: !0, data: { ids: t.ids, deleted: r } };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-let cachedClient = null;
-async function getClient() {
-  if (cachedClient) return cachedClient;
-  const client = new MongoClient(MONGODB_URI, {
+let me = null;
+async function Ir() {
+  if (me) return me;
+  const e = new y(g, {
     serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
     }
   });
-  await client.connect();
-  cachedClient = client;
-  return client;
+  return await e.connect(), me = e, e;
 }
-async function getOverlayComponentsForRender(overlayId) {
-  const client = await getClient();
-  const db = client.db("capture");
-  const components = db.collection("overlay_components");
-  const filter = { overlayId: new ObjectId(overlayId) };
-  const projection = {
+async function Ar(e) {
+  const o = (await Ir()).db("capture").collection("overlay_components"), n = { overlayId: new f(e) }, a = {
     _id: 1,
     name: 1,
     type: 1,
@@ -1947,810 +1545,726 @@ async function getOverlayComponentsForRender(overlayId) {
     createdAt: 1,
     updatedAt: 1
   };
-  const cursor = components.find(filter, { projection }).sort({ createdAt: 1 });
-  const list = await cursor.toArray();
-  return list;
+  return await o.find(n, { projection: a }).sort({ createdAt: 1 }).toArray();
 }
-ipcMain.handle("db:getOverlayComponentsForRender", async (_event, input) => {
+d.handle("db:getOverlayComponentsForRender", async (e, t) => {
   try {
-    if (!(input == null ? void 0 : input.overlayId)) throw new Error("overlayId is required");
-    const items = await getOverlayComponentsForRender(input.overlayId);
-    const plain = items.map((i) => ({
-      _id: i._id.toString(),
-      name: i.name,
-      type: i.type,
-      x: i.x,
-      y: i.y,
-      width: i.width,
-      height: i.height,
-      backgroundColor: i.backgroundColor,
-      borderColor: i.borderColor,
-      radius: i.radius,
-      textStyle: i.textStyle,
-      customText: i.customText,
-      dateFormat: i.dateFormat,
-      twentyFourHour: i.twentyFourHour,
-      useUTC: i.useUTC,
-      dataType: i.dataType,
-      nodeLevel: i.nodeLevel,
-      imagePath: i.imagePath,
-      createdAt: i.createdAt,
-      updatedAt: i.updatedAt
-    }));
-    return { ok: true, data: plain };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    if (!(t != null && t.overlayId)) throw new Error("overlayId is required");
+    return { ok: !0, data: (await Ar(t.overlayId)).map((n) => ({
+      _id: n._id.toString(),
+      name: n.name,
+      type: n.type,
+      x: n.x,
+      y: n.y,
+      width: n.width,
+      height: n.height,
+      backgroundColor: n.backgroundColor,
+      borderColor: n.borderColor,
+      radius: n.radius,
+      textStyle: n.textStyle,
+      customText: n.customText,
+      dateFormat: n.dateFormat,
+      twentyFourHour: n.twentyFourHour,
+      useUTC: n.useUTC,
+      dataType: n.dataType,
+      nodeLevel: n.nodeLevel,
+      imagePath: n.imagePath,
+      createdAt: n.createdAt,
+      updatedAt: n.updatedAt
+    })) };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-function ensureImagesDir$1() {
-  if (process.platform !== "win32") {
+function _r() {
+  if (process.platform !== "win32")
     throw new Error("This application supports Windows only");
-  }
-  const baseDir = app.getPath("userData");
-  const imagesDir = path.join(baseDir, "overlay-images");
+  const e = A.getPath("userData"), t = u.join(e, "overlay-images");
   try {
-    fs.mkdirSync(imagesDir, { recursive: true });
+    I.mkdirSync(t, { recursive: !0 });
   } catch {
   }
-  return imagesDir;
+  return t;
 }
-function isAllowedExt$1(ext) {
-  const e = ext.toLowerCase();
-  return e === ".png" || e === ".jpg" || e === ".jpeg" || e === ".webp" || e === ".bmp";
+function Or(e) {
+  const t = e.toLowerCase();
+  return t === ".png" || t === ".jpg" || t === ".jpeg" || t === ".webp" || t === ".bmp";
 }
-function buildTargetFilename(sourceName) {
-  const ext = path.extname(sourceName || "").toLowerCase();
-  if (!isAllowedExt$1(ext)) throw new Error("Unsupported image type");
-  const base = path.basename(sourceName, ext);
-  const safeBase = base.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80) || "image";
-  const stamp = /* @__PURE__ */ new Date();
-  const y = stamp.getFullYear();
-  const m = String(stamp.getMonth() + 1).padStart(2, "0");
-  const d = String(stamp.getDate()).padStart(2, "0");
-  const hh = String(stamp.getHours()).padStart(2, "0");
-  const mm = String(stamp.getMinutes()).padStart(2, "0");
-  const ss = String(stamp.getSeconds()).padStart(2, "0");
-  return `${safeBase}_${y}${m}${d}_${hh}${mm}${ss}${ext}`;
+function Oe(e) {
+  const t = u.extname(e || "").toLowerCase();
+  if (!Or(t)) throw new Error("Unsupported image type");
+  const o = u.basename(e, t).replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80) || "image", n = /* @__PURE__ */ new Date(), a = n.getFullYear(), s = String(n.getMonth() + 1).padStart(2, "0"), c = String(n.getDate()).padStart(2, "0"), l = String(n.getHours()).padStart(2, "0"), i = String(n.getMinutes()).padStart(2, "0"), m = String(n.getSeconds()).padStart(2, "0");
+  return `${o}_${a}${s}${c}_${l}${i}${m}${t}`;
 }
-async function handleUpload(input) {
-  if (!input || typeof input !== "object") throw new Error("Invalid input");
-  const imagesDir = ensureImagesDir$1();
-  if (input.sourcePath) {
-    const src = path.resolve(input.sourcePath);
-    const stat = fs.statSync(src);
-    if (!stat.isFile()) throw new Error("Source is not a file");
-    const filename = buildTargetFilename(path.basename(src));
-    const dest = path.join(imagesDir, filename);
-    fs.copyFileSync(src, dest);
-    const fileUrl = `file://${dest.replace(/\\/g, "/")}`;
-    const httpUrl = buildHttpUrl(filename);
-    return { absolutePath: dest, fileUrl, httpUrl, filename };
+async function Cr(e) {
+  if (!e || typeof e != "object") throw new Error("Invalid input");
+  const t = _r();
+  if (e.sourcePath) {
+    const r = u.resolve(e.sourcePath);
+    if (!I.statSync(r).isFile()) throw new Error("Source is not a file");
+    const n = Oe(u.basename(r)), a = u.join(t, n);
+    I.copyFileSync(r, a);
+    const s = `file://${a.replace(/\\/g, "/")}`, c = Ce(n);
+    return { absolutePath: a, fileUrl: s, httpUrl: c, filename: n };
   }
-  if (input.bytesBase64) {
-    const rawName = input.filename && input.filename.trim() ? input.filename.trim() : "image.png";
-    const filename = buildTargetFilename(rawName);
-    const dest = path.join(imagesDir, filename);
-    const buffer = Buffer.from(input.bytesBase64, "base64");
-    fs.writeFileSync(dest, buffer);
-    const fileUrl = `file://${dest.replace(/\\/g, "/")}`;
-    const httpUrl = buildHttpUrl(filename);
-    return { absolutePath: dest, fileUrl, httpUrl, filename };
+  if (e.bytesBase64) {
+    const r = e.filename && e.filename.trim() ? e.filename.trim() : "image.png", o = Oe(r), n = u.join(t, o), a = Buffer.from(e.bytesBase64, "base64");
+    I.writeFileSync(n, a);
+    const s = `file://${n.replace(/\\/g, "/")}`, c = Ce(o);
+    return { absolutePath: n, fileUrl: s, httpUrl: c, filename: o };
   }
   throw new Error("Provide either sourcePath or bytesBase64");
 }
-function buildHttpUrl(filename) {
+function Ce(e) {
   try {
-    const port = Number(process.env.OVERLAY_WS_PORT || OVERLAY_WS_PORT || 3620) || 3620;
-    return `http://127.0.0.1:${port}/images/${encodeURIComponent(filename)}`;
+    return `http://127.0.0.1:${Number(process.env.OVERLAY_WS_PORT || ke || 3620) || 3620}/images/${encodeURIComponent(e)}`;
   } catch {
     return "";
   }
 }
-ipcMain.handle("fs:uploadOverlayImage", async (_event, input) => {
+d.handle("fs:uploadOverlayImage", async (e, t) => {
   try {
-    const result = await handleUpload(input);
-    return { ok: true, data: result };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: await Cr(t) };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-function ensureImagesDir() {
-  if (process.platform !== "win32") {
+function Er() {
+  if (process.platform !== "win32")
     throw new Error("This application supports Windows only");
-  }
-  const baseDir = app.getPath("userData");
-  const imagesDir = path.join(baseDir, "overlay-images");
+  const e = A.getPath("userData"), t = u.join(e, "overlay-images");
   try {
-    fs.mkdirSync(imagesDir, { recursive: true });
+    I.mkdirSync(t, { recursive: !0 });
   } catch {
   }
-  return imagesDir;
+  return t;
 }
-function isAllowedExt(ext) {
-  const e = ext.toLowerCase();
-  return e === ".png" || e === ".jpg" || e === ".jpeg" || e === ".webp" || e === ".bmp";
+function $r(e) {
+  const t = e.toLowerCase();
+  return t === ".png" || t === ".jpg" || t === ".jpeg" || t === ".webp" || t === ".bmp";
 }
-function toFileUrl(p) {
-  return `file://${p.replace(/\\/g, "/")}`;
+function Tr(e) {
+  return `file://${e.replace(/\\/g, "/")}`;
 }
-function toHttpUrl(filename) {
+function jr(e) {
   try {
-    const port = Number(process.env.OVERLAY_WS_PORT || 3620) || 3620;
-    return `http://127.0.0.1:${port}/images/${encodeURIComponent(filename)}`;
+    return `http://127.0.0.1:${Number(process.env.OVERLAY_WS_PORT || 3620) || 3620}/images/${encodeURIComponent(e)}`;
   } catch {
     return "";
   }
 }
-function listAllImages() {
-  const dir = ensureImagesDir();
-  let entries = [];
+function Pr() {
+  const e = Er();
+  let t = [];
   try {
-    const files = fs.readdirSync(dir);
-    for (const name of files) {
+    const r = I.readdirSync(e);
+    for (const o of r)
       try {
-        const ext = path.extname(name);
-        if (!isAllowedExt(ext)) continue;
-        const full = path.join(dir, name);
-        const stat = fs.statSync(full);
-        if (!stat.isFile()) continue;
-        entries.push({
-          absolutePath: full,
-          fileUrl: toFileUrl(full),
-          httpUrl: toHttpUrl(name),
-          filename: name,
-          size: stat.size,
-          modifiedAt: new Date(stat.mtimeMs).toISOString()
+        const n = u.extname(o);
+        if (!$r(n)) continue;
+        const a = u.join(e, o), s = I.statSync(a);
+        if (!s.isFile()) continue;
+        t.push({
+          absolutePath: a,
+          fileUrl: Tr(a),
+          httpUrl: jr(o),
+          filename: o,
+          size: s.size,
+          modifiedAt: new Date(s.mtimeMs).toISOString()
         });
       } catch {
       }
-    }
   } catch {
   }
-  entries.sort((a, b) => a.modifiedAt < b.modifiedAt ? 1 : a.modifiedAt > b.modifiedAt ? -1 : 0);
-  return entries;
+  return t.sort((r, o) => r.modifiedAt < o.modifiedAt ? 1 : r.modifiedAt > o.modifiedAt ? -1 : 0), t;
 }
-ipcMain.handle("fs:getAllOverlayImages", async () => {
+d.handle("fs:getAllOverlayImages", async () => {
   try {
-    const items = listAllImages();
-    return { ok: true, data: items };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: Pr() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-const TARGET_SCENE = "video sources";
-const TARGET_GROUP = "source 1";
-const TARGET_INPUT = "video capture device 1";
-async function getLiveDevices() {
-  const obs = getObsClient();
-  if (!obs) return [];
+const Dr = "video sources", Ee = "source 1", ye = "video capture device 1";
+async function Ur() {
+  const e = v();
+  if (!e) return [];
   try {
     try {
-      const groupItems = await obs.call("GetGroupSceneItemList", { groupName: TARGET_GROUP });
-      const hasInput = Array.isArray(groupItems == null ? void 0 : groupItems.sceneItems) ? groupItems.sceneItems.some((it) => String((it == null ? void 0 : it.sourceName) ?? "").toLowerCase() === TARGET_INPUT) : false;
-      if (!hasInput) {
+      const o = await e.call("GetGroupSceneItemList", { groupName: Ee });
+      if (!(Array.isArray(o == null ? void 0 : o.sceneItems) ? o.sceneItems.some((a) => String((a == null ? void 0 : a.sourceName) ?? "").toLowerCase() === ye) : !1))
         try {
-          const sceneRes = await obs.call("GetSceneItemList", { sceneName: TARGET_SCENE });
-          const hasGroup = Array.isArray(sceneRes == null ? void 0 : sceneRes.sceneItems) ? sceneRes.sceneItems.some((it) => String((it == null ? void 0 : it.sourceName) ?? "").toLowerCase() === TARGET_GROUP) : false;
-          if (!hasGroup) {
-          }
+          const a = await e.call("GetSceneItemList", { sceneName: Dr }), s = Array.isArray(a == null ? void 0 : a.sceneItems) ? a.sceneItems.some((c) => String((c == null ? void 0 : c.sourceName) ?? "").toLowerCase() === Ee) : !1;
         } catch {
         }
-      }
     } catch {
     }
     try {
-      const inputs = await obs.call("GetInputList");
-      const target = (Array.isArray(inputs == null ? void 0 : inputs.inputs) ? inputs.inputs : []).find((i) => String((i == null ? void 0 : i.inputName) ?? "").toLowerCase() === TARGET_INPUT);
-      if (!target) {
-      } else {
-      }
+      const o = await e.call("GetInputList"), n = (Array.isArray(o == null ? void 0 : o.inputs) ? o.inputs : []).find((a) => String((a == null ? void 0 : a.inputName) ?? "").toLowerCase() === ye);
     } catch {
     }
-    const devices = [];
-    const tryProperty = async (propertyName) => {
+    const t = [];
+    return await (async (o) => {
       try {
-        const res = await obs.call("GetInputPropertiesListPropertyItems", {
-          inputName: TARGET_INPUT,
-          propertyName
-        });
-        const items = Array.isArray(res == null ? void 0 : res.propertyItems) ? res.propertyItems : [];
-        for (const it of items) {
-          const name = String((it == null ? void 0 : it.itemName) ?? (it == null ? void 0 : it.name) ?? "").trim();
-          const id = String((it == null ? void 0 : it.itemValue) ?? (it == null ? void 0 : it.value) ?? "").trim();
-          if (name && id && !devices.some((d) => d.id === id)) {
-            devices.push({ id, name });
-          }
+        const n = await e.call("GetInputPropertiesListPropertyItems", {
+          inputName: ye,
+          propertyName: o
+        }), a = Array.isArray(n == null ? void 0 : n.propertyItems) ? n.propertyItems : [];
+        for (const s of a) {
+          const c = String((s == null ? void 0 : s.itemName) ?? (s == null ? void 0 : s.name) ?? "").trim(), l = String((s == null ? void 0 : s.itemValue) ?? (s == null ? void 0 : s.value) ?? "").trim();
+          c && l && !t.some((i) => i.id === l) && t.push({ id: l, name: c });
         }
       } catch {
       }
-    };
-    await tryProperty("video_device_id");
-    return devices.filter((d) => !/obs/i.test(d.name));
+    })("video_device_id"), t.filter((o) => !/obs/i.test(o.name));
   } catch {
     return [];
   }
 }
-ipcMain.handle("obs:get-live-devices", async () => {
+d.handle("obs:get-live-devices", async () => {
   try {
-    const list = await getLiveDevices();
-    return list;
+    return await Ur();
   } catch {
     return [];
   }
 });
-async function getRecordingDirectory() {
-  const obs = getObsClient();
-  if (!obs) return "";
+async function Be() {
+  const e = v();
+  if (!e) return "";
   try {
-    const { recordDirectory } = await obs.call("GetRecordDirectory");
-    return typeof recordDirectory === "string" ? recordDirectory : "";
+    const { recordDirectory: t } = await e.call("GetRecordDirectory");
+    return typeof t == "string" ? t : "";
   } catch {
     return "";
   }
 }
-ipcMain.handle("obs:get-recording-directory", async () => {
+d.handle("obs:get-recording-directory", async () => {
   try {
-    const dir = await getRecordingDirectory();
-    return dir;
+    return await Be();
   } catch {
     return "";
   }
 });
-async function getFileNameFormatting() {
-  const obs = getObsClient();
-  if (!obs) {
+async function Rr() {
+  const e = v();
+  if (!e)
     return { preview: "", ch1: "", ch2: "", ch3: "", ch4: "" };
-  }
-  let preview = "";
+  let t = "";
   try {
-    const { parameterValue } = await obs.call("GetProfileParameter", {
+    const { parameterValue: n } = await e.call("GetProfileParameter", {
       parameterCategory: "Output",
       parameterName: "FilenameFormatting"
     });
-    preview = typeof parameterValue === "string" ? parameterValue : "";
+    t = typeof n == "string" ? n : "";
   } catch {
-    preview = "";
+    t = "";
   }
-  const sources = ["channel 1", "channel 2", "channel 3", "channel 4"];
-  const results = ["", "", "", ""];
-  for (let i = 0; i < sources.length; i++) {
-    const sourceName = sources[i];
+  const r = ["channel 1", "channel 2", "channel 3", "channel 4"], o = ["", "", "", ""];
+  for (let n = 0; n < r.length; n++) {
+    const a = r[n];
     try {
-      const { filterSettings } = await obs.call("GetSourceFilter", {
-        sourceName,
+      const { filterSettings: s } = await e.call("GetSourceFilter", {
+        sourceName: a,
         filterName: "source record"
-      });
-      const value = filterSettings && typeof filterSettings.filename_formatting === "string" ? filterSettings.filename_formatting : "";
-      results[i] = value;
+      }), c = s && typeof s.filename_formatting == "string" ? s.filename_formatting : "";
+      o[n] = c;
     } catch {
-      results[i] = "";
+      o[n] = "";
     }
   }
   return {
-    preview,
-    ch1: results[0] || "",
-    ch2: results[1] || "",
-    ch3: results[2] || "",
-    ch4: results[3] || ""
+    preview: t,
+    ch1: o[0] || "",
+    ch2: o[1] || "",
+    ch3: o[2] || "",
+    ch4: o[3] || ""
   };
 }
-ipcMain.handle("obs:get-file-name-formatting", async () => {
+d.handle("obs:get-file-name-formatting", async () => {
   try {
-    const value = await getFileNameFormatting();
-    return value;
+    return await Rr();
   } catch {
     return { preview: "", ch1: "", ch2: "", ch3: "", ch4: "" };
   }
 });
-async function setFileNameFormatting(format) {
-  const obs = getObsClient();
-  if (!obs) return false;
-  let allOk = true;
+async function Nr(e) {
+  const t = v();
+  if (!t) return !1;
+  let r = !0;
   try {
-    await obs.call("SetProfileParameter", {
+    await t.call("SetProfileParameter", {
       parameterCategory: "Output",
       parameterName: "FilenameFormatting",
-      parameterValue: `preview-${format}`
+      parameterValue: `preview-${e}`
     });
   } catch {
-    allOk = false;
+    r = !1;
   }
-  const sources = [
+  const o = [
     "channel 1",
     "channel 2",
     "channel 3",
     "channel 4"
   ];
-  for (let i = 0; i < sources.length; i++) {
-    const sourceName = sources[i];
-    const channelIndex = i + 1;
+  for (let n = 0; n < o.length; n++) {
+    const a = o[n], s = n + 1;
     try {
-      await obs.call("SetSourceFilterSettings", {
-        sourceName,
+      await t.call("SetSourceFilterSettings", {
+        sourceName: a,
         filterName: "source record",
-        filterSettings: { filename_formatting: `ch${channelIndex}-${format}` },
-        overlay: true
+        filterSettings: { filename_formatting: `ch${s}-${e}` },
+        overlay: !0
       });
     } catch {
-      allOk = false;
+      r = !1;
     }
   }
-  return allOk;
+  return r;
 }
-ipcMain.handle("obs:set-file-name-formatting", async (_e, format) => {
+d.handle("obs:set-file-name-formatting", async (e, t) => {
   try {
-    const ok = await setFileNameFormatting(format);
-    return ok;
+    return await Nr(t);
   } catch {
-    return false;
+    return !1;
   }
 });
-async function setClipRecordingFileNameFormatting(format) {
-  const obs = getObsClient();
-  if (!obs) return false;
-  let ok = true;
+async function xr(e) {
+  const t = v();
+  if (!t) return !1;
+  let r = !0;
   try {
-    await obs.call("SetSourceFilterSettings", {
+    await t.call("SetSourceFilterSettings", {
       sourceName: "clip recording",
       filterName: "source record",
-      filterSettings: { filename_formatting: `clip-${format}` },
-      overlay: true
+      filterSettings: { filename_formatting: `clip-${e}` },
+      overlay: !0
     });
   } catch {
-    ok = false;
+    r = !1;
   }
-  return ok;
+  return r;
 }
-ipcMain.handle("obs:set-clip-file-name-formatting", async (_e, format) => {
+d.handle("obs:set-clip-file-name-formatting", async (e, t) => {
   try {
-    const ok = await setClipRecordingFileNameFormatting(format);
-    return ok;
+    return await xr(t);
   } catch {
-    return false;
+    return !1;
   }
 });
-async function startClipRecording() {
-  const obs = getObsClient();
-  if (!obs) return false;
+async function Fr() {
+  const e = v();
+  if (!e) return !1;
   try {
-    await obs.call("TriggerHotkeyByKeySequence", {
+    return await e.call("TriggerHotkeyByKeySequence", {
       keyId: "OBS_KEY_5",
-      keyModifiers: { shift: false, control: true, alt: false, command: false }
-    });
-    return true;
+      keyModifiers: { shift: !1, control: !0, alt: !1, command: !1 }
+    }), !0;
   } catch {
-    return false;
+    return !1;
   }
 }
-ipcMain.handle("obs:start-clip-recording", async () => {
+d.handle("obs:start-clip-recording", async () => {
   try {
-    const ok = await startClipRecording();
-    return ok;
+    return await Fr();
   } catch {
-    return false;
+    return !1;
   }
 });
-async function stopClipRecording() {
-  const obs = getObsClient();
-  if (!obs) return false;
+async function Lr() {
+  const e = v();
+  if (!e) return !1;
   try {
-    await obs.call("TriggerHotkeyByKeySequence", {
+    return await e.call("TriggerHotkeyByKeySequence", {
       keyId: "OBS_KEY_6",
-      keyModifiers: { shift: false, control: true, alt: false, command: false }
-    });
-    return true;
+      keyModifiers: { shift: !1, control: !0, alt: !1, command: !1 }
+    }), !0;
   } catch {
-    return false;
+    return !1;
   }
 }
-ipcMain.handle("obs:stop-clip-recording", async () => {
+d.handle("obs:stop-clip-recording", async () => {
   try {
-    const ok = await stopClipRecording();
-    return ok;
+    return await Lr();
   } catch {
-    return false;
+    return !1;
   }
 });
-let recordingState = {
-  isRecordingStarted: false,
-  isRecordingPaused: false,
-  isRecordingStopped: false,
-  isClipRecordingStarted: false
+let ve = {
+  isRecordingStarted: !1,
+  isRecordingPaused: !1,
+  isRecordingStopped: !1,
+  isClipRecordingStarted: !1
 };
-function getRecordingState() {
-  return recordingState;
+function Br() {
+  return ve;
 }
-function updateRecordingState(patch) {
-  recordingState = { ...recordingState, ...patch };
+function Mr(e) {
+  ve = { ...ve, ...e };
 }
-ipcMain.handle("recording:getState", async () => {
+d.handle("recording:getState", async () => {
   try {
-    return { ok: true, data: getRecordingState() };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return { ok: !0, data: Br() };
+  } catch (e) {
+    return { ok: !1, error: e instanceof Error ? e.message : "Unknown error" };
   }
 });
-ipcMain.handle("recording:updateState", async (_e, patch) => {
+d.handle("recording:updateState", async (e, t) => {
   try {
-    updateRecordingState(patch || {});
-    return { ok: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    return Mr(t || {}), { ok: !0 };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-async function startRecording(preview, ch1, ch2, ch3, ch4) {
-  const obs = getObsClient();
-  if (!obs) return false;
-  let allOk = true;
-  if (preview) {
+async function Hr(e, t, r, o, n) {
+  const a = v();
+  if (!a) return !1;
+  let s = !0;
+  if (e)
     try {
-      await obs.call("StartRecord");
+      await a.call("StartRecord");
     } catch {
-      allOk = false;
+      s = !1;
+    }
+  async function c(l) {
+    const i = `OBS_KEY_${l}`;
+    try {
+      return await a.call("TriggerHotkeyByKeySequence", {
+        keyId: i,
+        keyModifiers: { shift: !1, control: !0, alt: !1, command: !1 }
+      }), !0;
+    } catch {
+      return !1;
     }
   }
-  async function triggerCtrlNumber(numberKey) {
-    const keyId = `OBS_KEY_${numberKey}`;
-    try {
-      await obs.call("TriggerHotkeyByKeySequence", {
-        keyId,
-        keyModifiers: { shift: false, control: true, alt: false, command: false }
-      });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-  if (ch1) allOk = await triggerCtrlNumber(1) && allOk;
-  if (ch2) allOk = await triggerCtrlNumber(2) && allOk;
-  if (ch3) allOk = await triggerCtrlNumber(3) && allOk;
-  if (ch4) allOk = await triggerCtrlNumber(4) && allOk;
-  return allOk;
+  return t && (s = await c(1) && s), r && (s = await c(2) && s), o && (s = await c(3) && s), n && (s = await c(4) && s), s;
 }
-ipcMain.handle("obs:start-recording", async (_e, args) => {
+d.handle("obs:start-recording", async (e, t) => {
   try {
-    const { preview, ch1, ch2, ch3, ch4 } = args || {};
-    const ok = await startRecording(!!preview, !!ch1, !!ch2, !!ch3, !!ch4);
-    return ok;
+    const { preview: r, ch1: o, ch2: n, ch3: a, ch4: s } = t || {};
+    return await Hr(!!r, !!o, !!n, !!a, !!s);
   } catch {
-    return false;
+    return !1;
   }
 });
-async function stopRecording() {
-  const obs = getObsClient();
-  if (!obs) return false;
-  let ok = true;
+async function Vr() {
+  const e = v();
+  if (!e) return !1;
+  let t = !0;
   try {
-    await obs.call("StopRecord");
+    await e.call("StopRecord");
   } catch {
-    ok = false;
+    t = !1;
   }
   try {
-    await obs.call("TriggerHotkeyByKeySequence", {
+    await e.call("TriggerHotkeyByKeySequence", {
       keyId: "OBS_KEY_0",
-      keyModifiers: { shift: false, control: true, alt: false, command: false }
+      keyModifiers: { shift: !1, control: !0, alt: !1, command: !1 }
     });
   } catch {
-    ok = false;
+    t = !1;
   }
-  return ok;
+  return t;
 }
-ipcMain.handle("obs:stop-recording", async () => {
+d.handle("obs:stop-recording", async () => {
   try {
-    const ok = await stopRecording();
-    return ok;
+    return await Vr();
   } catch {
-    return false;
+    return !1;
   }
 });
-async function pauseRecording() {
-  const obs = getObsClient();
-  if (!obs) return false;
-  let ok = true;
+async function qr() {
+  const e = v();
+  if (!e) return !1;
+  let t = !0;
   try {
-    await obs.call("ToggleRecordPause");
+    await e.call("ToggleRecordPause");
   } catch {
-    ok = false;
+    t = !1;
   }
   try {
-    await obs.call("TriggerHotkeyByKeySequence", {
+    await e.call("TriggerHotkeyByKeySequence", {
       keyId: "OBS_KEY_P",
-      keyModifiers: { shift: false, control: true, alt: false, command: false }
+      keyModifiers: { shift: !1, control: !0, alt: !1, command: !1 }
     });
   } catch {
-    ok = false;
+    t = !1;
   }
-  return ok;
+  return t;
 }
-ipcMain.handle("obs:pause-recording", async () => {
+d.handle("obs:pause-recording", async () => {
   try {
-    const ok = await pauseRecording();
-    return ok;
+    return await qr();
   } catch {
-    return false;
+    return !1;
   }
 });
-async function resumeRecording() {
-  const obs = getObsClient();
-  if (!obs) return false;
-  let ok = true;
+async function Wr() {
+  const e = v();
+  if (!e) return !1;
+  let t = !0;
   try {
-    await obs.call("ResumeRecord");
+    await e.call("ResumeRecord");
   } catch {
-    ok = false;
+    t = !1;
   }
   try {
-    await obs.call("TriggerHotkeyByKeySequence", {
+    await e.call("TriggerHotkeyByKeySequence", {
       keyId: "OBS_KEY_R",
-      keyModifiers: { shift: false, control: true, alt: false, command: false }
+      keyModifiers: { shift: !1, control: !0, alt: !1, command: !1 }
     });
   } catch {
-    ok = false;
+    t = !1;
   }
-  return ok;
+  return t;
 }
-ipcMain.handle("obs:resume-recording", async () => {
+d.handle("obs:resume-recording", async () => {
   try {
-    const ok = await resumeRecording();
-    return ok;
+    return await Wr();
   } catch {
-    return false;
+    return !1;
   }
 });
-async function resolveSceneName(obs, hint, channelIndex) {
-  if (typeof hint === "string" && hint.trim()) return hint.trim();
-  if (!obs) return null;
+let he = null;
+async function Yr() {
+  if (he) return he;
+  const e = new y(g, {
+    serverApi: {
+      version: h.v1,
+      strict: !0,
+      deprecationErrors: !0
+    }
+  });
+  return await e.connect(), he = e, e;
+}
+function j(e) {
+  if (!Array.isArray(e)) return;
+  const t = e.map((r) => typeof r == "string" ? r.trim() : "").filter(Boolean);
+  return t.length > 0 ? t : void 0;
+}
+async function Me(e, t) {
+  const n = (await Yr()).db("capture").collection("sessions"), a = new f(e), s = {}, c = j(t.preview), l = j(t.ch1), i = j(t.ch2), m = j(t.ch3), w = j(t.ch4), p = j(t.clips);
+  if (c && (s["snapshots.preview"] = { $each: c }), l && (s["snapshots.ch1"] = { $each: l }), i && (s["snapshots.ch2"] = { $each: i }), m && (s["snapshots.ch3"] = { $each: m }), w && (s["snapshots.ch4"] = { $each: w }), p && (s.clips = { $each: p }), Object.keys(s).length === 0)
+    throw new Error("No paths provided to append");
+  const T = await n.findOneAndUpdate(
+    { _id: a },
+    {
+      ...Object.keys(s).length ? { $push: s } : {},
+      $set: { updatedAt: /* @__PURE__ */ new Date() }
+    },
+    { returnDocument: "after", includeResultMetadata: !1 }
+  );
+  if (!T) throw new Error("Session not found");
+  return T;
+}
+d.handle("db:editSession", async (e, t, r) => {
   try {
-    const list = await obs.call("GetSceneList");
-    const scenes = Array.isArray(list == null ? void 0 : list.scenes) ? list.scenes : [];
-    const normalized = scenes.map((s) => ({ raw: String((s == null ? void 0 : s.sceneName) ?? ""), low: String((s == null ? void 0 : s.sceneName) ?? "").toLowerCase() }));
-    const exactOrder = [
-      `channel ${channelIndex}`,
-      `ch${channelIndex}`,
-      `source ${channelIndex}`
+    const o = await Me(t, r || {});
+    return { ok: !0, data: String(o._id) };
+  } catch (o) {
+    return { ok: !1, error: o instanceof Error ? o.message : "Unknown error" };
+  }
+});
+async function Gr(e, t, r) {
+  if (typeof t == "string" && t.trim()) return t.trim();
+  if (!e) return null;
+  try {
+    const o = await e.call("GetSceneList"), a = (Array.isArray(o == null ? void 0 : o.scenes) ? o.scenes : []).map((i) => ({ raw: String((i == null ? void 0 : i.sceneName) ?? ""), low: String((i == null ? void 0 : i.sceneName) ?? "").toLowerCase() })), s = [
+      `channel ${r}`,
+      `ch${r}`,
+      `source ${r}`
     ];
-    for (const cand of exactOrder) {
-      const m = normalized.find((s) => s.low === cand);
+    for (const i of s) {
+      const m = a.find((w) => w.low === i);
       if (m) return m.raw;
     }
-    const containsOrder = [
-      `channel ${channelIndex}`,
-      `ch${channelIndex}`,
-      `source ${channelIndex}`,
-      `${channelIndex}`
-    ];
-    const cont = normalized.find((s) => containsOrder.some((c) => s.low.includes(c)));
-    return cont ? cont.raw : null;
+    const c = [
+      `channel ${r}`,
+      `ch${r}`,
+      `source ${r}`,
+      `${r}`
+    ], l = a.find((i) => c.some((m) => i.low.includes(m)));
+    return l ? l.raw : null;
   } catch {
     return null;
   }
 }
-async function takeSnapshots(payload) {
-  const obs = getObsClient();
-  if (!obs) return [];
-  let outDir = "";
-  const preferred = typeof (payload == null ? void 0 : payload.outputDir) === "string" ? payload.outputDir.trim() : "";
-  if (preferred) {
-    outDir = preferred;
-  } else {
-    outDir = await getRecordingDirectory();
-  }
+async function Kr(e) {
+  const t = v();
+  if (!t) return [];
+  let r = "";
+  const o = typeof (e == null ? void 0 : e.outputDir) == "string" ? e.outputDir.trim() : "";
+  o ? r = o : r = await Be();
   try {
-    if (outDir && !fs.existsSync(outDir)) {
-      await fsp.mkdir(outDir, { recursive: true });
-    }
+    r && !I.existsSync(r) && await Ge.mkdir(r, { recursive: !0 });
   } catch {
   }
-  Math.max(1, Math.min(3840, Math.floor(Number((payload == null ? void 0 : payload.width) ?? 0)) || 0)) || void 0;
-  Math.max(1, Math.min(2160, Math.floor(Number((payload == null ? void 0 : payload.height) ?? 0)) || 0)) || void 0;
-  const providedName = typeof (payload == null ? void 0 : payload.fileName) === "string" ? payload.fileName.trim() : "";
-  const results = [];
-  const tasks = [];
-  const doOne = async (idx, hint) => {
-    const sceneName = await resolveSceneName(obs, hint, idx);
-    if (!sceneName) return;
-    const baseName = providedName || `snapshot_ch${idx}`;
-    const filePath = path.join(outDir || process.cwd(), `${baseName}.png`);
+  Math.max(1, Math.min(3840, Math.floor(Number((e == null ? void 0 : e.width) ?? 0)) || 0)), Math.max(1, Math.min(2160, Math.floor(Number((e == null ? void 0 : e.height) ?? 0)) || 0));
+  const n = typeof (e == null ? void 0 : e.fileName) == "string" ? e.fileName.trim() : "", a = [], s = [], c = async (l, i) => {
+    const m = await Gr(t, i, l);
+    if (!m) return;
+    const w = n || `snapshot_ch${l}`, p = u.join(r || process.cwd(), `${w}.png`);
     try {
-      await obs.call("SaveSourceScreenshot", {
-        sourceName: sceneName,
+      await t.call("SaveSourceScreenshot", {
+        sourceName: m,
         imageFormat: "png",
-        imageFilePath: filePath
-      });
-      results.push(filePath);
+        imageFilePath: p
+      }), a.push(p);
     } catch {
     }
   };
-  if (payload == null ? void 0 : payload.ch1) tasks.push(doOne(1, payload.ch1));
-  if (payload == null ? void 0 : payload.ch2) tasks.push(doOne(2, payload.ch2));
-  if (payload == null ? void 0 : payload.ch3) tasks.push(doOne(3, payload.ch3));
-  if (payload == null ? void 0 : payload.ch4) tasks.push(doOne(4, payload.ch4));
-  await Promise.all(tasks);
-  return results;
+  return e != null && e.ch1 && s.push(c(1, e.ch1)), e != null && e.ch2 && s.push(c(2, e.ch2)), e != null && e.ch3 && s.push(c(3, e.ch3)), e != null && e.ch4 && s.push(c(4, e.ch4)), await Promise.all(s), a;
 }
-ipcMain.handle("obs:take-snapshot", async (_e, payload) => {
+d.handle("obs:take-snapshot", async (e, t) => {
   try {
-    const files = await takeSnapshots(payload || {});
-    return { ok: true, data: files };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
+    const r = await Kr(t || {});
+    try {
+      const o = Le();
+      if (o && Array.isArray(r) && r.length) {
+        const n = r.filter((i) => /\bch1\b/i.test(i) || /ch1-/i.test(i)), a = r.filter((i) => /\bch2\b/i.test(i) || /ch2-/i.test(i)), s = r.filter((i) => /\bch3\b/i.test(i) || /ch3-/i.test(i)), c = r.filter((i) => /\bch4\b/i.test(i) || /ch4-/i.test(i)), l = {};
+        if (n.length && (l.ch1 = n), a.length && (l.ch2 = a), s.length && (l.ch3 = s), c.length && (l.ch4 = c), Object.keys(l).length)
+          try {
+            await Me(o, l);
+          } catch {
+          }
+      }
+    } catch {
+    }
+    return { ok: !0, data: r };
+  } catch (r) {
+    return { ok: !1, error: r instanceof Error ? r.message : "Unknown error" };
   }
 });
-const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
-process.env.APP_ROOT = path.join(__dirname$1, "..");
-const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
-const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
-const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
-let win = null;
-let splashWin = null;
-let overlayEditorWin = null;
-function delay(ms) {
-  return new Promise((r) => setTimeout(r, ms));
+const zr = u.dirname(qe(import.meta.url));
+process.env.APP_ROOT = u.join(zr, "..");
+const Xr = process.env.VITE_DEV_SERVER_URL, ln = u.join(process.env.APP_ROOT, "dist-electron"), Jr = u.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = Xr ? u.join(process.env.APP_ROOT, "public") : Jr;
+let k = null, O = null, S = null;
+function ge(e) {
+  return new Promise((t) => setTimeout(t, e));
 }
-function onceReadyToShow(bw) {
-  return new Promise((resolve) => {
-    if (bw.isDestroyed()) return resolve();
-    if (bw.isVisible()) return resolve();
-    bw.once("ready-to-show", () => resolve());
+function Qr(e) {
+  return new Promise((t) => {
+    if (e.isDestroyed() || e.isVisible()) return t();
+    e.once("ready-to-show", () => t());
   });
 }
-async function createWindow() {
-  splashWin = createSplashWindow(SPLASHSCREEN_DURATION_MS);
-  const splashStart = Date.now();
-  const updateSplash = async (text) => {
+async function He() {
+  O = Ke(Ie);
+  const e = Date.now(), t = async (s) => {
     try {
-      if (splashWin && !splashWin.isDestroyed()) {
-        await splashWin.webContents.executeJavaScript(
-          `window.postMessage({ type: 'status', text: ${JSON.stringify(text)} }, '*')`
-        );
-      }
-    } catch (_) {
+      O && !O.isDestroyed() && await O.webContents.executeJavaScript(
+        `window.postMessage({ type: 'status', text: ${JSON.stringify(s)} }, '*')`
+      );
+    } catch {
     }
   };
-  await updateSplash("Checking OBS…");
-  let isObsRunning = false;
+  await t("Checking OBS…");
+  let r = !1;
   try {
-    isObsRunning = checkIfOBSOpenOrNot();
-  } catch (_) {
-    isObsRunning = false;
+    r = Ae();
+  } catch {
+    r = !1;
   }
-  let launchedObs = false;
-  if (!isObsRunning) {
-    await updateSplash("Launching OBS…");
+  let o = !1;
+  if (!r) {
+    await t("Launching OBS…");
     try {
-      openObs();
-      launchedObs = true;
-    } catch (err) {
-      console.error("Failed to launch OBS:", err);
+      Ze(), o = !0;
+    } catch (s) {
+      console.error("Failed to launch OBS:", s);
     }
   }
-  if (launchedObs) {
-    await updateSplash("Waiting for OBS to start…");
-    while (true) {
+  if (o)
+    for (await t("Waiting for OBS to start…"); ; ) {
       try {
-        if (checkIfOBSOpenOrNot()) break;
-      } catch (_) {
+        if (Ae()) break;
+      } catch {
       }
-      await delay(1e3);
+      await ge(1e3);
     }
-  }
-  await updateSplash("Connecting to OBS WebSocket…");
+  await t("Connecting to OBS WebSocket…");
   try {
-    await startBrowserSourceService();
+    await at();
   } catch {
   }
-  while (true) {
-    const ok = await connectToOBSWebsocket(4e3);
-    if (ok) break;
-    await updateSplash("Failed to connect. Retrying…");
-    await delay(1500);
-  }
-  win = createMainWindow();
-  await onceReadyToShow(win);
-  const elapsed = Date.now() - splashStart;
-  const remaining = Math.max(0, SPLASHSCREEN_DURATION_MS - elapsed);
-  if (remaining > 0) await delay(remaining);
-  if (splashWin && !splashWin.isDestroyed()) splashWin.close();
-  splashWin = null;
-  win == null ? void 0 : win.show();
-  win.webContents.on("render-process-gone", (_e, details) => {
-    console.error("Renderer crashed:", details);
-  });
-  win.on("unresponsive", () => {
+  for (; !await et(4e3); )
+    await t("Failed to connect. Retrying…"), await ge(1500);
+  k = ze(), await Qr(k);
+  const n = Date.now() - e, a = Math.max(0, Ie - n);
+  a > 0 && await ge(a), O && !O.isDestroyed() && O.close(), O = null, k == null || k.show(), k.webContents.on("render-process-gone", (s, c) => {
+    console.error("Renderer crashed:", c);
+  }), k.on("unresponsive", () => {
     console.warn("Window unresponsive");
   });
 }
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-    win = null;
+A.on("window-all-closed", () => {
+  process.platform !== "darwin" && (A.quit(), k = null);
+});
+let $e = !1;
+A.on("before-quit", async (e) => {
+  if (!$e) {
+    e.preventDefault(), $e = !0;
+    try {
+      await tt();
+    } catch {
+    }
+    try {
+      await st();
+    } catch {
+    }
+    A.quit();
   }
 });
-let isQuitting = false;
-app.on("before-quit", async (e) => {
-  if (isQuitting) return;
-  e.preventDefault();
-  isQuitting = true;
-  try {
-    await exitOBS();
-  } catch {
-  }
-  try {
-    await stopBrowserSourceService();
-  } catch {
-  }
-  app.quit();
+A.on("activate", () => {
+  $.getAllWindows().length === 0 && He();
 });
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
-    createWindow();
-  }
-});
-app.whenReady().then(createWindow);
-ipcMain.on("overlay:get-port-sync", (e) => {
+A.whenReady().then(He);
+d.on("overlay:get-port-sync", (e) => {
   try {
-    e.returnValue = OVERLAY_WS_PORT;
+    e.returnValue = ke;
   } catch {
     e.returnValue = 3620;
   }
 });
-ipcMain.handle("window:open-overlay-editor", async () => {
+d.handle("window:open-overlay-editor", async () => {
   try {
-    if (overlayEditorWin && !overlayEditorWin.isDestroyed()) {
-      overlayEditorWin.show();
-      overlayEditorWin.focus();
-      return true;
-    }
-    overlayEditorWin = createOverlayEditorWindow();
-    overlayEditorWin.on("closed", () => {
-      overlayEditorWin = null;
-    });
-    return true;
+    return S && !S.isDestroyed() ? (S.show(), S.focus(), !0) : (S = Xe(), S.on("closed", () => {
+      S = null;
+    }), !0);
   } catch {
-    return false;
+    return !1;
   }
 });
-ipcMain.handle("overlay-window:minimize", async () => {
+d.handle("overlay-window:minimize", async () => {
   try {
-    overlayEditorWin == null ? void 0 : overlayEditorWin.minimize();
-    return true;
+    return S == null || S.minimize(), !0;
   } catch {
-    return false;
+    return !1;
   }
 });
-ipcMain.handle("overlay-window:close", async () => {
+d.handle("overlay-window:close", async () => {
   try {
-    overlayEditorWin == null ? void 0 : overlayEditorWin.close();
-    return true;
+    return S == null || S.close(), !0;
   } catch {
-    return false;
+    return !1;
   }
 });
-ipcMain.handle("window:minimize", async () => {
+d.handle("window:minimize", async () => {
   try {
-    win == null ? void 0 : win.minimize();
-    return true;
+    return k == null || k.minimize(), !0;
   } catch {
-    return false;
+    return !1;
   }
 });
-ipcMain.handle("window:close", async () => {
+d.handle("window:close", async () => {
   try {
-    win == null ? void 0 : win.close();
-    return true;
+    return k == null || k.close(), !0;
   } catch {
-    return false;
+    return !1;
   }
 });
 export {
-  MAIN_DIST,
-  RENDERER_DIST,
-  VITE_DEV_SERVER_URL
+  ln as MAIN_DIST,
+  Jr as RENDERER_DIST,
+  Xr as VITE_DEV_SERVER_URL
 };

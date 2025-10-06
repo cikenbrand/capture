@@ -84,17 +84,21 @@ export default memo(function StartSessionForm({ onClose }: Props) {
       }
 
       // Create session record first
-      await window.ipcRenderer.invoke('db:createSession', {
+      const created = await window.ipcRenderer.invoke('db:createSession', {
         projectId,
         diveId,
         taskId,
         nodeId,
-        ...(previewEnabled ? { preview: `${previewPath}\${previewFileName}` } : {}),
-        ...(channel1Enabled ? { ch1: `${channel1Path}\${channel1FileName}` } : {}),
-        ...(channel2Enabled ? { ch2: `${channel2Path}\${channel2FileName}` } : {}),
-        ...(channel3Enabled ? { ch3: `${channel3Path}\${channel3FileName}` } : {}),
-        ...(channel4Enabled ? { ch4: `${channel4Path}\${channel4FileName}` } : {}),
+        ...(previewEnabled ? { preview: `${previewPath}\\${previewFileName}` } : {}),
+        ...(channel1Enabled ? { ch1: `${channel1Path}\\${channel1FileName}` } : {}),
+        ...(channel2Enabled ? { ch2: `${channel2Path}\\${channel2FileName}` } : {}),
+        ...(channel3Enabled ? { ch3: `${channel3Path}\\${channel3FileName}` } : {}),
+        ...(channel4Enabled ? { ch4: `${channel4Path}\\${channel4FileName}` } : {}),
       })
+      try {
+        const id = created?.ok ? (created.data ?? null) : null
+        if (id) await window.ipcRenderer.invoke('app:setActiveSessionId', id)
+      } catch {}
 
             await window.ipcRenderer.invoke('obs:start-recording', {
                 preview: previewEnabled,

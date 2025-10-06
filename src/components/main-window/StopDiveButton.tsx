@@ -5,6 +5,7 @@ export default function StopDiveButton() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [selectedDiveId, setSelectedDiveId] = useState<string | null>(null)
   const [isStarted, setIsStarted] = useState<boolean>(false)
+  const [isRecordingStarted, setIsRecordingStarted] = useState<boolean>(false)
 
   useEffect(() => {
     let done = false
@@ -50,6 +51,28 @@ export default function StopDiveButton() {
     }
   }, [selectedDiveId])
 
+  // Track recording state to disable Stop Dive while recording is active
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await window.ipcRenderer.invoke('recording:getState')
+        if (!cancelled && res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+      } catch {}
+    })()
+    const onChanged = async () => {
+      try {
+        const res = await window.ipcRenderer.invoke('recording:getState')
+        if (res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+      } catch {}
+    }
+    window.addEventListener('recordingStateChanged', onChanged as any)
+    return () => {
+      cancelled = true
+      window.removeEventListener('recordingStateChanged', onChanged as any)
+    }
+  }, [])
+
   async function onStop() {
     if (!selectedDiveId) return
     try {
@@ -64,7 +87,7 @@ export default function StopDiveButton() {
     } catch { }
   }
 
-  const disabled = !selectedProjectId || !selectedDiveId || !isStarted
+  const disabled = !selectedProjectId || !selectedDiveId || !isStarted || isRecordingStarted
 
   return (
     <button title="Stop Dive" disabled={disabled} onClick={onStop} className="flex items-center justify-center gap-2 px-1.5 h-[28px] hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">

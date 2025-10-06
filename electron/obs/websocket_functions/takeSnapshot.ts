@@ -3,6 +3,8 @@ import path from 'node:path'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import { getObsClient } from './connectToOBSWebsocket'
+import { getActiveSessionId } from '../../getter-setter/activeSession'
+import { editSession } from '../../db/editSession'
 import { getRecordingDirectory } from './getRecordingDirectory'
 
 type ChannelsPayload = {
@@ -99,6 +101,24 @@ export async function takeSnapshots(payload: ChannelsPayload): Promise<string[]>
 ipcMain.handle('obs:take-snapshot', async (_e, payload: ChannelsPayload) => {
   try {
     const files = await takeSnapshots(payload || {})
+    // Append snapshots to active session if any
+    try {
+      const sessionId = getActiveSessionId()
+      if (sessionId && Array.isArray(files) && files.length) {
+        const ch1 = files.filter(f => /\bch1\b/i.test(f) || /ch1-/i.test(f))
+        const ch2 = files.filter(f => /\bch2\b/i.test(f) || /ch2-/i.test(f))
+        const ch3 = files.filter(f => /\bch3\b/i.test(f) || /ch3-/i.test(f))
+        const ch4 = files.filter(f => /\bch4\b/i.test(f) || /ch4-/i.test(f))
+        const snapshots: any = {}
+        if (ch1.length) snapshots.ch1 = ch1
+        if (ch2.length) snapshots.ch2 = ch2
+        if (ch3.length) snapshots.ch3 = ch3
+        if (ch4.length) snapshots.ch4 = ch4
+        if (Object.keys(snapshots).length) {
+          try { await editSession(sessionId, snapshots) } catch {}
+        }
+      }
+    } catch {}
     return { ok: true, data: files }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
