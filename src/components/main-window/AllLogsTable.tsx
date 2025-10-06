@@ -97,8 +97,8 @@ export default function AllLogsTable() {
                             <TableCell colSpan={9}>No logs</TableCell>
                         </TableRow>
                     ) : (
-                        logs.map((log) => (
-                            <TableRow key={log._id}>
+                        logs.map((log, idx) => (
+                            <TableRow key={log._id} className={idx === 0 ? 'bg-blue-300 text-black' : ''}>
                                 <TableCell className="max-w-[100px] whitespace-nowrap overflow-hidden text-ellipsis">{log.date}</TableCell>
                                 <TableCell className="max-w-[90px] whitespace-nowrap overflow-hidden text-ellipsis">{log.time}</TableCell>
                                 <TableCell className="max-w-[160px] whitespace-nowrap overflow-hidden text-ellipsis">{log.event}</TableCell>

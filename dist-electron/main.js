@@ -1,4 +1,4 @@
-import require$$1$4, { BrowserWindow, ipcMain, app } from "electron";
+import require$$1$4, { BrowserWindow, ipcMain, app, dialog } from "electron";
 import path$m from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { spawn, spawnSync } from "node:child_process";
@@ -16097,6 +16097,28 @@ ipcMain.handle("obs:get-file-name-formatting", async () => {
     return { preview: "", ch1: "", ch2: "", ch3: "", ch4: "" };
   }
 });
+async function getClipFileNameFormatting() {
+  const obs = getObsClient();
+  if (!obs) return "";
+  try {
+    const { filterSettings } = await obs.call("GetSourceFilter", {
+      sourceName: "clip recording",
+      filterName: "source record"
+    });
+    const value = filterSettings && typeof filterSettings.filename_formatting === "string" ? filterSettings.filename_formatting : "";
+    return value;
+  } catch {
+    return "";
+  }
+}
+ipcMain.handle("obs:get-clip-file-name-formatting", async () => {
+  try {
+    const value = await getClipFileNameFormatting();
+    return value;
+  } catch {
+    return "";
+  }
+});
 async function setFileNameFormatting(format) {
   const obs = getObsClient();
   if (!obs) return false;
@@ -16164,6 +16186,66 @@ ipcMain.handle("obs:set-clip-file-name-formatting", async (_e, format) => {
     return false;
   }
 });
+let cachedClient$1 = null;
+async function getClient$1() {
+  if (cachedClient$1) return cachedClient$1;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$1 = client;
+  return client;
+}
+function cleanArray(input) {
+  if (!Array.isArray(input)) return void 0;
+  const out2 = input.map((s) => typeof s === "string" ? s.trim() : "").filter(Boolean);
+  return out2.length > 0 ? out2 : void 0;
+}
+async function editSession(sessionId, snapshots) {
+  const client = await getClient$1();
+  const db = client.db("capture");
+  const sessions = db.collection("sessions");
+  const _id = new ObjectId(sessionId);
+  const toPush = {};
+  const preview = cleanArray(snapshots.preview);
+  const ch1 = cleanArray(snapshots.ch1);
+  const ch2 = cleanArray(snapshots.ch2);
+  const ch3 = cleanArray(snapshots.ch3);
+  const ch4 = cleanArray(snapshots.ch4);
+  const clips = cleanArray(snapshots.clips);
+  if (preview) toPush["snapshots.preview"] = { $each: preview };
+  if (ch1) toPush["snapshots.ch1"] = { $each: ch1 };
+  if (ch2) toPush["snapshots.ch2"] = { $each: ch2 };
+  if (ch3) toPush["snapshots.ch3"] = { $each: ch3 };
+  if (ch4) toPush["snapshots.ch4"] = { $each: ch4 };
+  if (clips) toPush["clips"] = { $each: clips };
+  if (Object.keys(toPush).length === 0) {
+    throw new Error("No paths provided to append");
+  }
+  const updated = await sessions.findOneAndUpdate(
+    { _id },
+    {
+      ...Object.keys(toPush).length ? { $push: toPush } : {},
+      $set: { updatedAt: /* @__PURE__ */ new Date() }
+    },
+    { returnDocument: "after", includeResultMetadata: false }
+  );
+  if (!updated) throw new Error("Session not found");
+  return updated;
+}
+ipcMain.handle("db:editSession", async (_event, sessionId, snapshots) => {
+  try {
+    const updated = await editSession(sessionId, snapshots || {});
+    return { ok: true, data: String(updated._id) };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 async function startClipRecording() {
   const obs = getObsClient();
   if (!obs) return false;
@@ -16177,9 +16259,74 @@ async function startClipRecording() {
     return false;
   }
 }
+async function resolveClipFilePath() {
+  const obs = getObsClient();
+  if (!obs) return null;
+  let outDir = "";
+  try {
+    outDir = await getRecordingDirectory();
+  } catch {
+    outDir = "";
+  }
+  if (!outDir) outDir = process.cwd();
+  let filenameFormatting = "";
+  let filterSettings = null;
+  try {
+    const { filterSettings: fsSettings } = await obs.call("GetSourceFilter", {
+      sourceName: "clip recording",
+      filterName: "source record"
+    });
+    filterSettings = fsSettings;
+    const val = fsSettings && typeof fsSettings.filename_formatting === "string" ? fsSettings.filename_formatting.trim() : "";
+    filenameFormatting = val;
+  } catch {
+    filenameFormatting = "";
+  }
+  if (!filenameFormatting) return null;
+  const prefixFullPath = path$m.join(outDir, filenameFormatting);
+  const allowed = [".mkv", ".mp4", ".mov", ".flv", ".m4v"];
+  let ext = "";
+  const candidates = [
+    filterSettings == null ? void 0 : filterSettings.container,
+    filterSettings == null ? void 0 : filterSettings.rec_format,
+    filterSettings == null ? void 0 : filterSettings.format,
+    filterSettings == null ? void 0 : filterSettings.file_extension
+  ];
+  for (const cand of candidates) {
+    const s = typeof cand === "string" ? cand.toLowerCase() : "";
+    if (s && allowed.includes(`.${s}`)) {
+      ext = `.${s}`;
+      break;
+    }
+  }
+  if (!ext) {
+    try {
+      const files = fs$j.readdirSync(outDir);
+      const found = files.find((f) => f.startsWith(`${path$m.basename(filenameFormatting)}.`));
+      if (found) return path$m.join(outDir, found);
+    } catch {
+    }
+  }
+  return ext ? `${prefixFullPath}${ext}` : `${prefixFullPath}`;
+}
 ipcMain.handle("obs:start-clip-recording", async () => {
   try {
     const ok = await startClipRecording();
+    try {
+      if (ok) {
+        const sessionId = getActiveSessionId();
+        if (sessionId) {
+          const clipPath = await resolveClipFilePath();
+          if (clipPath) {
+            try {
+              await editSession(sessionId, { clips: [clipPath] });
+            } catch {
+            }
+          }
+        }
+      }
+    } catch {
+    }
     return ok;
   } catch {
     return false;
@@ -16352,66 +16499,6 @@ ipcMain.handle("obs:resume-recording", async () => {
     return ok;
   } catch {
     return false;
-  }
-});
-let cachedClient$1 = null;
-async function getClient$1() {
-  if (cachedClient$1) return cachedClient$1;
-  const client = new MongoClient(MONGODB_URI, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
-    }
-  });
-  await client.connect();
-  cachedClient$1 = client;
-  return client;
-}
-function cleanArray(input) {
-  if (!Array.isArray(input)) return void 0;
-  const out2 = input.map((s) => typeof s === "string" ? s.trim() : "").filter(Boolean);
-  return out2.length > 0 ? out2 : void 0;
-}
-async function editSession(sessionId, snapshots) {
-  const client = await getClient$1();
-  const db = client.db("capture");
-  const sessions = db.collection("sessions");
-  const _id = new ObjectId(sessionId);
-  const toPush = {};
-  const preview = cleanArray(snapshots.preview);
-  const ch1 = cleanArray(snapshots.ch1);
-  const ch2 = cleanArray(snapshots.ch2);
-  const ch3 = cleanArray(snapshots.ch3);
-  const ch4 = cleanArray(snapshots.ch4);
-  const clips = cleanArray(snapshots.clips);
-  if (preview) toPush["snapshots.preview"] = { $each: preview };
-  if (ch1) toPush["snapshots.ch1"] = { $each: ch1 };
-  if (ch2) toPush["snapshots.ch2"] = { $each: ch2 };
-  if (ch3) toPush["snapshots.ch3"] = { $each: ch3 };
-  if (ch4) toPush["snapshots.ch4"] = { $each: ch4 };
-  if (clips) toPush["clips"] = { $each: clips };
-  if (Object.keys(toPush).length === 0) {
-    throw new Error("No paths provided to append");
-  }
-  const updated = await sessions.findOneAndUpdate(
-    { _id },
-    {
-      ...Object.keys(toPush).length ? { $push: toPush } : {},
-      $set: { updatedAt: /* @__PURE__ */ new Date() }
-    },
-    { returnDocument: "after", includeResultMetadata: false }
-  );
-  if (!updated) throw new Error("Session not found");
-  return updated;
-}
-ipcMain.handle("db:editSession", async (_event, sessionId, snapshots) => {
-  try {
-    const updated = await editSession(sessionId, snapshots || {});
-    return { ok: true, data: String(updated._id) };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
   }
 });
 async function resolveSceneName(obs, hint, channelIndex) {
@@ -16612,6 +16699,12 @@ async function createWindow() {
       launchedObs = true;
     } catch (err) {
       console.error("Failed to launch OBS:", err);
+      try {
+        if (Date.now() - splashStart > 1e4) {
+          await dialog.showMessageBox({ type: "error", title: "Service Error", message: "Failed to launch OBS. Please start OBS manually and retry." });
+        }
+      } catch {
+      }
     }
   }
   if (launchedObs) {
@@ -16625,13 +16718,33 @@ async function createWindow() {
     }
   }
   await updateSplash("Connecting to OBS WebSocket…");
+  let drawingServiceOk = false;
   try {
-    await startBrowserSourceService();
+    drawingServiceOk = await startBrowserSourceService();
   } catch {
+    drawingServiceOk = false;
   }
+  if (!drawingServiceOk) {
+    try {
+      if (Date.now() - splashStart > 1e4) {
+        await dialog.showMessageBox({ type: "error", title: "Service Error", message: `Failed to start drawing service on localhost (port ${OVERLAY_WS_PORT}). The app will continue retrying, but features depending on it may not work until the service starts.` });
+      }
+    } catch {
+    }
+  }
+  let wsErrorShown = false;
   while (true) {
     const ok = await connectToOBSWebsocket(4e3);
     if (ok) break;
+    if (!wsErrorShown) {
+      try {
+        if (Date.now() - splashStart > 1e4) {
+          await dialog.showMessageBox({ type: "error", title: "OBS Connection Error", message: "Failed to connect to OBS WebSocket. Retrying…\nPlease ensure OBS is running and WebSocket is enabled." });
+          wsErrorShown = true;
+        }
+      } catch {
+      }
+    }
     await updateSplash("Failed to connect. Retrying…");
     await delay(1500);
   }

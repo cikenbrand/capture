@@ -37,6 +37,7 @@ export default function CreateProjectForm({ onClose }: Props) {
                 const newId: string | undefined = result.data
                 if (newId) {
                     await window.ipcRenderer.invoke('app:setSelectedProjectId', newId)
+                    try { window.dispatchEvent(new CustomEvent('selectedProjectChanged', { detail: newId })) } catch {}
                     try { window.dispatchEvent(new CustomEvent('projectsChanged')) } catch {}
                 }
                 onClose()

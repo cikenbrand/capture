@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createSplashWindow } from './windows/splashscreen'
@@ -55,6 +55,7 @@ import './db/getAllOverlayImages'
 import './obs/websocket_functions/getLiveDevices'
 import './obs/websocket_functions/getRecordingDirectory'
 import './obs/websocket_functions/getFileNameFormatting'
+import './obs/websocket_functions/getClipFileNameFormatting'
 import './obs/websocket_functions/setFileNameFormatting'
 import './obs/websocket_functions/setClipRecordingFileNameFormatting'
 import './obs/websocket_functions/startClipRecording'
@@ -130,6 +131,11 @@ async function createWindow() {
       launchedObs = true
     } catch (err) {
       console.error('Failed to launch OBS:', err)
+      try {
+        if (Date.now() - splashStart > 10000) {
+          await dialog.showMessageBox({ type: 'error', title: 'Service Error', message: 'Failed to launch OBS. Please start OBS manually and retry.' })
+        }
+      } catch {}
     }
   }
 
@@ -149,10 +155,27 @@ async function createWindow() {
   // 2) Connect to OBS WebSocket, keep retrying while on splash
   await updateSplash('Connecting to OBS WebSocket…')
   // Also start drawing service early
-  try { await startBrowserSourceService() } catch {}
+  let drawingServiceOk = false
+  try { drawingServiceOk = await startBrowserSourceService() } catch { drawingServiceOk = false }
+  if (!drawingServiceOk) {
+    try {
+      if (Date.now() - splashStart > 10000) {
+        await dialog.showMessageBox({ type: 'error', title: 'Service Error', message: `Failed to start drawing service on localhost (port ${OVERLAY_WS_PORT}). The app will continue retrying, but features depending on it may not work until the service starts.` })
+      }
+    } catch {}
+  }
+  let wsErrorShown = false
   while (true) {
     const ok = await connectToOBSWebsocket(4000)
     if (ok) break
+    if (!wsErrorShown) {
+      try {
+        if (Date.now() - splashStart > 10000) {
+          await dialog.showMessageBox({ type: 'error', title: 'OBS Connection Error', message: 'Failed to connect to OBS WebSocket. Retrying…\nPlease ensure OBS is running and WebSocket is enabled.' })
+          wsErrorShown = true
+        }
+      } catch {}
+    }
     await updateSplash('Failed to connect. Retrying…')
     await delay(1500)
   }
