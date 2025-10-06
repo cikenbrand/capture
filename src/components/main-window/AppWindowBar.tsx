@@ -74,9 +74,20 @@ export default function AppWindowBar() {
             } catch { }
         }
         window.addEventListener('selectedProjectChanged', onChanged as any)
+        const onProjectsChanged = async () => {
+            try {
+                const all = await window.ipcRenderer.invoke('db:getAllProjects')
+                if (all?.ok && Array.isArray(all.data)) {
+                    const top5 = (all.data as any[]).slice(0, 5).map(p => ({ _id: p._id, name: p.name, lastSelectedDiveId: p.lastSelectedDiveId ?? null, lastSelectedTaskId: p.lastSelectedTaskId ?? null, lastSelectedNodeId: p.lastSelectedNodeId ?? null }))
+                    setRecentProjects(top5)
+                }
+            } catch {}
+        }
+        window.addEventListener('projectsChanged', onProjectsChanged as any)
         return () => {
             done = true
             window.removeEventListener('selectedProjectChanged', onChanged as any)
+            window.removeEventListener('projectsChanged', onProjectsChanged as any)
         }
     }, [])
 

@@ -50,6 +50,7 @@ import './db/editOverlayComponent'
 import './db/deleteOverlayComponent'
 import './db/getOverlayComponentsForRender'
 import './db/uploadOverlayImage'
+import './db/addProjectLog'
 import './db/getAllOverlayImages'
 import './obs/websocket_functions/getLiveDevices'
 import './obs/websocket_functions/getRecordingDirectory'
@@ -67,6 +68,7 @@ import './obs/websocket_functions/setClipRecordingFileNameFormatting'
 import './obs/websocket_functions/startClipRecording'
 import './obs/websocket_functions/stopClipRecording'
 import './obs/websocket_functions/takeSnapshot'
+import './db/getProjectLogs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')

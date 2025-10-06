@@ -4,6 +4,7 @@ import { FaStop } from "react-icons/fa";
 export default function StopDiveButton() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
   const [selectedDiveId, setSelectedDiveId] = useState<string | null>(null)
+  const [selectedDiveName, setSelectedDiveName] = useState<string | null>(null)
   const [isStarted, setIsStarted] = useState<boolean>(false)
   const [isRecordingStarted, setIsRecordingStarted] = useState<boolean>(false)
 
@@ -14,11 +15,31 @@ export default function StopDiveButton() {
           const p = await window.ipcRenderer.invoke('app:getSelectedProjectId')
           if (!done && p?.ok) setSelectedProjectId(p.data ?? null)
           const d = await window.ipcRenderer.invoke('app:getSelectedDiveId')
-          if (!done && d?.ok) setSelectedDiveId(d.data ?? null)
+          if (!done && d?.ok) {
+            const id = d.data ?? null
+            setSelectedDiveId(id)
+            if (id) {
+              try {
+                const det = await window.ipcRenderer.invoke('db:getSelectedDiveDetails', id)
+                if (!done) setSelectedDiveName(det?.ok ? (det.data?.name ?? null) : null)
+              } catch { if (!done) setSelectedDiveName(null) }
+            }
+          }
         } catch { }
       })()
     const onProjectChanged = (e: any) => setSelectedProjectId(e?.detail ?? null)
-    const onDiveChanged = (e: any) => setSelectedDiveId(e?.detail ?? null)
+    const onDiveChanged = async (e: any) => {
+      const id = e?.detail ?? null
+      setSelectedDiveId(id)
+      try {
+        if (id) {
+          const det = await window.ipcRenderer.invoke('db:getSelectedDiveDetails', id)
+          setSelectedDiveName(det?.ok ? (det.data?.name ?? null) : null)
+        } else {
+          setSelectedDiveName(null)
+        }
+      } catch { setSelectedDiveName(null) }
+    }
     window.addEventListener('selectedProjectChanged', onProjectChanged as any)
     window.addEventListener('selectedDiveChanged', onDiveChanged as any)
     return () => {
@@ -78,6 +99,18 @@ export default function StopDiveButton() {
     try {
       const res = await window.ipcRenderer.invoke('dive:setStarted', selectedDiveId, false)
       if (res?.ok) {
+        try {
+          const proj = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+          const projectId = proj?.ok ? (proj.data ?? null) : null
+          if (projectId) {
+            await window.ipcRenderer.invoke('db:addProjectLog', {
+              projectId,
+              event: 'Stop Dive',
+              dive: selectedDiveName || null,
+            })
+            try { window.dispatchEvent(new Event('projectLogsChanged')) } catch {}
+          }
+        } catch { }
         try {
           const ev = new CustomEvent('divesChanged')
           window.dispatchEvent(ev)

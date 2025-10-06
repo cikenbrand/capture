@@ -279,7 +279,7 @@ function App() {
               </TabsContent>
             </Tabs>
           </div>
-          <div className="flex-none h-[250px] w-full">
+          <div className="flex-none h-[250px] overflow-hidden w-full">
             <Tabs defaultValue="alllogs" className="h-full">
               <TabsList>
                 <TabsTrigger value="alllogs">All Logs</TabsTrigger>

@@ -100,6 +100,40 @@ export default memo(function StartSessionForm({ onClose }: Props) {
         if (id) await window.ipcRenderer.invoke('app:setActiveSessionId', id)
       } catch {}
 
+      // Add project log: Recording started
+      try {
+        const detDive = await window.ipcRenderer.invoke('db:getSelectedDiveDetails', diveId)
+        const diveName = detDive?.ok ? (detDive.data?.name ?? '') : ''
+        const detTask = await window.ipcRenderer.invoke('db:getSelectedTaskDetails', taskId)
+        const taskName = detTask?.ok ? (detTask.data?.name ?? '') : ''
+
+        // Build node hierarchy names "Structure A, Component A"
+        let nodePath = ''
+        try {
+          const detNode = await window.ipcRenderer.invoke('db:getSelectedNodeDetails', nodeId)
+          const nodeName = detNode?.ok ? (detNode.data?.name ?? '') : ''
+          // Reconstruct path from NodesTree would need parent traversal; fallback to current node name
+          nodePath = nodeName
+        } catch {}
+
+        const fileNames: string[] = []
+        if (previewEnabled && previewFileName) fileNames.push(previewFileName)
+        if (channel1Enabled && channel1FileName) fileNames.push(channel1FileName)
+        if (channel2Enabled && channel2FileName) fileNames.push(channel2FileName)
+        if (channel3Enabled && channel3FileName) fileNames.push(channel3FileName)
+        if (channel4Enabled && channel4FileName) fileNames.push(channel4FileName)
+
+        await window.ipcRenderer.invoke('db:addProjectLog', {
+          projectId,
+          event: 'Recording Started',
+          dive: diveName || null,
+          task: taskName || null,
+          components: nodePath ? `(${nodePath})` : null,
+          fileName: fileNames.length ? fileNames.join(', ') : null,
+        })
+        try { window.dispatchEvent(new Event('projectLogsChanged')) } catch {}
+      } catch {}
+
             await window.ipcRenderer.invoke('obs:start-recording', {
                 preview: previewEnabled,
                 ch1: channel1Enabled,
