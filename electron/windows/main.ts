@@ -18,9 +18,10 @@ export function createMainWindow() {
     width: 1280,
     height: 800,
     show: false,
+    title: 'Deepstrim Capture',
     frame: false,
     backgroundColor: '#0f0f0f',
-    icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), 'electron-vite.svg'),
+    icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), 'dc.ico'),
     webPreferences: {
       preload: path.join(process.env.APP_ROOT || path.join(__dirname, '..', '..'), 'dist-electron', 'preload.mjs'),
       contextIsolation: true,
@@ -45,7 +46,7 @@ export function createOverlayEditorWindow() {
     show: true,
     frame: false,
     backgroundColor: '#0f0f0f',
-    icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), 'electron-vite.svg'),
+    icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), 'dc.ico'),
     webPreferences: {
       preload: path.join(process.env.APP_ROOT || path.join(__dirname, '..', '..'), 'dist-electron', 'preload.mjs'),
       contextIsolation: true,

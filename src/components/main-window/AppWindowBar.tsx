@@ -84,7 +84,7 @@ export default function AppWindowBar() {
         <div className='h-9 w-full drag flex items-center justify-between pl-2' >
             <div className="flex gap-2 w-full items-center">
                 <div className="h-5 w-5 overflow-hidden rounded">
-                    <img src="/dc.png" className="object-contain" />
+                    <img src="./dc.png" className="object-contain" />
                 </div>
                 <Menubar className='no-drag h-6 bg-transparent border-0 p-0 shadow-none text-white'>
                     <MenubarMenu>
