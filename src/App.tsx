@@ -37,6 +37,7 @@ import StartClipRecordingForm from "./components/main-window/StartClipRecordingF
 import StopClipRecordingForm from "./components/main-window/StopClipRecordingForm"
 import SessionTimer from "./components/main-window/SessionTimer"
 import ClipTimer from "./components/main-window/ClipTimer"
+import TakeSnapshotForm from "./components/main-window/TakeSnapshotForm"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -56,6 +57,7 @@ function App() {
   const [isPauseSessionDialogOpen, setIsPauseSessionDialogOpen] = useState(false)
   const [isStartClipDialogOpen, setIsStartClipDialogOpen] = useState(false)
   const [isStopClipDialogOpen, setIsStopClipDialogOpen] = useState(false)
+  const [isTakeSnapshotDialogOpen, setIsTakeSnapshotDialogOpen] = useState(false)
   const [recordingState, setRecordingState] = useState({ isRecordingStarted: false, isRecordingPaused: false, isRecordingStopped: false, isClipRecordingStarted: false })
 
   const isSessionActionDisabled = !(
@@ -257,7 +259,7 @@ function App() {
                   </button>
                   <ClipTimer />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Take Snapshot" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                  <button title="Take Snapshot" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted} onClick={() => setIsTakeSnapshotDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                     <BsCameraFill className="h-4 w-4" />
                   </button>
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
@@ -340,6 +342,9 @@ function App() {
       </DraggableDialog>
       <DraggableDialog open={isStopClipDialogOpen} onOpenChange={setIsStopClipDialogOpen} title="Stop Clip">
         <StopClipRecordingForm onClose={() => setIsStopClipDialogOpen(false)} />
+      </DraggableDialog>
+      <DraggableDialog open={isTakeSnapshotDialogOpen} onOpenChange={setIsTakeSnapshotDialogOpen} title="Take Snapshot">
+        <TakeSnapshotForm />
       </DraggableDialog>
     </div>
   )

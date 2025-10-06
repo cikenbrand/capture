@@ -6,6 +6,7 @@ import fs from "node:fs";
 import OBSWebSocket from "obs-websocket-js";
 import http from "node:http";
 import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
+import fsp from "node:fs/promises";
 let splash = null;
 function createSplashWindow(timeoutMs) {
   splash = new BrowserWindow({
@@ -2499,6 +2500,94 @@ ipcMain.handle("obs:resume-recording", async () => {
     return ok;
   } catch {
     return false;
+  }
+});
+function timestamp() {
+  const now = /* @__PURE__ */ new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mi = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  return `${yyyy}${mm}${dd}_${hh}${mi}${ss}`;
+}
+async function resolveSceneName(obs, hint, channelIndex) {
+  if (typeof hint === "string" && hint.trim()) return hint.trim();
+  if (!obs) return null;
+  try {
+    const list = await obs.call("GetSceneList");
+    const scenes = Array.isArray(list == null ? void 0 : list.scenes) ? list.scenes : [];
+    const normalized = scenes.map((s) => ({ raw: String((s == null ? void 0 : s.sceneName) ?? ""), low: String((s == null ? void 0 : s.sceneName) ?? "").toLowerCase() }));
+    const exactOrder = [
+      `channel ${channelIndex}`,
+      `ch${channelIndex}`,
+      `source ${channelIndex}`
+    ];
+    for (const cand of exactOrder) {
+      const m = normalized.find((s) => s.low === cand);
+      if (m) return m.raw;
+    }
+    const containsOrder = [
+      `channel ${channelIndex}`,
+      `ch${channelIndex}`,
+      `source ${channelIndex}`,
+      `${channelIndex}`
+    ];
+    const cont = normalized.find((s) => containsOrder.some((c) => s.low.includes(c)));
+    return cont ? cont.raw : null;
+  } catch {
+    return null;
+  }
+}
+async function takeSnapshots(payload) {
+  const obs = getObsClient();
+  if (!obs) return [];
+  let outDir = "";
+  const preferred = typeof (payload == null ? void 0 : payload.outputDir) === "string" ? payload.outputDir.trim() : "";
+  if (preferred) {
+    outDir = preferred;
+  } else {
+    outDir = await getRecordingDirectory();
+  }
+  try {
+    if (outDir && !fs.existsSync(outDir)) {
+      await fsp.mkdir(outDir, { recursive: true });
+    }
+  } catch {
+  }
+  Math.max(1, Math.min(3840, Math.floor(Number((payload == null ? void 0 : payload.width) ?? 0)) || 0)) || void 0;
+  Math.max(1, Math.min(2160, Math.floor(Number((payload == null ? void 0 : payload.height) ?? 0)) || 0)) || void 0;
+  const results = [];
+  const tasks = [];
+  const doOne = async (idx, hint) => {
+    const sceneName = await resolveSceneName(obs, hint, idx);
+    if (!sceneName) return;
+    const filePath = path.join(outDir || process.cwd(), `snapshot_ch${idx}_${timestamp()}.png`);
+    try {
+      await obs.call("SaveSourceScreenshot", {
+        sourceName: sceneName,
+        imageFormat: "png",
+        imageFilePath: filePath
+      });
+      results.push(filePath);
+    } catch {
+    }
+  };
+  if (payload == null ? void 0 : payload.ch1) tasks.push(doOne(1, payload.ch1));
+  if (payload == null ? void 0 : payload.ch2) tasks.push(doOne(2, payload.ch2));
+  if (payload == null ? void 0 : payload.ch3) tasks.push(doOne(3, payload.ch3));
+  if (payload == null ? void 0 : payload.ch4) tasks.push(doOne(4, payload.ch4));
+  await Promise.all(tasks);
+  return results;
+}
+ipcMain.handle("obs:take-snapshot", async (_e, payload) => {
+  try {
+    const files = await takeSnapshots(payload || {});
+    return { ok: true, data: files };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
   }
 });
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
