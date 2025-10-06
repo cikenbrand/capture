@@ -22,3 +22,20 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Build outputs (electron-builder, installers, unpacked)
+release/
+release*/
+build/
+out/
+win-unpacked/
+linux-unpacked/
+mac*/
+*.exe
+*.msi
+*.dmg
+*.pkg
+*.AppImage
+*.snap
+*.deb
+*.rpm
