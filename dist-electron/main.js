@@ -16876,6 +16876,19 @@ ipcMain.handle("overlay-window:minimize", async () => {
     return false;
   }
 });
+ipcMain.handle("overlay-window:toggle-maximize", async () => {
+  try {
+    if (!overlayEditorWin || overlayEditorWin.isDestroyed()) return false;
+    if (overlayEditorWin.isMaximized()) {
+      overlayEditorWin.unmaximize();
+    } else {
+      overlayEditorWin.maximize();
+    }
+    return true;
+  } catch {
+    return false;
+  }
+});
 ipcMain.handle("overlay-window:close", async () => {
   try {
     overlayEditorWin == null ? void 0 : overlayEditorWin.close();
@@ -16887,6 +16900,19 @@ ipcMain.handle("overlay-window:close", async () => {
 ipcMain.handle("window:minimize", async () => {
   try {
     win == null ? void 0 : win.minimize();
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("window:toggle-maximize", async () => {
+  try {
+    if (!win || win.isDestroyed()) return false;
+    if (win.isMaximized()) {
+      win.unmaximize();
+    } else {
+      win.maximize();
+    }
     return true;
   } catch {
     return false;

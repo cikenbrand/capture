@@ -2,7 +2,7 @@ import AppWindowBar from "./components/main-window/AppWindowBar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DraggableDialog } from "@/components/ui/draggable-dialog"
 import AddNewDive from "./components/main-window/AddNewDiveForm"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { BiPlus } from "react-icons/bi";
 import { MdCameraRoll, MdDelete, MdEdit } from "react-icons/md";
 import DiveSelection from "./components/main-window/DiveSelection"
@@ -60,6 +60,53 @@ function App() {
   const [isTakeSnapshotDialogOpen, setIsTakeSnapshotDialogOpen] = useState(false)
   const [recordingState, setRecordingState] = useState({ isRecordingStarted: false, isRecordingPaused: false, isRecordingStopped: false, isClipRecordingStarted: false })
 
+  // WebSocket connections per overlay channel to broadcast project details
+  const socketsRef = useRef<Record<number, WebSocket | null>>({})
+  const WS_HOST = '127.0.0.1'
+  const WS_PORT = 3620
+
+  function getSocket(channelIndex: number): WebSocket | null {
+    const existing = socketsRef.current[channelIndex]
+    if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) {
+      return existing
+    }
+    try {
+      const ws = new WebSocket(`ws://${WS_HOST}:${WS_PORT}/overlay?ch=${channelIndex}`)
+      ws.addEventListener('close', () => {
+        try { if (socketsRef.current[channelIndex] === ws) socketsRef.current[channelIndex] = null } catch { }
+      })
+      ws.addEventListener('error', () => { try { /* ignore */ } catch { } })
+      socketsRef.current[channelIndex] = ws
+      return ws
+    } catch {
+      return existing ?? null
+    }
+  }
+
+  function broadcastProject(details: { name?: string | null; client?: string | null; vessel?: string | null; location?: string | null; contractor?: string | null } | null) {
+    const safe = details || {}
+    const payload = JSON.stringify({
+      project: {
+        name: typeof safe.name === 'string' ? safe.name : null,
+        client: typeof safe.client === 'string' ? safe.client : null,
+        vessel: typeof safe.vessel === 'string' ? safe.vessel : null,
+        location: typeof safe.location === 'string' ? safe.location : null,
+        contractor: typeof safe.contractor === 'string' ? safe.contractor : null,
+      }
+    })
+    for (const ch of [1, 2, 3, 4]) {
+      try {
+        const ws = getSocket(ch)
+        if (!ws || typeof (ws as any).send !== 'function') continue
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(payload)
+        } else if (ws.readyState === WebSocket.CONNECTING) {
+          ws.addEventListener('open', () => { try { ws.send(payload) } catch { } }, { once: true })
+        }
+      } catch { }
+    }
+  }
+
   const isSessionActionDisabled = !(
     selectedProjectId && selectedTaskId && selectedDiveId && selectedNodeId
   )
@@ -86,6 +133,20 @@ function App() {
       try {
         const id = e?.detail ?? null
         setSelectedProjectId(id)
+          ; (async () => {
+            try {
+              if (id) {
+                const det = await window.ipcRenderer.invoke('db:getSelectedProjectDetails', id)
+                const p = det?.ok ? (det.data ?? null) : null
+                if (p) broadcastProject({ name: p.name ?? null, client: p.client ?? null, vessel: p.vessel ?? null, location: p.location ?? null, contractor: p.contractor ?? null })
+                else broadcastProject({ name: null, client: null, vessel: null, location: null, contractor: null })
+              } else {
+                broadcastProject({ name: null, client: null, vessel: null, location: null, contractor: null })
+              }
+            } catch {
+              broadcastProject({ name: null, client: null, vessel: null, location: null, contractor: null })
+            }
+          })()
       } catch { }
     }
     const onDiveChanged = (e: any) => {
@@ -235,46 +296,86 @@ function App() {
               <TabsList>
                 <TabsTrigger value="preview">Preview</TabsTrigger>
               </TabsList>
-              <TabsContent value="preview" className="flex flex-col gap-1 p-0">
+              <TabsContent value="preview" className="flex flex-col p-0">
                 <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
-                  <button title="Start Session" disabled={isStartSessionDisabled || recordingState.isRecordingStarted} onClick={() => setIsStartSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                    <FaCircle className="h-3.5 w-3.5" fill="#E06061"/>
+                  <button
+                    title="Start Session"
+                    disabled={isStartSessionDisabled || recordingState.isRecordingStarted}
+                    onClick={() => setIsStartSessionDialogOpen(true)}
+                    className="flex items-center justify-center h-[28px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                    <FaCircle className="h-3.5 w-3.5" fill="#E06061" />
+                    <span className="font-medium">Start Session</span>
                   </button>
-                  <button title="Stop Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isRecordingStopped} onClick={() => setIsStopSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                    <FaStop className="h-3.5 w-3.5" fill="#DE4D3A"/>
+                  <button
+                    title="Stop Session"
+                    disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isRecordingStopped}
+                    onClick={() => setIsStopSessionDialogOpen(true)}
+                    className="flex items-center justify-center h-[28px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                    <FaStop className="h-3.5 w-3.5" fill="#DE4D3A" />
+                    <span className="font-medium">Stop Session</span>
                   </button>
-                  <button title="Pause Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isRecordingPaused || recordingState.isRecordingStopped} onClick={() => setIsPauseSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                    <FaPause className="h-3.5 w-3.5" fill="#E0CC5F"/>
+                  <button
+                    title="Pause Session"
+                    disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isRecordingPaused || recordingState.isRecordingStopped}
+                    onClick={() => setIsPauseSessionDialogOpen(true)}
+                    className="flex items-center justify-center h-[28px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                    <FaPause className="h-3.5 w-3.5" fill="#E0CC5F" />
+                    <span className="font-medium">Pause Session</span>
                   </button>
-                  <button title="Resume Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || !recordingState.isRecordingPaused || recordingState.isRecordingStopped} onClick={() => { try { window.ipcRenderer.invoke('obs:resume-recording'); window.ipcRenderer.invoke('recording:updateState', { isRecordingPaused: false }); setRecordingState(prev => ({ ...prev, isRecordingPaused: false })); window.dispatchEvent(new Event('recordingStateChanged')); (async () => { try { const proj = await window.ipcRenderer.invoke('app:getSelectedProjectId'); const projectId = proj?.ok ? (proj.data ?? null) : null; if (projectId) { const [diveRes, taskRes, nodeRes, fmt] = await Promise.all([ window.ipcRenderer.invoke('app:getSelectedDiveId'), window.ipcRenderer.invoke('app:getSelectedTaskId'), window.ipcRenderer.invoke('app:getSelectedNodeId'), window.ipcRenderer.invoke('obs:get-file-name-formatting').catch(() => null), ]); const diveId = diveRes?.ok ? (diveRes.data ?? null) : null; const taskId = taskRes?.ok ? (taskRes.data ?? null) : null; const nodeId = nodeRes?.ok ? (nodeRes.data ?? null) : null; let diveName = ''; let taskName = ''; let nodeName = ''; try { if (diveId) { const d = await window.ipcRenderer.invoke('db:getSelectedDiveDetails', diveId); diveName = d?.ok ? (d.data?.name ?? '') : '' } } catch {} try { if (taskId) { const t = await window.ipcRenderer.invoke('db:getSelectedTaskDetails', taskId); taskName = t?.ok ? (t.data?.name ?? '') : '' } } catch {} try { if (nodeId) { const n = await window.ipcRenderer.invoke('db:getSelectedNodeDetails', nodeId); nodeName = n?.ok ? (n.data?.name ?? '') : '' } } catch {} const fileNames: string[] = []; try { const previewFmt = fmt && typeof fmt.preview === 'string' ? fmt.preview : ''; const ch1Fmt = fmt && typeof fmt.ch1 === 'string' ? fmt.ch1 : ''; const ch2Fmt = fmt && typeof fmt.ch2 === 'string' ? fmt.ch2 : ''; const ch3Fmt = fmt && typeof fmt.ch3 === 'string' ? fmt.ch3 : ''; const ch4Fmt = fmt && typeof fmt.ch4 === 'string' ? fmt.ch4 : ''; if (previewFmt) fileNames.push(previewFmt); if (ch1Fmt) fileNames.push(ch1Fmt); if (ch2Fmt) fileNames.push(ch2Fmt); if (ch3Fmt) fileNames.push(ch3Fmt); if (ch4Fmt) fileNames.push(ch4Fmt); } catch {} await window.ipcRenderer.invoke('db:addProjectLog', { projectId, event: 'Recording Resumed', dive: diveName || null, task: taskName || null, components: nodeName ? `(${nodeName})` : null, fileName: fileNames.length ? fileNames.join(', ') : null, }); try { window.dispatchEvent(new Event('projectLogsChanged')) } catch {} } } catch {} })() } catch { } }} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                    <FaPlay className="h-3.5 w-3.5" fill="#93E05F"/>
+                  <button
+                    title="Resume Session"
+                    disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || !recordingState.isRecordingPaused || recordingState.isRecordingStopped}
+                    onClick={() => { try { window.ipcRenderer.invoke('obs:resume-recording'); window.ipcRenderer.invoke('recording:updateState', { isRecordingPaused: false }); setRecordingState(prev => ({ ...prev, isRecordingPaused: false })); window.dispatchEvent(new Event('recordingStateChanged')); (async () => { try { const proj = await window.ipcRenderer.invoke('app:getSelectedProjectId'); const projectId = proj?.ok ? (proj.data ?? null) : null; if (projectId) { const [diveRes, taskRes, nodeRes, fmt] = await Promise.all([window.ipcRenderer.invoke('app:getSelectedDiveId'), window.ipcRenderer.invoke('app:getSelectedTaskId'), window.ipcRenderer.invoke('app:getSelectedNodeId'), window.ipcRenderer.invoke('obs:get-file-name-formatting').catch(() => null),]); const diveId = diveRes?.ok ? (diveRes.data ?? null) : null; const taskId = taskRes?.ok ? (taskRes.data ?? null) : null; const nodeId = nodeRes?.ok ? (nodeRes.data ?? null) : null; let diveName = ''; let taskName = ''; let nodeName = ''; try { if (diveId) { const d = await window.ipcRenderer.invoke('db:getSelectedDiveDetails', diveId); diveName = d?.ok ? (d.data?.name ?? '') : '' } } catch { } try { if (taskId) { const t = await window.ipcRenderer.invoke('db:getSelectedTaskDetails', taskId); taskName = t?.ok ? (t.data?.name ?? '') : '' } } catch { } try { if (nodeId) { const n = await window.ipcRenderer.invoke('db:getSelectedNodeDetails', nodeId); nodeName = n?.ok ? (n.data?.name ?? '') : '' } } catch { } const fileNames: string[] = []; try { const previewFmt = fmt && typeof fmt.preview === 'string' ? fmt.preview : ''; const ch1Fmt = fmt && typeof fmt.ch1 === 'string' ? fmt.ch1 : ''; const ch2Fmt = fmt && typeof fmt.ch2 === 'string' ? fmt.ch2 : ''; const ch3Fmt = fmt && typeof fmt.ch3 === 'string' ? fmt.ch3 : ''; const ch4Fmt = fmt && typeof fmt.ch4 === 'string' ? fmt.ch4 : ''; if (previewFmt) fileNames.push(previewFmt); if (ch1Fmt) fileNames.push(ch1Fmt); if (ch2Fmt) fileNames.push(ch2Fmt); if (ch3Fmt) fileNames.push(ch3Fmt); if (ch4Fmt) fileNames.push(ch4Fmt); } catch { } await window.ipcRenderer.invoke('db:addProjectLog', { projectId, event: 'Recording Resumed', dive: diveName || null, task: taskName || null, components: nodeName ? `(${nodeName})` : null, fileName: fileNames.length ? fileNames.join(', ') : null, }); try { window.dispatchEvent(new Event('projectLogsChanged')) } catch { } } } catch { } })() } catch { } }}
+                    className="flex items-center justify-center h-[28px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                    <FaPlay className="h-3.5 w-3.5" fill="#93E05F" />
+                    <span className="font-medium">Resume Session</span>
                   </button>
                   <SessionTimer />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Start Clip" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isClipRecordingStarted} onClick={() => setIsStartClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                  <button
+                    title="Start Clip"
+                    disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isClipRecordingStarted}
+                    onClick={() => setIsStartClipDialogOpen(true)}
+                    className="flex items-center justify-center h-[28px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                     <MdCameraRoll className="h-3.5 w-3.5" />
+                    <span className="font-medium">Start Clip</span>
                   </button>
-                  <button title="Stop Clip" disabled={isSessionActionDisabled || !recordingState.isClipRecordingStarted} onClick={() => setIsStopClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                  <button
+                    title="Stop Clip"
+                    disabled={isSessionActionDisabled || !recordingState.isClipRecordingStarted}
+                    onClick={() => setIsStopClipDialogOpen(true)}
+                    className="flex items-center justify-center h-[28px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                     <FaStop className="h-3.5 w-3.5" />
+                    <span className="font-medium">Stop Clip</span>
                   </button>
                   <ClipTimer />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Take Snapshot" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted} onClick={() => setIsTakeSnapshotDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                  <button
+                    title="Take Snapshot"
+                    disabled={isSessionActionDisabled || !recordingState.isRecordingStarted}
+                    onClick={() => setIsTakeSnapshotDialogOpen(true)}
+                    className="flex items-center justify-center h-[28px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                     <BsCameraFill className="h-4 w-4" />
+                    <span className="font-medium">Take Snapshot</span>
                   </button>
-                  <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
+                </div>
+                <div className="flex-1 bg-black">
+                  <PreviewVirtualCam />
+                </div>
+                <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
                   <CursorToolButton />
                   <FreeDrawToolButton />
                   <ArrowDrawingTool />
                   <CircleDrawingTool />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Mute Microphone" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                  <button 
+                    title="Mute Microphone" 
+                    disabled={isSessionActionDisabled} 
+                    className="flex items-center justify-center h-[28px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                     <FaMicrophone className="h-4 w-4" />
+                    <span className="font-medium">Mute Microphone</span>
                   </button>
                   <AudioMeter valueDb={-100} />
-                </div>
-                <div className="flex-1 bg-black">
-                  <PreviewVirtualCam />
                 </div>
               </TabsContent>
             </Tabs>

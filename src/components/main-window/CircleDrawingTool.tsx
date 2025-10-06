@@ -69,13 +69,14 @@ export default function CircleDrawingTool() {
             data-draw-ui='true'
             title="Draw Circle"
             className={clsx(
-                "flex items-center justify-center h-[28px] aspect-square rounded-[2px] disabled:opacity-50 disabled:pointer-events-none",
+                "flex items-center justify-center h-[28px] px-2 gap-2 rounded-[2px] disabled:opacity-50 disabled:pointer-events-none",
                 isActive
                     ? "bg-[#202832] text-[#71BCFC]"
                     : "text-white hover:bg-[#4C525E] active:bg-[#202832] active:text-[#71BCFC]"
             )}
         >
             <FaRegCircle className="h-4 w-4" />
+            <span className="font-medium">Circle Drawing Tool</span>
         </button>
     )
 }

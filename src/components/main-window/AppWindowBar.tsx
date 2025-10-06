@@ -17,6 +17,7 @@ import CreateProjectForm from "./CreateProjectForm";
 import OpenProject from "./OpenProject";
 import EditProjectDetailsForm from "./EditProjectDetailsForm";
 import VideoDeviceConfigurations from "./VideoDeviceConfigurations";
+import { FaRegWindowRestore } from "react-icons/fa";
 
 export default function AppWindowBar() {
     const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
@@ -204,12 +205,21 @@ export default function AppWindowBar() {
             </div>
             <div className='flex items-center gap-2 h-full'>
                 <button
+                    title="Minimize"
                     className='h-full w-12 no-drag flex items-center justify-center text-white hover:bg-white/15'
                     onClick={() => window.ipcRenderer.invoke('window:minimize')}
                 >
                     <VscChromeMinimize className="h-4 w-4 text-white/50" />
                 </button>
                 <button
+                    title="Restore/Maximize"
+                    className='h-full w-12 no-drag flex items-center justify-center text-white hover:bg-white/15'
+                    onClick={() => window.ipcRenderer.invoke('window:toggle-maximize')}
+                >
+                    <FaRegWindowRestore className="h-3 w-3 text-white/50" />
+                </button>
+                <button
+                    title="Close Application"
                     className='group h-full w-12 no-drag flex items-center justify-center text-white hover:bg-red-600'
                     onClick={() => setConfirmCloseOpen(true)}
                 >

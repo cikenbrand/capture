@@ -58,6 +58,8 @@ export default function EditProjectDetailsForm({ onClose }: Props) {
                 setError(res?.error || 'Failed to update project')
                 return
             }
+            try { window.dispatchEvent(new Event('projectsChanged')) } catch {}
+            try { window.dispatchEvent(new CustomEvent('selectedProjectChanged', { detail: projectId })) } catch {}
             onClose()
         } finally {
             setSubmitting(false)

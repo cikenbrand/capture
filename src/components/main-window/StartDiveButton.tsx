@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { FaPlay } from "react-icons/fa";
+import { FaPersonSwimming } from "react-icons/fa6";
 
 export default function StartDiveButton() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
@@ -102,7 +103,7 @@ export default function StartDiveButton() {
 
   return (
     <button title="Start Dive" disabled={disabled} onClick={onStart} className="flex items-center justify-center gap-2 px-1.5 h-[28px] hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-      <FaPlay className="h-3 w-3" fill="#0F65EE"/>
+      <FaPersonSwimming className="h-4.5 w-4.5" fill="#57E44C"/>
       <span className="text-[14px] font-semibold">Start Dive</span>
     </button>
   )

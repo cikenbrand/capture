@@ -68,15 +68,16 @@ export default function CursorToolButton() {
                 } catch { }
             }}
             data-draw-ui='true'
-            title="Move Tool"
+            title="Select & Move Drawing Tool"
             className={clsx(
-                "flex items-center justify-center h-[28px] aspect-square rounded-[2px] disabled:opacity-50 disabled:pointer-events-none",
+                "flex items-center justify-center h-[28px] px-2 gap-2 rounded-[2px] disabled:opacity-50 disabled:pointer-events-none",
                 isActive
                     ? "bg-[#202832] text-[#71BCFC]"
                     : "text-white hover:bg-[#4C525E] active:bg-[#202832] active:text-[#71BCFC]"
             )}
         >
             <FaMousePointer className="h-3.5 w-3.5" />
+            <span className='font-medium'>Select & Move Drawing</span>
         </button>
     )
 }

@@ -85,6 +85,7 @@
         let timeInterval = null;
         let currentTaskName = '';
         let currentDiveName = '';
+        let currentProject = { name: 'undefined', client: 'undefined', vessel: 'undefined', location: 'undefined', contractor: 'undefined' };
 
         function setStatus(text, cls) {
           statusEl.textContent = text;
@@ -147,6 +148,17 @@
                 if (typeof parsed.diveName === 'string') {
                   currentDiveName = parsed.diveName || '';
                   updateDiveTexts();
+                }
+                if (parsed.project && typeof parsed.project === 'object') {
+                  const p = parsed.project || {};
+                  currentProject = {
+                    name: (typeof p.name === 'string' && p.name.trim() !== '') ? p.name : 'undefined',
+                    client: (typeof p.client === 'string' && p.client.trim() !== '') ? p.client : 'undefined',
+                    vessel: (typeof p.vessel === 'string' && p.vessel.trim() !== '') ? p.vessel : 'undefined',
+                    location: (typeof p.location === 'string' && p.location.trim() !== '') ? p.location : 'undefined',
+                    contractor: (typeof p.contractor === 'string' && p.contractor.trim() !== '') ? p.contractor : 'undefined',
+                  };
+                  updateProjectTexts();
                 }
               }
             } catch {}
@@ -292,6 +304,11 @@
                 if (c.type === 'dive') {
                   return String(currentDiveName || c.customText || c.name || '');
                 }
+                if (c.type === 'project') {
+                  const key = (c.projectDetail || 'name');
+                  const value = (currentProject && currentProject[key]) || 'undefined';
+                  return String(value);
+                }
                 // TODO: dive/task/data could be wired to live data; for now show name
                 return c.name || '';
               }
@@ -316,6 +333,10 @@
               }
               if (c.type === 'dive') {
                 try { item.setAttribute('data-kind', 'dive'); } catch {}
+              }
+              if (c.type === 'project') {
+                try { item.setAttribute('data-kind', 'project'); } catch {}
+                try { item.setAttribute('data-project-detail', String(c.projectDetail || 'name')); } catch {}
               }
 
               box.appendChild(content);
@@ -360,6 +381,20 @@
               try {
                 const content = el.querySelector('.text-content');
                 if (content && typeof content.textContent !== 'undefined') content.textContent = String(currentDiveName || '');
+              } catch {}
+            });
+          } catch {}
+        }
+
+        function updateProjectTexts() {
+          try {
+            const items = stageEl.querySelectorAll('.overlay-item[data-kind="project"]');
+            items.forEach((el) => {
+              try {
+                const detail = (el.getAttribute('data-project-detail') || 'name');
+                const value = (currentProject && currentProject[detail]) || 'undefined';
+                const content = el.querySelector('.text-content');
+                if (content && typeof content.textContent !== 'undefined') content.textContent = String(value);
               } catch {}
             });
           } catch {}
