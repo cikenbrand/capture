@@ -13,18 +13,10 @@ type ChannelsPayload = {
   width?: number
   height?: number
   outputDir?: string
+  fileName?: string
 }
 
-function timestamp(): string {
-  const now = new Date()
-  const yyyy = now.getFullYear()
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const dd = String(now.getDate()).padStart(2, '0')
-  const hh = String(now.getHours()).padStart(2, '0')
-  const mi = String(now.getMinutes()).padStart(2, '0')
-  const ss = String(now.getSeconds()).padStart(2, '0')
-  return `${yyyy}${mm}${dd}_${hh}${mi}${ss}`
-}
+// Removed timestamp-based naming; file name is provided by renderer
 
 async function resolveSceneName(obs: any, hint: string | boolean | undefined, channelIndex: number): Promise<string | null> {
   if (typeof hint === 'string' && hint.trim()) return hint.trim()
@@ -75,6 +67,7 @@ export async function takeSnapshots(payload: ChannelsPayload): Promise<string[]>
   } catch {}
   const w = Math.max(1, Math.min(3840, Math.floor(Number(payload?.width ?? 0)) || 0)) || undefined
   const h = Math.max(1, Math.min(2160, Math.floor(Number(payload?.height ?? 0)) || 0)) || undefined
+  const providedName = (typeof payload?.fileName === 'string' ? payload.fileName.trim() : '')
 
   const results: string[] = []
   const tasks: Promise<void>[] = []
@@ -82,7 +75,8 @@ export async function takeSnapshots(payload: ChannelsPayload): Promise<string[]>
   const doOne = async (idx: 1 | 2 | 3 | 4, hint?: string | boolean) => {
     const sceneName = await resolveSceneName(obs, hint, idx)
     if (!sceneName) return
-    const filePath = path.join(outDir || process.cwd(), `snapshot_ch${idx}_${timestamp()}.png`)
+    const baseName = providedName || `snapshot_ch${idx}`
+    const filePath = path.join(outDir || process.cwd(), `${baseName}.png`)
     try {
       await obs.call('SaveSourceScreenshot', {
         sourceName: sceneName,

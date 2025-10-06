@@ -12,6 +12,7 @@ export default function TaskSelection() {
   const [loading, setLoading] = useState<boolean>(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [refreshTick, setRefreshTick] = useState(0)
+  const [isRecordingStarted, setIsRecordingStarted] = useState(false)
 
   // WebSocket connections per overlay channel (1..4) to send selected task
   const socketsRef = useRef<Record<number, WebSocket | null>>({})
@@ -130,6 +131,28 @@ export default function TaskSelection() {
     return () => window.removeEventListener('tasksChanged', onTasksChanged as any)
   }, [])
 
+  // Load and track recording state to disable selection while recording
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await window.ipcRenderer.invoke('recording:getState')
+        if (!cancelled && res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+      } catch {}
+    })()
+    const onChanged = async () => {
+      try {
+        const res = await window.ipcRenderer.invoke('recording:getState')
+        if (res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+      } catch {}
+    }
+    window.addEventListener('recordingStateChanged', onChanged as any)
+    return () => {
+      cancelled = true
+      window.removeEventListener('recordingStateChanged', onChanged as any)
+    }
+  }, [])
+
   const placeholder = useMemo(() => {
     if (!projectId) return 'Select a project first'
     if (loading) return 'Loading tasks…'
@@ -174,7 +197,7 @@ export default function TaskSelection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTaskId, tasks])
 
-  const disabled = !projectId || loading || !tasks.length
+  const disabled = isRecordingStarted || !projectId || loading || !tasks.length
 
   return (
     <Select value={selectedTaskId ?? undefined} onValueChange={onChange} disabled={disabled}>

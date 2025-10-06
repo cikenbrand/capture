@@ -344,7 +344,7 @@ function App() {
         <StopClipRecordingForm onClose={() => setIsStopClipDialogOpen(false)} />
       </DraggableDialog>
       <DraggableDialog open={isTakeSnapshotDialogOpen} onOpenChange={setIsTakeSnapshotDialogOpen} title="Take Snapshot">
-        <TakeSnapshotForm />
+        <TakeSnapshotForm onClose={() => setIsTakeSnapshotDialogOpen(false)} />
       </DraggableDialog>
     </div>
   )

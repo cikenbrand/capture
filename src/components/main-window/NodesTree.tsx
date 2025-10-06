@@ -121,6 +121,7 @@ export default function NodesTree() {
   const [expandedIds, setExpandedIds] = useState<string[]>(['root', 'nodes-root'])
   const [pendingExpandIds, setPendingExpandIds] = useState<string[] | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [isRecordingStarted, setIsRecordingStarted] = useState(false)
 
   // WebSocket connections per overlay channel (1..4) to send node selection path
   const socketsRef = useRef<Record<number, WebSocket | null>>({})
@@ -268,8 +269,30 @@ export default function NodesTree() {
     return () => { cancelled = true; window.removeEventListener('nodesChanged', refresh as any) }
   }, [projectId])
 
+  // Track recording state; disable interactions when recording is started
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await window.ipcRenderer.invoke('recording:getState')
+        if (!cancelled && res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+      } catch {}
+    })()
+    const onChanged = async () => {
+      try {
+        const res = await window.ipcRenderer.invoke('recording:getState')
+        if (res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+      } catch {}
+    }
+    window.addEventListener('recordingStateChanged', onChanged as any)
+    return () => {
+      cancelled = true
+      window.removeEventListener('recordingStateChanged', onChanged as any)
+    }
+  }, [])
+
   return (
-    <div className="flex h-full flex-col gap-2 *:first:grow">
+    <div className={`flex h-full flex-col gap-2 *:first:grow ${isRecordingStarted ? 'pointer-events-none opacity-30' : ''}`}>
       <div>
         <MemoTreeContent
           key={itemsVersion}
@@ -277,6 +300,7 @@ export default function NodesTree() {
           expanded={expandedIds}
           selectedId={selectedId}
           onItemClick={(id, isFolder, pathNames) => {
+            if (isRecordingStarted) return
             if (isFolder) {
               setPendingExpandIds((prev) => {
                 const next = new Set(prev || [])

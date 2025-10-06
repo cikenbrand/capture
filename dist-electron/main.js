@@ -2502,16 +2502,6 @@ ipcMain.handle("obs:resume-recording", async () => {
     return false;
   }
 });
-function timestamp() {
-  const now = /* @__PURE__ */ new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  const hh = String(now.getHours()).padStart(2, "0");
-  const mi = String(now.getMinutes()).padStart(2, "0");
-  const ss = String(now.getSeconds()).padStart(2, "0");
-  return `${yyyy}${mm}${dd}_${hh}${mi}${ss}`;
-}
 async function resolveSceneName(obs, hint, channelIndex) {
   if (typeof hint === "string" && hint.trim()) return hint.trim();
   if (!obs) return null;
@@ -2558,12 +2548,14 @@ async function takeSnapshots(payload) {
   }
   Math.max(1, Math.min(3840, Math.floor(Number((payload == null ? void 0 : payload.width) ?? 0)) || 0)) || void 0;
   Math.max(1, Math.min(2160, Math.floor(Number((payload == null ? void 0 : payload.height) ?? 0)) || 0)) || void 0;
+  const providedName = typeof (payload == null ? void 0 : payload.fileName) === "string" ? payload.fileName.trim() : "";
   const results = [];
   const tasks = [];
   const doOne = async (idx, hint) => {
     const sceneName = await resolveSceneName(obs, hint, idx);
     if (!sceneName) return;
-    const filePath = path.join(outDir || process.cwd(), `snapshot_ch${idx}_${timestamp()}.png`);
+    const baseName = providedName || `snapshot_ch${idx}`;
+    const filePath = path.join(outDir || process.cwd(), `${baseName}.png`);
     try {
       await obs.call("SaveSourceScreenshot", {
         sourceName: sceneName,
