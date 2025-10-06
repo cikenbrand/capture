@@ -62,6 +62,10 @@ function App() {
     selectedProjectId && selectedTaskId && selectedDiveId && selectedNodeId
   )
 
+  const isStartSessionDisabled = (!isDiving) || !(
+    selectedTaskId && selectedDiveId && selectedNodeId
+  )
+
   useEffect(() => {
     let done = false
       ; (async () => {
@@ -145,8 +149,8 @@ function App() {
         return
       }
       try {
-        const res = await window.ipcRenderer.invoke('db:getSelectedDiveDetails', selectedDiveId)
-        if (!cancelled) setIsDiving(!!(res?.ok && res.data && res.data.started))
+        const res = await window.ipcRenderer.invoke('dive:isStarted', selectedDiveId)
+        if (!cancelled) setIsDiving(!!(res?.ok && res.data === true))
       } catch {
         if (!cancelled) setIsDiving(false)
       }
@@ -170,10 +174,10 @@ function App() {
             </TabsList>
             <TabsContent value="dive" className="flex flex-col gap-1">
               <div className="flex gap-1">
-                <button title="New Dive" disabled={!selectedProjectId || isDiving} onClick={() => setIsCreateDiveDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                <button title="New Dive" disabled={!selectedProjectId || isDiving} onClick={() => setIsCreateDiveDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <BiPlus className="h-6 w-6" />
                 </button>
-                <button title="Edit Dive" disabled={!selectedProjectId || !selectedDiveId || isDiving} onClick={() => setIsEditDiveDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                <button title="Edit Dive" disabled={!selectedProjectId || !selectedDiveId || isDiving} onClick={() => setIsEditDiveDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <MdEdit className="h-4.5 w-4.5" />
                 </button>
                 <StartDiveButton />
@@ -189,10 +193,10 @@ function App() {
             </TabsList>
             <TabsContent value="task" className="flex flex-col gap-1">
               <div className="flex gap-1">
-                <button title="New Task" disabled={!selectedProjectId} onClick={() => setIsCreateTaskDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                <button title="New Task" disabled={!selectedProjectId} onClick={() => setIsCreateTaskDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <BiPlus className="h-6 w-6" />
                 </button>
-                <button title="Edit Task" disabled={!selectedProjectId || !selectedTaskId} onClick={() => setIsEditTaskDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                <button title="Edit Task" disabled={!selectedProjectId || !selectedTaskId} onClick={() => setIsEditTaskDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <MdEdit className="h-4.5 w-4.5" />
                 </button>
               </div>
@@ -206,13 +210,13 @@ function App() {
             </TabsList>
             <TabsContent value="workpack" className="flex flex-col gap-1">
               <div className="flex gap-1">
-                <button title="New Node" disabled={!selectedProjectId} onMouseDown={(e) => e.preventDefault()} onClick={() => setIsCreateNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                <button title="New Node" disabled={!selectedProjectId} onMouseDown={(e) => e.preventDefault()} onClick={() => setIsCreateNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <BiPlus className="h-6 w-6" />
                 </button>
-                <button title="Edit Node" disabled={!selectedProjectId || !selectedNodeId} onClick={() => setIsEditNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                <button title="Edit Node" disabled={!selectedProjectId || !selectedNodeId} onClick={() => setIsEditNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <MdEdit className="h-4.5 w-4.5" />
                 </button>
-                <button title="Delete Node" disabled={!selectedProjectId || !selectedNodeId} onClick={() => setIsDeleteNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                <button title="Delete Node" disabled={!selectedProjectId || !selectedNodeId} onClick={() => setIsDeleteNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <MdDelete className="h-4.5 w-4.5" />
                 </button>
               </div>
@@ -231,29 +235,29 @@ function App() {
               </TabsList>
               <TabsContent value="preview" className="flex flex-col gap-1 p-0">
                 <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
-                  <button title="Start Session" disabled={isSessionActionDisabled || recordingState.isRecordingStarted} onClick={() => setIsStartSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                    <FaCircle className="h-3.5 w-3.5" />
+                  <button title="Start Session" disabled={isStartSessionDisabled || recordingState.isRecordingStarted} onClick={() => setIsStartSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                    <FaCircle className="h-3.5 w-3.5" fill="#E06061"/>
                   </button>
-                  <button title="Stop Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isRecordingStopped} onClick={() => setIsStopSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                    <FaStop className="h-3.5 w-3.5" />
+                  <button title="Stop Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isRecordingStopped} onClick={() => setIsStopSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                    <FaStop className="h-3.5 w-3.5" fill="#DE4D3A"/>
                   </button>
-                  <button title="Pause Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isRecordingPaused || recordingState.isRecordingStopped} onClick={() => setIsPauseSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                    <FaPause className="h-3.5 w-3.5" />
+                  <button title="Pause Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isRecordingPaused || recordingState.isRecordingStopped} onClick={() => setIsPauseSessionDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                    <FaPause className="h-3.5 w-3.5" fill="#E0CC5F"/>
                   </button>
-                  <button title="Resume Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || !recordingState.isRecordingPaused || recordingState.isRecordingStopped} onClick={() => { try { window.ipcRenderer.invoke('obs:resume-recording'); window.ipcRenderer.invoke('recording:updateState', { isRecordingPaused: false }); setRecordingState(prev => ({ ...prev, isRecordingPaused: false })); window.dispatchEvent(new Event('recordingStateChanged')) } catch { } }} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
-                    <FaPlay className="h-3.5 w-3.5" />
+                  <button title="Resume Session" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || !recordingState.isRecordingPaused || recordingState.isRecordingStopped} onClick={() => { try { window.ipcRenderer.invoke('obs:resume-recording'); window.ipcRenderer.invoke('recording:updateState', { isRecordingPaused: false }); setRecordingState(prev => ({ ...prev, isRecordingPaused: false })); window.dispatchEvent(new Event('recordingStateChanged')) } catch { } }} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                    <FaPlay className="h-3.5 w-3.5" fill="#93E05F"/>
                   </button>
                   <SessionTimer />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Start Clip" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isClipRecordingStarted} onClick={() => setIsStartClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Start Clip" disabled={isSessionActionDisabled || !recordingState.isRecordingStarted || recordingState.isClipRecordingStarted} onClick={() => setIsStartClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                     <MdCameraRoll className="h-3.5 w-3.5" />
                   </button>
-                  <button title="Stop Clip" disabled={isSessionActionDisabled || !recordingState.isClipRecordingStarted} onClick={() => setIsStopClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Stop Clip" disabled={isSessionActionDisabled || !recordingState.isClipRecordingStarted} onClick={() => setIsStopClipDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                     <FaStop className="h-3.5 w-3.5" />
                   </button>
                   <ClipTimer />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Take Snapshot" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Take Snapshot" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                     <BsCameraFill className="h-4 w-4" />
                   </button>
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
@@ -262,7 +266,7 @@ function App() {
                   <ArrowDrawingTool />
                   <CircleDrawingTool />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button title="Mute Microphone" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                  <button title="Mute Microphone" disabled={isSessionActionDisabled} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                     <FaMicrophone className="h-4 w-4" />
                   </button>
                   <AudioMeter valueDb={-100} />

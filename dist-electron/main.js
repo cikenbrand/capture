@@ -325,9 +325,9 @@ async function stopBrowserSourceService() {
   } catch {
   }
 }
-let cachedClient$p = null;
-async function getClient$p() {
-  if (cachedClient$p) return cachedClient$p;
+let cachedClient$q = null;
+async function getClient$q() {
+  if (cachedClient$q) return cachedClient$q;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -336,11 +336,11 @@ async function getClient$p() {
     }
   });
   await client.connect();
-  cachedClient$p = client;
+  cachedClient$q = client;
   return client;
 }
 async function createProject(input) {
-  const client = await getClient$p();
+  const client = await getClient$q();
   const db = client.db("capture");
   const projects = db.collection("projects");
   const now = /* @__PURE__ */ new Date();
@@ -379,9 +379,9 @@ ipcMain.handle("db:createProject", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$o = null;
-async function getClient$o() {
-  if (cachedClient$o) return cachedClient$o;
+let cachedClient$p = null;
+async function getClient$p() {
+  if (cachedClient$p) return cachedClient$p;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -390,11 +390,11 @@ async function getClient$o() {
     }
   });
   await client.connect();
-  cachedClient$o = client;
+  cachedClient$p = client;
   return client;
 }
 async function createOverlay(input) {
-  const client = await getClient$o();
+  const client = await getClient$p();
   const db = client.db("capture");
   const overlays = db.collection("overlays");
   const now = /* @__PURE__ */ new Date();
@@ -432,9 +432,9 @@ ipcMain.handle("db:createOverlay", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$n = null;
-async function getClient$n() {
-  if (cachedClient$n) return cachedClient$n;
+let cachedClient$o = null;
+async function getClient$o() {
+  if (cachedClient$o) return cachedClient$o;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -443,11 +443,11 @@ async function getClient$n() {
     }
   });
   await client.connect();
-  cachedClient$n = client;
+  cachedClient$o = client;
   return client;
 }
 async function getAllOverlay() {
-  const client = await getClient$n();
+  const client = await getClient$o();
   const db = client.db("capture");
   const overlays = db.collection("overlays");
   return overlays.find({}).sort({ createdAt: -1 }).toArray();
@@ -467,9 +467,9 @@ ipcMain.handle("db:getAllOverlay", async () => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$m = null;
-async function getClient$m() {
-  if (cachedClient$m) return cachedClient$m;
+let cachedClient$n = null;
+async function getClient$n() {
+  if (cachedClient$n) return cachedClient$n;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -478,11 +478,11 @@ async function getClient$m() {
     }
   });
   await client.connect();
-  cachedClient$m = client;
+  cachedClient$n = client;
   return client;
 }
 async function createTask(input) {
-  const client = await getClient$m();
+  const client = await getClient$n();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const now = /* @__PURE__ */ new Date();
@@ -519,9 +519,9 @@ ipcMain.handle("db:createTask", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$l = null;
-async function getClient$l() {
-  if (cachedClient$l) return cachedClient$l;
+let cachedClient$m = null;
+async function getClient$m() {
+  if (cachedClient$m) return cachedClient$m;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -530,11 +530,11 @@ async function getClient$l() {
     }
   });
   await client.connect();
-  cachedClient$l = client;
+  cachedClient$m = client;
   return client;
 }
 async function getAllTasks(projectId) {
-  const client = await getClient$l();
+  const client = await getClient$m();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   return tasks.find({ projectId: new ObjectId(projectId) }).sort({ createdAt: -1 }).toArray();
@@ -562,9 +562,9 @@ ipcMain.handle("db:getAllTasks", async (_event, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$k = null;
-async function getClient$k() {
-  if (cachedClient$k) return cachedClient$k;
+let cachedClient$l = null;
+async function getClient$l() {
+  if (cachedClient$l) return cachedClient$l;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -573,11 +573,11 @@ async function getClient$k() {
     }
   });
   await client.connect();
-  cachedClient$k = client;
+  cachedClient$l = client;
   return client;
 }
 async function getSelectedTaskDetails(taskId) {
-  const client = await getClient$k();
+  const client = await getClient$l();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const _id = new ObjectId(taskId);
@@ -605,9 +605,9 @@ ipcMain.handle("db:getSelectedTaskDetails", async (_event, taskId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$j = null;
-async function getClient$j() {
-  if (cachedClient$j) return cachedClient$j;
+let cachedClient$k = null;
+async function getClient$k() {
+  if (cachedClient$k) return cachedClient$k;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -616,11 +616,11 @@ async function getClient$j() {
     }
   });
   await client.connect();
-  cachedClient$j = client;
+  cachedClient$k = client;
   return client;
 }
 async function editTask(taskId, updates) {
-  const client = await getClient$j();
+  const client = await getClient$k();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const _id = new ObjectId(taskId);
@@ -647,9 +647,9 @@ ipcMain.handle("db:editTask", async (_event, taskId, updates) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$i = null;
-async function getClient$i() {
-  if (cachedClient$i) return cachedClient$i;
+let cachedClient$j = null;
+async function getClient$j() {
+  if (cachedClient$j) return cachedClient$j;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -658,11 +658,11 @@ async function getClient$i() {
     }
   });
   await client.connect();
-  cachedClient$i = client;
+  cachedClient$j = client;
   return client;
 }
 async function createDive(input) {
-  const client = await getClient$i();
+  const client = await getClient$j();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const now = /* @__PURE__ */ new Date();
@@ -693,6 +693,91 @@ ipcMain.handle("db:createDive", async (_event, input) => {
   var _a, _b;
   try {
     const created = await createDive(input);
+    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
+    return { ok: true, data: id };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$i = null;
+async function getClient$i() {
+  if (cachedClient$i) return cachedClient$i;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$i = client;
+  return client;
+}
+async function createSession(input) {
+  const client = await getClient$i();
+  const db = client.db("capture");
+  const sessions = db.collection("sessions");
+  const now = /* @__PURE__ */ new Date();
+  const hasAnyVideo = [input.preview, input.ch1, input.ch2, input.ch3, input.ch4].some((v) => typeof v === "string" && v.trim().length > 0);
+  if (!hasAnyVideo) {
+    throw new Error("At least one of preview/ch1/ch2/ch3/ch4 must be provided");
+  }
+  const nodeObjectId = typeof input.nodeId === "string" && input.nodeId.trim() ? new ObjectId(input.nodeId.trim()) : null;
+  const diveObjectId = new ObjectId(input.diveId);
+  const taskObjectId = new ObjectId(input.taskId);
+  const [diveDoc, taskDoc] = await Promise.all([
+    db.collection("dives").findOne({ _id: diveObjectId }, { projection: { name: 1 } }),
+    db.collection("tasks").findOne({ _id: taskObjectId }, { projection: { name: 1 } })
+  ]);
+  let nodesWithNames = [];
+  if (nodeObjectId) {
+    const nodesCol = db.collection("nodes");
+    const chain = [];
+    let currentId = nodeObjectId;
+    while (currentId) {
+      const nd = await nodesCol.findOne({ _id: currentId }, { projection: { name: 1, parentId: 1 } });
+      if (!nd) break;
+      chain.push({ id: currentId, name: String(nd.name || "") });
+      const parentId = nd.parentId;
+      if (!parentId) break;
+      currentId = parentId;
+    }
+    nodesWithNames = chain.reverse();
+  }
+  let nodesHierarchy = void 0;
+  if (nodesWithNames.length > 0) {
+    for (let i = nodesWithNames.length - 1; i >= 0; i--) {
+      const entry = nodesWithNames[i];
+      if (!nodesHierarchy) {
+        nodesHierarchy = { id: entry.id, name: entry.name };
+      } else {
+        nodesHierarchy = { id: nodesWithNames[i].id, name: nodesWithNames[i].name, children: nodesHierarchy };
+      }
+    }
+  }
+  const doc = {
+    projectId: new ObjectId(input.projectId),
+    diveId: diveObjectId,
+    taskId: taskObjectId,
+    dive: { id: diveObjectId, name: String((diveDoc == null ? void 0 : diveDoc.name) || "") },
+    task: { id: taskObjectId, name: String((taskDoc == null ? void 0 : taskDoc.name) || "") },
+    ...nodesHierarchy ? { nodesHierarchy } : {},
+    ...input.preview && input.preview.trim() ? { preview: input.preview.trim() } : {},
+    ...input.ch1 && input.ch1.trim() ? { ch1: input.ch1.trim() } : {},
+    ...input.ch2 && input.ch2.trim() ? { ch2: input.ch2.trim() } : {},
+    ...input.ch3 && input.ch3.trim() ? { ch3: input.ch3.trim() } : {},
+    ...input.ch4 && input.ch4.trim() ? { ch4: input.ch4.trim() } : {},
+    createdAt: now,
+    updatedAt: now
+  };
+  const result = await sessions.insertOne(doc);
+  return { _id: result.insertedId, ...doc };
+}
+ipcMain.handle("db:createSession", async (_event, input) => {
+  var _a, _b;
+  try {
+    const created = await createSession(input);
     const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
     return { ok: true, data: id };
   } catch (err) {
@@ -1078,6 +1163,47 @@ ipcMain.handle("app:setSelectedDiveId", async (_event, id) => {
 ipcMain.handle("app:getSelectedDiveId", async () => {
   try {
     return { ok: true, data: getSelectedDiveId() };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let startedDiveId = null;
+function getStartedDiveId() {
+  return startedDiveId;
+}
+function setDiveStarted(diveId, started) {
+  if (started) {
+    startedDiveId = diveId ? diveId.trim() || null : null;
+  } else {
+    if (startedDiveId && diveId && startedDiveId === diveId.trim()) {
+      startedDiveId = null;
+    } else if (!diveId) {
+      startedDiveId = null;
+    }
+  }
+}
+ipcMain.handle("dive:getStartedDiveId", async () => {
+  try {
+    return { ok: true, data: getStartedDiveId() };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("dive:isStarted", async (_event, diveId) => {
+  try {
+    const id = typeof diveId === "string" ? diveId.trim() || null : null;
+    return { ok: true, data: !!(id && startedDiveId === id) };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("dive:setStarted", async (_event, diveId, started) => {
+  try {
+    setDiveStarted(typeof diveId === "string" ? diveId : null, !!started);
+    return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };

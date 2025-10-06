@@ -15,7 +15,6 @@ export interface SessionWithSnapshotsDoc {
   projectId: ObjectId
   diveId: ObjectId
   taskId: ObjectId
-  nodeIds: ObjectId[]
   preview?: string
   ch1?: string
   ch2?: string

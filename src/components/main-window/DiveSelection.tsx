@@ -140,8 +140,8 @@ export default function DiveSelection() {
         return
       }
       try {
-        const res = await window.ipcRenderer.invoke('db:getSelectedDiveDetails', selectedDiveId)
-        if (!cancelled) setIsStarted(!!(res?.ok && res.data && res.data.started))
+        const res = await window.ipcRenderer.invoke('dive:isStarted', selectedDiveId)
+        if (!cancelled) setIsStarted(!!(res?.ok && res.data === true))
       } catch {
         if (!cancelled) setIsStarted(false)
       }

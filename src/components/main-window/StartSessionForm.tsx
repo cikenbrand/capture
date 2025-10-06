@@ -67,6 +67,35 @@ export default memo(function StartSessionForm({ onClose }: Props) {
 
     async function handleStart() {
         try {
+      // Gather current selection ids
+      const [projectRes, diveRes, taskRes, nodeRes] = await Promise.all([
+        window.ipcRenderer.invoke('app:getSelectedProjectId'),
+        window.ipcRenderer.invoke('app:getSelectedDiveId'),
+        window.ipcRenderer.invoke('app:getSelectedTaskId'),
+        window.ipcRenderer.invoke('app:getSelectedNodeId'),
+      ])
+      const projectId = projectRes?.ok ? (projectRes.data ?? null) : null
+      const diveId = diveRes?.ok ? (diveRes.data ?? null) : null
+      const taskId = taskRes?.ok ? (taskRes.data ?? null) : null
+      const nodeId = nodeRes?.ok ? (nodeRes.data ?? null) : null
+
+      if (!projectId || !diveId || !taskId || !nodeId) {
+        throw new Error('Missing selection to create session')
+      }
+
+      // Create session record first
+      await window.ipcRenderer.invoke('db:createSession', {
+        projectId,
+        diveId,
+        taskId,
+        nodeId,
+        ...(previewEnabled ? { preview: `${previewPath}\${previewFileName}` } : {}),
+        ...(channel1Enabled ? { ch1: `${channel1Path}\${channel1FileName}` } : {}),
+        ...(channel2Enabled ? { ch2: `${channel2Path}\${channel2FileName}` } : {}),
+        ...(channel3Enabled ? { ch3: `${channel3Path}\${channel3FileName}` } : {}),
+        ...(channel4Enabled ? { ch4: `${channel4Path}\${channel4FileName}` } : {}),
+      })
+
             await window.ipcRenderer.invoke('obs:start-recording', {
                 preview: previewEnabled,
                 ch1: channel1Enabled,

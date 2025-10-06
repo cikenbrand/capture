@@ -35,8 +35,8 @@ export default function StopDiveButton() {
         return
       }
       try {
-        const res = await window.ipcRenderer.invoke('db:getSelectedDiveDetails', selectedDiveId)
-        if (!cancelled) setIsStarted(!!(res?.ok && res.data && res.data.started))
+        const res = await window.ipcRenderer.invoke('dive:isStarted', selectedDiveId)
+        if (!cancelled) setIsStarted(!!(res?.ok && res.data === true))
       } catch {
         if (!cancelled) setIsStarted(false)
       }
@@ -53,7 +53,7 @@ export default function StopDiveButton() {
   async function onStop() {
     if (!selectedDiveId) return
     try {
-      const res = await window.ipcRenderer.invoke('db:editDive', selectedDiveId, { started: false })
+      const res = await window.ipcRenderer.invoke('dive:setStarted', selectedDiveId, false)
       if (res?.ok) {
         try {
           const ev = new CustomEvent('divesChanged')
