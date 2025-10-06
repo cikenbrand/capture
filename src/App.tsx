@@ -212,13 +212,13 @@ function App() {
             </TabsList>
             <TabsContent value="workpack" className="flex flex-col gap-1">
               <div className="flex gap-1">
-                <button title="New Node" disabled={!selectedProjectId} onMouseDown={(e) => e.preventDefault()} onClick={() => setIsCreateNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                <button title="New Node" disabled={!selectedProjectId || recordingState.isRecordingStarted} onMouseDown={(e) => e.preventDefault()} onClick={() => setIsCreateNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <BiPlus className="h-6 w-6" />
                 </button>
-                <button title="Edit Node" disabled={!selectedProjectId || !selectedNodeId} onClick={() => setIsEditNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                <button title="Edit Node" disabled={!selectedProjectId || !selectedNodeId || recordingState.isRecordingStarted} onClick={() => setIsEditNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <MdEdit className="h-4.5 w-4.5" />
                 </button>
-                <button title="Delete Node" disabled={!selectedProjectId || !selectedNodeId} onClick={() => setIsDeleteNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                <button title="Delete Node" disabled={!selectedProjectId || !selectedNodeId || recordingState.isRecordingStarted} onClick={() => setIsDeleteNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <MdDelete className="h-4.5 w-4.5" />
                 </button>
               </div>

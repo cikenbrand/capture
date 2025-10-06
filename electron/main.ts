@@ -12,6 +12,7 @@ import './obs/websocket_functions/setSelectedScene'
 import { startBrowserSourceService, stopBrowserSourceService } from './services/browserSourceService'
 import { OVERLAY_WS_PORT } from './settings'
 import { SPLASHSCREEN_DURATION_MS } from './settings'
+import { autoUpdater } from 'electron-updater'
 import './db/createProject'
 import './db/createOverlay'
 import './db/getAllOverlay'
@@ -166,6 +167,34 @@ async function createWindow() {
   if (splashWin && !splashWin.isDestroyed()) splashWin.close()
   splashWin = null
   win?.show()
+
+  // 5) Check for updates (GitHub) when online
+  try {
+    const online = await new Promise<boolean>((resolve) => {
+      try {
+        const req = require('node:https').request({ method: 'HEAD', host: 'api.github.com', path: '/', headers: { 'User-Agent': 'deepstrim-capture' }, timeout: 3000 }, (res: any) => { try { res.destroy() } catch {}; resolve(true) })
+        req.on('error', () => resolve(false))
+        req.on('timeout', () => { try { req.destroy() } catch {}; resolve(false) })
+        req.end()
+      } catch { resolve(false) }
+    })
+    if (online) {
+      autoUpdater.autoDownload = false
+      autoUpdater.on('update-available', async () => {
+        try {
+          const choice = await win?.webContents.executeJavaScript('new Promise(r=>{const ok=confirm("An update is available. Download and install now?"); r(ok)})')
+          if (choice) autoUpdater.downloadUpdate()
+        } catch {}
+      })
+      autoUpdater.on('update-downloaded', async () => {
+        try {
+          const choice = await win?.webContents.executeJavaScript('new Promise(r=>{const ok=confirm("Update downloaded. Install and restart now?"); r(ok)})')
+          if (choice) autoUpdater.quitAndInstall()
+        } catch {}
+      })
+      try { await autoUpdater.checkForUpdates() } catch {}
+    }
+  } catch {}
 
   // Optional: crash/unresponsive guards
   win.webContents.on('render-process-gone', (_e, details) => {
