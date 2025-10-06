@@ -11,6 +11,7 @@ export type OverlayComponentType =
   | 'data'
   | 'node'
   | 'task'
+  | 'project'
 
 export type TextStyle = {
   fontFamily?: string
@@ -46,6 +47,8 @@ export interface NewOverlayComponent {
   dataType?: string // for data
   nodeLevel?: number // for node
   imagePath?: string // for image
+  // Project component specific
+  projectDetail?: 'name' | 'client' | 'vessel' | 'location' | 'contractor'
 }
 
 export interface OverlayComponentDoc extends Omit<NewOverlayComponent, 'overlayId'> {
@@ -100,6 +103,11 @@ export async function createOverlayComponent(input: NewOverlayComponent): Promis
   switch (input.type) {
     case 'custom-text':
       customFields.customText = input.customText ?? 'Text'
+      break
+    case 'project':
+      // Placeholder shown on canvas; renderer uses customText or name
+      customFields.customText = input.customText ?? '[project-details]'
+      customFields.projectDetail = input.projectDetail ?? 'name'
       break
     case 'date':
       customFields.dateFormat = input.dateFormat ?? 'YYYY-MM-DD' // alternative could be 'DD/MM/YYYY'

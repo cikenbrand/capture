@@ -15518,6 +15518,10 @@ async function createOverlayComponent(input) {
     case "custom-text":
       customFields.customText = input.customText ?? "Text";
       break;
+    case "project":
+      customFields.customText = input.customText ?? "[project-details]";
+      customFields.projectDetail = input.projectDetail ?? "name";
+      break;
     case "date":
       customFields.dateFormat = input.dateFormat ?? "YYYY-MM-DD";
       break;
@@ -15636,6 +15640,7 @@ function buildSetObject(updates) {
   if (typeof updates.radius === "number") $set.radius = updates.radius;
   if (typeof updates.textStyle === "object" && updates.textStyle) $set.textStyle = updates.textStyle;
   if (typeof updates.customText === "string") $set.customText = updates.customText;
+  if (typeof updates.projectDetail === "string") $set.projectDetail = updates.projectDetail;
   if (typeof updates.dateFormat === "string") $set.dateFormat = updates.dateFormat;
   if (typeof updates.twentyFourHour === "boolean") $set.twentyFourHour = updates.twentyFourHour;
   if (typeof updates.useUTC === "boolean") $set.useUTC = updates.useUTC;
@@ -15732,6 +15737,7 @@ async function getOverlayComponentsForRender(overlayId) {
     radius: 1,
     textStyle: 1,
     customText: 1,
+    projectDetail: 1,
     dateFormat: 1,
     twentyFourHour: 1,
     useUTC: 1,
@@ -15762,6 +15768,7 @@ ipcMain.handle("db:getOverlayComponentsForRender", async (_event, input) => {
       radius: i.radius,
       textStyle: i.textStyle,
       customText: i.customText,
+      projectDetail: i.projectDetail,
       dateFormat: i.dateFormat,
       twentyFourHour: i.twentyFourHour,
       useUTC: i.useUTC,

@@ -38,6 +38,7 @@ type EditableFields = Partial<{
   dataType: string
   nodeLevel: number
   imagePath: string
+  projectDetail: 'name' | 'client' | 'vessel' | 'location' | 'contractor'
 }>
 
 function buildSetObject(updates: EditableFields): Record<string, any> {
@@ -56,6 +57,7 @@ function buildSetObject(updates: EditableFields): Record<string, any> {
   if (typeof updates.radius === 'number') $set.radius = updates.radius
   if (typeof updates.textStyle === 'object' && updates.textStyle) $set.textStyle = updates.textStyle
   if (typeof updates.customText === 'string') $set.customText = updates.customText
+  if (typeof (updates as any).projectDetail === 'string') $set.projectDetail = (updates as any).projectDetail
   if (typeof updates.dateFormat === 'string') $set.dateFormat = updates.dateFormat
   if (typeof updates.twentyFourHour === 'boolean') $set.twentyFourHour = updates.twentyFourHour
   if (typeof updates.useUTC === 'boolean') $set.useUTC = updates.useUTC

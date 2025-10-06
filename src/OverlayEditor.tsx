@@ -23,6 +23,7 @@ import CreateDiveButton from "./components/overlay-editor/CreateDiveButton";
 import CreateNodeButton from "./components/overlay-editor/CreateNodeButton";
 import CreateTaskButton from "./components/overlay-editor/CreateTaskButton";
 import DeleteOverlayConfirmation from "./components/overlay-editor/DeleteOverlayConfirmation";
+import CreateProjectDetailsButton from "./components/overlay-editor/CreateProjectDetailsButton";
 
 export default function OverlayEditor() {
     const [newOverlayOpen, setNewOverlayOpen] = useState(false)
@@ -149,6 +150,7 @@ export default function OverlayEditor() {
                                 <CreateDiveButton />
                                 <CreateNodeButton />
                                 <CreateTaskButton />
+                                <CreateProjectDetailsButton/>
                             </div>
                             <div className="flex-1 bg-black">
                                 <OverlayEditorCanvas
@@ -216,7 +218,7 @@ export default function OverlayEditor() {
                                                     ) : (
                                                         <div className="text-white/60 text-xs">No image</div>
                                                     )
-                                                ) : c.type === 'custom-text' || c.type === 'time' || c.type === 'date' || c.type === 'data' || c.type === 'dive' || c.type === 'node' || c.type === 'task' ? (
+                                                ) : c.type === 'custom-text' || c.type === 'time' || c.type === 'date' || c.type === 'data' || c.type === 'dive' || c.type === 'node' || c.type === 'task' || c.type === 'project' ? (
                                                     <TextOverlayContent component={c} />
                                                 ) : (
                                                     <div className="text-white/80 text-xs">{c.name}</div>
@@ -359,6 +361,55 @@ function TextOverlayContent({ component }: { component: any }) {
     if (component.type === 'task') {
         return <span style={style}>{component.customText || component.name}</span>
     }
+    if (component.type === 'project') {
+        return <ProjectOverlayContent detail={component.projectDetail} style={style} />
+    }
     return <span style={style}>{component.customText || component.name}</span>
+}
+
+function ProjectOverlayContent({ detail, style }: { detail?: string; style: CSSProperties }) {
+    const [text, setText] = useState('')
+
+    useEffect(() => {
+        let cancelled = false
+        async function load() {
+            try {
+                const sel = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+                const projectId: string | null = sel?.ok ? (sel.data ?? null) : null
+                if (!projectId) { if (!cancelled) setText('undefined'); return }
+                const res = await window.ipcRenderer.invoke('db:getSelectedProjectDetails', projectId)
+                const p = res?.ok ? (res.data ?? null) : null
+                if (!cancelled) {
+                    const key = (detail as any) || 'name'
+                    let value: string
+                    if (!p || typeof p !== 'object') {
+                        value = 'undefined'
+                    } else {
+                        const raw = (p as any)[key]
+                        if (raw === null || typeof raw === 'undefined') {
+                            value = 'undefined'
+                        } else if (typeof raw === 'string') {
+                            value = raw.trim() === '' ? 'undefined' : raw
+                        } else {
+                            const coerced = String(raw)
+                            value = coerced.trim() === '' ? 'undefined' : coerced
+                        }
+                    }
+                    setText(value)
+                }
+            } catch {
+                if (!cancelled) setText('undefined')
+            }
+        }
+        load()
+        const onSel = () => { void load() }
+        window.addEventListener('selectedProjectChanged', onSel as any)
+        return () => {
+            cancelled = true
+            window.removeEventListener('selectedProjectChanged', onSel as any)
+        }
+    }, [detail])
+
+    return <span style={style}>{text}</span>
 }
 

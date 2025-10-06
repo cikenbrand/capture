@@ -32,6 +32,7 @@ type OverlayComponentForEdit = {
     backgroundColor?: string
     textStyle?: TextStyleShape
     nodeLevel?: number
+    projectDetail?: 'name' | 'client' | 'vessel' | 'location' | 'contractor'
 }
 
 const FONT_WEIGHT_OPTIONS = [
@@ -138,6 +139,7 @@ export default function EditComponentForm({ onClose }: Props) {
     const [twentyFourHour, setTwentyFourHour] = useState(true)
     const [useUTC, setUseUTC] = useState(false)
     const [nodeLevel, setNodeLevel] = useState(1)
+    const [projectDetail, setProjectDetail] = useState<'name' | 'client' | 'vessel' | 'location' | 'contractor'>('name')
     const [imageUploading, setImageUploading] = useState(false)
     const [imagesLoading, setImagesLoading] = useState(false)
     const [overlayImages, setOverlayImages] = useState<Array<{ fileUrl: string; filename: string }>>([])
@@ -222,6 +224,7 @@ export default function EditComponentForm({ onClose }: Props) {
                     setTwentyFourHour(match?.twentyFourHour ?? true)
                     setUseUTC(match?.useUTC ?? false)
                     setNodeLevel(typeof (match as any)?.nodeLevel === 'number' ? (match as any).nodeLevel : 1)
+                    setProjectDetail((match as any)?.projectDetail ?? 'name')
                 }
             } catch {
                 if (active && requestId === latestRequestId) resetState()
@@ -448,6 +451,28 @@ export default function EditComponentForm({ onClose }: Props) {
         if (!canEdit || (componentType !== 'custom-text' && componentType !== 'task')) return
         void updateComponentCustomText(nextValue, selectedIds)
     }
+
+    const applyProjectDetailChange = useCallback(async (value: 'name' | 'client' | 'vessel' | 'location' | 'contractor') => {
+        if (!canEdit || componentType !== 'project') return
+        try {
+            const res = await window.ipcRenderer.invoke('db:editOverlayComponent', {
+                ids: selectedIds,
+                updates: { projectDetail: value }
+            })
+            if (res?.ok) {
+                setOverlayComponents((prev) => prev.map((component) => (
+                    selectedIds.includes(component._id)
+                        ? { ...component, projectDetail: value }
+                        : component
+                )))
+                broadcastUpdate(selectedIds)
+                try {
+                    const ev = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev)
+                } catch {}
+            }
+        } catch {}
+    }, [broadcastUpdate, canEdit, componentType, selectedIds])
 
     const handleNameChange = (event: ChangeEvent<HTMLInputElement>) => {
         const nextName = event.target.value
@@ -732,6 +757,30 @@ export default function EditComponentForm({ onClose }: Props) {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                ) : null}
+
+                {componentType === 'project' ? (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-1">
+                            <span>Project Details</span>
+                            <Select
+                                value={projectDetail}
+                                onValueChange={(v) => { const val = (v as any) as 'name' | 'client' | 'vessel' | 'location' | 'contractor'; setProjectDetail(val); void applyProjectDetailChange(val) }}
+                                disabled={!canEdit}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select detail" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="name">Project Name</SelectItem>
+                                    <SelectItem value="client">Client</SelectItem>
+                                    <SelectItem value="vessel">Vessel</SelectItem>
+                                    <SelectItem value="location">Location</SelectItem>
+                                    <SelectItem value="contractor">Contractor</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                 ) : null}

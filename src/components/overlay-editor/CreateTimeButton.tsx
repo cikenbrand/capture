@@ -50,11 +50,12 @@ export default function CreateTimeButton() {
     return (
         <button
             title="Time"
-            className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
+            className="flex items-center justify-center gap-1 px-2 h-[28px] hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
             onClick={onCreate}
             disabled={disabled}
         >
             <IoIosTime className="h-4.5 w-4.5" />
+            <span className="font-medium">Time</span>
         </button>
     )
 }
