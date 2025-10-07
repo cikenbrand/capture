@@ -4,9 +4,9 @@ import type { CSSProperties } from "react";
 import { DraggableDialog } from "@/components/ui/draggable-dialog";
 import OverlayWindowBar from "./components/overlay-editor/OverlayWindowBar";
 import CreateOverlayForm from "./components/overlay-editor/CreateOverlayForm";
-import OverlayEditorCanvas from "./components/ui/OverlayEditorCanvas";
+import OverlayEditorCanvas, { STAGE_WIDTH, STAGE_HEIGHT } from "./components/ui/OverlayEditorCanvas";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { MdDelete, MdEdit } from "react-icons/md";
+import { MdAlignHorizontalCenter, MdAlignHorizontalLeft, MdAlignHorizontalRight, MdAlignVerticalBottom, MdAlignVerticalCenter, MdAlignVerticalTop, MdDelete, MdEdit } from "react-icons/md";
 import OverlayList from "./components/overlay-editor/OverlayList";
 import RenameOverlayForm from "./components/overlay-editor/RenameOverlayForm";
 import ComponentList from "./components/overlay-editor/ComponentList";
@@ -106,6 +106,52 @@ export default function OverlayEditor() {
             window.removeEventListener('overlay:refresh', onOverlayRefresh as any)
         }
     }, [])
+
+    async function applyAlignment(action: 'left' | 'hcenter' | 'right' | 'top' | 'vcenter' | 'bottom') {
+        try {
+            const ids = selectedComponentIds
+            if (!ids.length) return
+            const byId = new Map(components.map((c) => [c._id, c]))
+            const updates: { id: string; x?: number; y?: number; width: number; height: number }[] = []
+            for (const id of ids) {
+                const c = byId.get(id)
+                if (!c) continue
+                let nextX: number | undefined = undefined
+                let nextY: number | undefined = undefined
+                if (action === 'left') nextX = 0
+                if (action === 'hcenter') nextX = (STAGE_WIDTH - c.width) / 2
+                if (action === 'right') nextX = STAGE_WIDTH - c.width
+                if (action === 'top') nextY = 0
+                if (action === 'vcenter') nextY = (STAGE_HEIGHT - c.height) / 2
+                if (action === 'bottom') nextY = STAGE_HEIGHT - c.height
+                updates.push({ id, x: nextX, y: nextY, width: c.width, height: c.height })
+            }
+            if (!updates.length) return
+
+            // Persist each update (x and/or y)
+            await Promise.all(updates.map((u) => window.ipcRenderer.invoke('db:editOverlayComponent', {
+                ids: [u.id],
+                updates: {
+                    ...(typeof u.x === 'number' ? { x: u.x } : {}),
+                    ...(typeof u.y === 'number' ? { y: u.y } : {}),
+                }
+            })))
+
+            // Update local state
+            setComponents((prev) => prev.map((c) => {
+                const u = updates.find((it) => it.id === c._id)
+                if (!u) return c
+                return { ...c, x: typeof u.x === 'number' ? u.x : c.x, y: typeof u.y === 'number' ? u.y : c.y }
+            }))
+
+            try {
+                const ev = new CustomEvent('overlayComponentsChanged', { detail: { action: 'moved' } })
+                window.dispatchEvent(ev)
+                const refresh = new CustomEvent('overlay:refresh')
+                window.dispatchEvent(refresh)
+            } catch {}
+        } catch {}
+    }
     return (
         <div className='h-screen flex flex-col bg-[#1D2229]'>
             <OverlayWindowBar />
@@ -214,7 +260,7 @@ export default function OverlayEditor() {
                                             >
                                                 {c.type === 'image' ? (
                                                     c.imagePath ? (
-                                                        <img src={c.imagePath} className="max-w-full max-h-full object-contain" draggable={false}/>
+                                                        <img src={c.imagePath} className="max-w-full max-h-full object-contain" style={{ opacity: typeof (c as any).opacity === 'number' ? (c as any).opacity : 1 }} draggable={false}/>
                                                     ) : (
                                                         <div className="text-white/60 text-xs">No image</div>
                                                     )
@@ -238,12 +284,16 @@ export default function OverlayEditor() {
                         </TabsList>
                         <TabsContent value="properties" className="flex flex-col gap-1">
                             <div className="flex gap-1">
-                                <button onClick={() => setEditComponentOpen(true)} title="Edit Component" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                <button 
+                                    onClick={() => setEditComponentOpen(true)} 
+                                    title="Edit Component" 
+                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdEdit className="h-4.5 w-4.5" />
+                                    <span className="font-medium">Edit Item</span>
                                 </button>
                                 <button
                                     title="Delete Component(s)"
-                                    className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
+                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
                                     disabled={!selectedOverlayId || selectedComponentIds.length === 0}
                                     onClick={async () => {
                                         try {
@@ -264,6 +314,53 @@ export default function OverlayEditor() {
                                     }}
                                 >
                                     <MdDelete className="h-4.5 w-4.5" />
+                                    <span className="font-medium">Delete Item</span>
+                                </button>
+                            </div>
+                            <div className="flex gap-1">
+                                <button 
+                                    onClick={() => applyAlignment('left')} 
+                                    title="Align Left" 
+                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    <MdAlignHorizontalLeft className="h-4.5 w-4.5" />
+                                    <span className="font-medium text-[10px]">Align Left</span>
+                                </button>
+                                <button 
+                                    onClick={() => applyAlignment('hcenter')} 
+                                    title="Align Horizontal Center" 
+                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    <MdAlignHorizontalCenter className="h-4.5 w-4.5" />
+                                    <span className="font-medium text-[10px]">Align H Cntr</span>
+                                </button>
+                                <button 
+                                    onClick={() => applyAlignment('right')} 
+                                    title="Align Right" 
+                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    <MdAlignHorizontalRight className="h-4.5 w-4.5" />
+                                    <span className="font-medium text-[10px]">Align Right</span>
+                                </button>
+                            </div>
+                            <div className="flex gap-1">
+                                <button 
+                                    onClick={() => applyAlignment('top')} 
+                                    title="Align Top" 
+                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    <MdAlignVerticalTop className="h-4.5 w-4.5" />
+                                    <span className="font-medium text-[10px]">Align Top</span>
+                                </button>
+                                <button 
+                                    onClick={() => applyAlignment('vcenter')} 
+                                    title="Align Vertical Center" 
+                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    <MdAlignVerticalCenter className="h-4.5 w-4.5" />
+                                    <span className="font-medium text-[10px]">Align V Cntr</span>
+                                </button>
+                                <button 
+                                    onClick={() => applyAlignment('bottom')} 
+                                    title="Align Bottom" 
+                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    <MdAlignVerticalBottom className="h-4.5 w-4.5" />
+                                    <span className="font-medium text-[10px]">Align Bottom</span>
                                 </button>
                             </div>
                             <ComponentList />

@@ -38,6 +38,7 @@ type EditableFields = Partial<{
   dataType: string
   nodeLevel: number
   imagePath: string
+  opacity: number
   projectDetail: 'name' | 'client' | 'vessel' | 'location' | 'contractor'
 }>
 
@@ -64,6 +65,10 @@ function buildSetObject(updates: EditableFields): Record<string, any> {
   if (typeof updates.dataType === 'string') $set.dataType = updates.dataType
   if (typeof updates.nodeLevel === 'number') $set.nodeLevel = updates.nodeLevel
   if (typeof updates.imagePath === 'string') $set.imagePath = updates.imagePath
+  if (typeof (updates as any).opacity === 'number') {
+    const raw = Number((updates as any).opacity)
+    $set.opacity = Math.max(0, Math.min(1, Number.isFinite(raw) ? raw : 1))
+  }
   return $set
 }
 

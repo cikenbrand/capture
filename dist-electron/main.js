@@ -15685,6 +15685,11 @@ async function createOverlayComponent(input) {
       break;
     case "image":
       customFields.imagePath = input.imagePath ?? "";
+      {
+        const raw = Number(input.opacity);
+        const clamped = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 1;
+        customFields.opacity = clamped;
+      }
       break;
   }
   const client = await getClient$7();
@@ -15795,6 +15800,10 @@ function buildSetObject(updates) {
   if (typeof updates.dataType === "string") $set.dataType = updates.dataType;
   if (typeof updates.nodeLevel === "number") $set.nodeLevel = updates.nodeLevel;
   if (typeof updates.imagePath === "string") $set.imagePath = updates.imagePath;
+  if (typeof updates.opacity === "number") {
+    const raw = Number(updates.opacity);
+    $set.opacity = Math.max(0, Math.min(1, Number.isFinite(raw) ? raw : 1));
+  }
   return $set;
 }
 async function editOverlayComponents(ids, updates) {
@@ -15892,6 +15901,7 @@ async function getOverlayComponentsForRender(overlayId) {
     dataType: 1,
     nodeLevel: 1,
     imagePath: 1,
+    opacity: 1,
     createdAt: 1,
     updatedAt: 1
   };
@@ -15923,6 +15933,7 @@ ipcMain.handle("db:getOverlayComponentsForRender", async (_event, input) => {
       dataType: i.dataType,
       nodeLevel: i.nodeLevel,
       imagePath: i.imagePath,
+      opacity: i.opacity,
       createdAt: i.createdAt,
       updatedAt: i.updatedAt
     }));
@@ -15932,7 +15943,7 @@ ipcMain.handle("db:getOverlayComponentsForRender", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-function ensureImagesDir$1() {
+function ensureImagesDir$2() {
   if (process.platform !== "win32") {
     throw new Error("This application supports Windows only");
   }
@@ -15944,13 +15955,13 @@ function ensureImagesDir$1() {
   }
   return imagesDir;
 }
-function isAllowedExt$1(ext) {
+function isAllowedExt$2(ext) {
   const e = ext.toLowerCase();
   return e === ".png" || e === ".jpg" || e === ".jpeg" || e === ".webp" || e === ".bmp";
 }
 function buildTargetFilename(sourceName) {
   const ext = path$m.extname(sourceName || "").toLowerCase();
-  if (!isAllowedExt$1(ext)) throw new Error("Unsupported image type");
+  if (!isAllowedExt$2(ext)) throw new Error("Unsupported image type");
   const base = path$m.basename(sourceName, ext);
   const safeBase = base.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 80) || "image";
   const stamp = /* @__PURE__ */ new Date();
@@ -15964,7 +15975,7 @@ function buildTargetFilename(sourceName) {
 }
 async function handleUpload(input) {
   if (!input || typeof input !== "object") throw new Error("Invalid input");
-  const imagesDir = ensureImagesDir$1();
+  const imagesDir = ensureImagesDir$2();
   if (input.sourcePath) {
     const src2 = path$m.resolve(input.sourcePath);
     const stat2 = fs$j.statSync(src2);
@@ -16063,7 +16074,7 @@ ipcMain.handle("db:addProjectLog", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-function ensureImagesDir() {
+function ensureImagesDir$1() {
   if (process.platform !== "win32") {
     throw new Error("This application supports Windows only");
   }
@@ -16075,7 +16086,7 @@ function ensureImagesDir() {
   }
   return imagesDir;
 }
-function isAllowedExt(ext) {
+function isAllowedExt$1(ext) {
   const e = ext.toLowerCase();
   return e === ".png" || e === ".jpg" || e === ".jpeg" || e === ".webp" || e === ".bmp";
 }
@@ -16091,14 +16102,14 @@ function toHttpUrl(filename) {
   }
 }
 function listAllImages() {
-  const dir = ensureImagesDir();
+  const dir = ensureImagesDir$1();
   let entries = [];
   try {
     const files = fs$j.readdirSync(dir);
     for (const name of files) {
       try {
         const ext = path$m.extname(name);
-        if (!isAllowedExt(ext)) continue;
+        if (!isAllowedExt$1(ext)) continue;
         const full = path$m.join(dir, name);
         const stat2 = fs$j.statSync(full);
         if (!stat2.isFile()) continue;
@@ -16802,6 +16813,66 @@ ipcMain.handle("db:getProjectLogs", async (_event, projectId, opts) => {
     const offset = Math.max(0, Number((opts == null ? void 0 : opts.offset) ?? 0) || 0);
     const list = await getProjectLogs(projectId, limit, offset);
     return { ok: true, data: list };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+function ensureImagesDir() {
+  if (process.platform !== "win32") {
+    throw new Error("This application supports Windows only");
+  }
+  const baseDir = app.getPath("userData");
+  const imagesDir = path$m.join(baseDir, "overlay-images");
+  try {
+    fs$j.mkdirSync(imagesDir, { recursive: true });
+  } catch {
+  }
+  return imagesDir;
+}
+function isAllowedExt(ext) {
+  const e = ext.toLowerCase();
+  return e === ".png" || e === ".jpg" || e === ".jpeg" || e === ".webp" || e === ".bmp";
+}
+function extractFilenameFromUrl(url) {
+  try {
+    const u2 = new URL(url);
+    const last = u2.pathname.split("/").filter(Boolean).pop() || "";
+    return last || null;
+  } catch {
+    const last = url.split(/[\\/]/).filter(Boolean).pop() || "";
+    return last || null;
+  }
+}
+function resolveTargetPath(input) {
+  const dir = ensureImagesDir();
+  let filename = (input.filename || "").trim();
+  if (!filename && input.fileUrl) filename = extractFilenameFromUrl(input.fileUrl) || "";
+  if (!filename && input.httpUrl) filename = extractFilenameFromUrl(input.httpUrl) || "";
+  if (!filename) throw new Error("filename, fileUrl, or httpUrl required");
+  const ext = path$m.extname(filename);
+  if (!isAllowedExt(ext)) throw new Error("Unsupported image type");
+  const base = path$m.basename(filename);
+  const full = path$m.join(dir, base);
+  const rel = path$m.relative(dir, full);
+  if (rel.startsWith("..") || path$m.isAbsolute(rel)) throw new Error("Invalid path");
+  return { dir, full, filename: base };
+}
+function deleteImageFile(full) {
+  try {
+    const stat2 = fs$j.statSync(full);
+    if (!stat2.isFile()) throw new Error("Not a file");
+  } catch (err) {
+    if ((err == null ? void 0 : err.code) === "ENOENT") return;
+    throw err;
+  }
+  fs$j.unlinkSync(full);
+}
+ipcMain.handle("fs:deleteOverlayImage", async (_event, input) => {
+  try {
+    const { full, filename } = resolveTargetPath(input || {});
+    deleteImageFile(full);
+    return { ok: true, data: { filename } };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };

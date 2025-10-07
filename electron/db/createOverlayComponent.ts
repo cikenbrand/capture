@@ -47,6 +47,7 @@ export interface NewOverlayComponent {
   dataType?: string // for data
   nodeLevel?: number // for node
   imagePath?: string // for image
+  opacity?: number // 0..1, for image
   // Project component specific
   projectDetail?: 'name' | 'client' | 'vessel' | 'location' | 'contractor'
 }
@@ -124,6 +125,11 @@ export async function createOverlayComponent(input: NewOverlayComponent): Promis
       break
     case 'image':
       customFields.imagePath = input.imagePath ?? ''
+      {
+        const raw = Number(input.opacity)
+        const clamped = Number.isFinite(raw) ? Math.max(0, Math.min(1, raw)) : 1
+        ;(customFields as any).opacity = clamped
+      }
       break
     // dive, task: no special props
   }

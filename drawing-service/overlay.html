@@ -248,6 +248,7 @@
               img.style.width = '100%';
               img.style.height = '100%';
               img.style.objectFit = 'contain';
+              try { img.style.opacity = String(typeof c.opacity === 'number' ? c.opacity : 1) } catch {}
               item.appendChild(img);
             } else {
               const box = document.createElement('div');

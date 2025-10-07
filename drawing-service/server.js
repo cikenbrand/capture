@@ -59,6 +59,7 @@ server.on('request', (req, res) => {
             dataType: 1,
             nodeLevel: 1,
             imagePath: 1,
+            opacity: 1,
             createdAt: 1,
             updatedAt: 1,
           }
@@ -84,6 +85,7 @@ server.on('request', (req, res) => {
             dataType: i.dataType,
             nodeLevel: i.nodeLevel,
             imagePath: i.imagePath,
+            opacity: i.opacity,
             createdAt: i.createdAt,
             updatedAt: i.updatedAt,
           }))

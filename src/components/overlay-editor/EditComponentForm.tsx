@@ -141,6 +141,8 @@ export default function EditComponentForm({ onClose }: Props) {
     const [nodeLevel, setNodeLevel] = useState(1)
     const [projectDetail, setProjectDetail] = useState<'name' | 'client' | 'vessel' | 'location' | 'contractor'>('name')
     const [imageUploading, setImageUploading] = useState(false)
+    const [imageDeleting, setImageDeleting] = useState(false)
+    const [imageOpacity, setImageOpacity] = useState('1')
     const [imagesLoading, setImagesLoading] = useState(false)
     const [overlayImages, setOverlayImages] = useState<Array<{ fileUrl: string; filename: string }>>([])
     const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -225,6 +227,7 @@ export default function EditComponentForm({ onClose }: Props) {
                     setUseUTC(match?.useUTC ?? false)
                     setNodeLevel(typeof (match as any)?.nodeLevel === 'number' ? (match as any).nodeLevel : 1)
                     setProjectDetail((match as any)?.projectDetail ?? 'name')
+                    setImageOpacity(String((match as any)?.opacity ?? 1))
                 }
             } catch {
                 if (active && requestId === latestRequestId) resetState()
@@ -367,6 +370,27 @@ export default function EditComponentForm({ onClose }: Props) {
                 setOverlayComponents((prev) => prev.map((component) => (
                     ids.includes(component._id)
                         ? { ...component, imagePath }
+                        : component
+                )))
+                broadcastUpdate(ids)
+                try {
+                    const ev = new CustomEvent('overlay:refresh')
+                    window.dispatchEvent(ev)
+                } catch {}
+            }
+        } catch {}
+    }, [broadcastUpdate])
+
+    const updateComponentOpacity = useCallback(async (opacity: number, ids: string[]) => {
+        try {
+            const res = await window.ipcRenderer.invoke('db:editOverlayComponent', {
+                ids,
+                updates: { opacity }
+            })
+            if (res?.ok) {
+                setOverlayComponents((prev) => prev.map((component) => (
+                    ids.includes(component._id)
+                        ? { ...component, opacity } as any
                         : component
                 )))
                 broadcastUpdate(ids)
@@ -635,6 +659,31 @@ export default function EditComponentForm({ onClose }: Props) {
         }
     }, [componentType, loadOverlayImages])
 
+    const selectedImagePath = (canEdit && selectedIds.length === 1)
+        ? (overlayComponents.find((c) => c._id === selectedIds[0]) as any)?.imagePath
+        : undefined
+
+    const handleDeleteSelectedImage = useCallback(async () => {
+        if (!canEdit || componentType !== 'image') return
+        const current = selectedImagePath
+        if (!current) return
+        try {
+            setImageDeleting(true)
+            const entry = overlayImages.find((i) => i.fileUrl === current)
+            const filename = entry?.filename || ''
+            const res = await window.ipcRenderer.invoke('fs:deleteOverlayImage', filename ? { filename } : { fileUrl: current })
+            if (res?.ok) {
+                if (current === selectedImagePath) {
+                    try { await updateComponentImagePath('', selectedIds) } catch {}
+                }
+                try { await loadOverlayImages() } catch {}
+            }
+        } catch {
+        } finally {
+            setImageDeleting(false)
+        }
+    }, [canEdit, componentType, loadOverlayImages, overlayImages, selectedIds, selectedImagePath, updateComponentImagePath])
+
     const handleApplyAllClick = useCallback(async () => {
         const targets = overlayComponents.filter((component) => component.type !== 'image')
         if (!targets.length) return
@@ -726,28 +775,19 @@ export default function EditComponentForm({ onClose }: Props) {
 
                 {componentType === 'image' ? (
                     <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                            <Button onClick={handleUploadImageClick} disabled={!canEdit || imageUploading}>{imageUploading ? 'Uploading…' : 'Upload Image'}</Button>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp,image/bmp"
-                                className="hidden"
-                                onChange={handleImageFileSelected}
-                            />
-                        </div>
+                        <span>Image Selection</span>
                         <div>
                             {imagesLoading ? (
                                 <div className="text-white/60 text-sm">Loading images…</div>
                             ) : overlayImages.length === 0 ? (
                                 <div className="text-white/60 text-sm">No images uploaded yet.</div>
                             ) : (
-                                <div className="grid grid-cols-4 gap-2">
+                                <div className="grid grid-cols-6 gap-2">
                                     {overlayImages.map((img, idx) => (
                                         <button
                                             key={`${img.filename}-${idx}`}
                                             type="button"
-                                            className="w-full aspect-square bg-[#252B34] border border-[#4C525E] rounded overflow-hidden hover:border-[#71BCFC] focus:outline-none disabled:opacity-50"
+                                            className={`w-full aspect-square bg-[#252B34] border border-4 ${selectedImagePath === img.fileUrl ? 'border-blue-700' : 'border-[#4C525E]'} rounded overflow-hidden hover:border-[#71BCFC] focus:outline-none disabled:opacity-50`}
                                             onClick={() => { if (!canEdit) return; void updateComponentImagePath(img.fileUrl, selectedIds) }}
                                             disabled={!canEdit}
                                             title={img.filename}
@@ -757,6 +797,36 @@ export default function EditComponentForm({ onClose }: Props) {
                                     ))}
                                 </div>
                             )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button onClick={handleUploadImageClick} disabled={!canEdit || imageUploading}>{imageUploading ? 'Uploading…' : 'Upload Image'}</Button>
+                            <Button onClick={handleDeleteSelectedImage} disabled={!canEdit || imageDeleting || !selectedImagePath}>{imageDeleting ? 'Deleting…' : 'Delete Image'}</Button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp,image/bmp"
+                                className="hidden"
+                                onChange={handleImageFileSelected}
+                            />
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <span>Opacity</span>
+                            <Input
+                                type="number"
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={imageOpacity}
+                                onChange={(e) => {
+                                    const v = e.target.value
+                                    setImageOpacity(v)
+                                    const num = Number(v)
+                                    if (!canEdit || !Number.isFinite(num)) return
+                                    const clamped = Math.max(0, Math.min(1, num))
+                                    void updateComponentOpacity(clamped, selectedIds)
+                                }}
+                                disabled={!canEdit}
+                            />
                         </div>
                     </div>
                 ) : null}

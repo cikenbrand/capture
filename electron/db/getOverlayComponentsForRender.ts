@@ -44,6 +44,7 @@ export async function getOverlayComponentsForRender(overlayId: string) {
     dataType: 1,
     nodeLevel: 1,
     imagePath: 1,
+    opacity: 1,
     createdAt: 1,
     updatedAt: 1,
   } as const
@@ -76,6 +77,7 @@ ipcMain.handle('db:getOverlayComponentsForRender', async (_event, input: { overl
       dataType: (i as any).dataType,
       nodeLevel: (i as any).nodeLevel,
       imagePath: (i as any).imagePath,
+      opacity: (i as any).opacity,
       createdAt: i.createdAt,
       updatedAt: i.updatedAt,
     }))
