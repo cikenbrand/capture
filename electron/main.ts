@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createSplashWindow } from './windows/splashscreen'
-import { createMainWindow, createOverlayEditorWindow, createExportProjectWindow, createPictureInPictureWindow, createEventingWindow } from './windows/main'
+import { createMainWindow, createOverlayEditorWindow, createExportProjectWindow, createPictureInPictureWindow, createEventingWindow, createDataConfigurationsWindow } from './windows/main'
 import { openObs } from './obs/openOBS'
 import { exitOBS } from './obs/websocket_functions/exitOBS'
 import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
@@ -71,6 +71,9 @@ import './obs/websocket_functions/stopClipRecording'
 import './obs/websocket_functions/takeSnapshot'
 import './db/getProjectLogs'
 import './db/deleteOverlayImage'
+import './db/exportOverlay'
+import './db/importOverlay'
+import './db/exportOverlay'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -88,6 +91,7 @@ let splashWin: BrowserWindow | null = null
 let overlayEditorWin: BrowserWindow | null = null
 let pipWin: BrowserWindow | null = null
 let eventingWin: BrowserWindow | null = null
+let dataConfigWin: BrowserWindow | null = null
 
 // ——— helpers ———
 function delay(ms: number) {
@@ -356,6 +360,21 @@ ipcMain.handle('window:open-eventing', async () => {
   }
 })
 
+ipcMain.handle('window:open-data-configurations', async () => {
+  try {
+    if (dataConfigWin && !dataConfigWin.isDestroyed()) {
+      dataConfigWin.show()
+      dataConfigWin.focus()
+      return true
+    }
+    dataConfigWin = createDataConfigurationsWindow()
+    dataConfigWin.on('closed', () => { dataConfigWin = null })
+    return true
+  } catch {
+    return false
+  }
+})
+
 ipcMain.handle('pip-window:minimize', async () => {
   try { pipWin?.minimize(); return true } catch { return false }
 })
@@ -422,5 +441,28 @@ ipcMain.handle('window:close', async () => {
     return true
   } catch {
     return false
+  }
+})
+
+// Generic folder picker dialog
+ipcMain.handle('dialog:selectDirectory', async () => {
+  try {
+    const res = await dialog.showOpenDialog({ properties: ['openDirectory', 'createDirectory'] })
+    if (res.canceled || !res.filePaths?.[0]) return { ok: false, error: 'cancelled' }
+    return { ok: true, data: res.filePaths[0] }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
+
+ipcMain.handle('dialog:openJsonFile', async () => {
+  try {
+    const res = await dialog.showOpenDialog({ properties: ['openFile'], filters: [{ name: 'JSON', extensions: ['json'] }] })
+    if (res.canceled || !res.filePaths?.[0]) return { ok: false, error: 'cancelled' }
+    return { ok: true, data: res.filePaths[0] }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
 })

@@ -1,4 +1,4 @@
-import { BiPlus } from "react-icons/bi";
+import { BiDownload, BiPlus, BiUpload } from "react-icons/bi";
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { DraggableDialog } from "@/components/ui/draggable-dialog";
@@ -24,6 +24,8 @@ import CreateNodeButton from "./components/overlay-editor/CreateNodeButton";
 import CreateTaskButton from "./components/overlay-editor/CreateTaskButton";
 import DeleteOverlayConfirmation from "./components/overlay-editor/DeleteOverlayConfirmation";
 import CreateProjectDetailsButton from "./components/overlay-editor/CreateProjectDetailsButton";
+import { FaFileExport, FaFileImport } from "react-icons/fa";
+import { toast } from "sonner";
 
 export default function OverlayEditor() {
     const [newOverlayOpen, setNewOverlayOpen] = useState(false)
@@ -77,8 +79,8 @@ export default function OverlayEditor() {
                     try {
                         const ws = new WebSocket(`ws://127.0.0.1:3620/overlay?ch=${ch}`)
                         const sendRefresh = () => {
-                            try { ws.send(JSON.stringify({ action: 'refresh' })) } catch {}
-                            try { ws.close() } catch {}
+                            try { ws.send(JSON.stringify({ action: 'refresh' })) } catch { }
+                            try { ws.close() } catch { }
                         }
                         if (ws.readyState === WebSocket.OPEN) {
                             sendRefresh()
@@ -149,8 +151,8 @@ export default function OverlayEditor() {
                 window.dispatchEvent(ev)
                 const refresh = new CustomEvent('overlay:refresh')
                 window.dispatchEvent(refresh)
-            } catch {}
-        } catch {}
+            } catch { }
+        } catch { }
     }
     return (
         <div className='h-screen flex flex-col bg-[#1D2229]'>
@@ -162,6 +164,63 @@ export default function OverlayEditor() {
                             <TabsTrigger value="overlay">Overlay</TabsTrigger>
                         </TabsList>
                         <TabsContent value="overlay" className="flex flex-col gap-1">
+                            <div className="flex gap-1">
+                                <button
+                                    title="Export Overlay"
+                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
+                                    disabled={!selectedOverlayId}
+                                    onClick={async () => {
+                                        try {
+                                            if (!selectedOverlayId) return
+                                            const dir = await window.ipcRenderer.invoke('dialog:selectDirectory')
+                                            if (!dir?.ok || !dir.data) return
+                                            let overlayName = 'overlay'
+                                            try {
+                                                const all = await window.ipcRenderer.invoke('db:getAllOverlay')
+                                                const match = all?.ok && Array.isArray(all.data) ? all.data.find((o: any) => String(o._id) === String(selectedOverlayId)) : null
+                                                overlayName = match?.name ? String(match.name) : 'overlay'
+                                            } catch {}
+                                            const safe = overlayName.replace(/[^a-zA-Z0-9._-]+/g, '_') || 'overlay'
+                                            const destination = `${dir.data}\\${safe}.json`
+                                            const res = await window.ipcRenderer.invoke('db:exportOverlay', { destPath: destination, overlayId: selectedOverlayId })
+                                            if (!res?.ok) {
+                                                console.warn('Export failed:', res?.error)
+                                            }
+                                        } catch {}
+                                    }}
+                                >
+                                    <FaFileExport className="h-4 w-4" />
+                                    <span className="font-medium">Export Overlay</span>
+                                </button>
+                                <button
+                                    title="Import Overlay"
+                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
+                                    onClick={async () => {
+                                        try {
+                                            // Ask main process to select a JSON file
+                                            const file = await window.ipcRenderer.invoke('dialog:openJsonFile')
+                                            if (!file?.ok) return
+                                            const filePath = String(file.data || '')
+                                            if (!filePath.toLowerCase().endsWith('.json')) {
+                                                toast.error('Please select a .json overlay file')
+                                                return
+                                            }
+                                            const res = await window.ipcRenderer.invoke('db:importOverlay', { sourcePath: filePath })
+                                            if (!res?.ok) {
+                                                toast.error(res?.error || 'Failed to import overlay')
+                                                return
+                                            }
+                                            toast.success('Overlay imported')
+                                            try { const ev = new CustomEvent('overlaysChanged', { detail: { id: res.data?.overlayId, action: 'created' } }); window.dispatchEvent(ev) } catch {}
+                                        } catch (err) {
+                                            toast.error('Failed to import overlay')
+                                        }
+                                    }}
+                                >
+                                    <FaFileImport className="h-4 w-4" />
+                                    <span className="font-medium">Import Overlay</span>
+                                </button>
+                            </div>
                             <div className="flex gap-1">
                                 <button onClick={() => setNewOverlayOpen(true)} title="New Overlay" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
                                     <BiPlus className="h-6 w-6" />
@@ -196,7 +255,7 @@ export default function OverlayEditor() {
                                 <CreateDiveButton />
                                 <CreateNodeButton />
                                 <CreateTaskButton />
-                                <CreateProjectDetailsButton/>
+                                <CreateProjectDetailsButton />
                             </div>
                             <div className="flex-1 bg-black">
                                 <OverlayEditorCanvas
@@ -260,7 +319,7 @@ export default function OverlayEditor() {
                                             >
                                                 {c.type === 'image' ? (
                                                     c.imagePath ? (
-                                                        <img src={c.imagePath} className="max-w-full max-h-full object-contain" style={{ opacity: typeof (c as any).opacity === 'number' ? (c as any).opacity : 1 }} draggable={false}/>
+                                                        <img src={c.imagePath} className="max-w-full max-h-full object-contain" style={{ opacity: typeof (c as any).opacity === 'number' ? (c as any).opacity : 1 }} draggable={false} />
                                                     ) : (
                                                         <div className="text-white/60 text-xs">No image</div>
                                                     )
@@ -284,9 +343,9 @@ export default function OverlayEditor() {
                         </TabsList>
                         <TabsContent value="properties" className="flex flex-col gap-1">
                             <div className="flex gap-1">
-                                <button 
-                                    onClick={() => setEditComponentOpen(true)} 
-                                    title="Edit Component" 
+                                <button
+                                    onClick={() => setEditComponentOpen(true)}
+                                    title="Edit Component"
                                     className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdEdit className="h-4.5 w-4.5" />
                                     <span className="font-medium">Edit Item</span>
@@ -318,46 +377,46 @@ export default function OverlayEditor() {
                                 </button>
                             </div>
                             <div className="flex gap-1">
-                                <button 
-                                    onClick={() => applyAlignment('left')} 
-                                    title="Align Left" 
+                                <button
+                                    onClick={() => applyAlignment('left')}
+                                    title="Align Left"
                                     className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignHorizontalLeft className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align Left</span>
                                 </button>
-                                <button 
-                                    onClick={() => applyAlignment('hcenter')} 
-                                    title="Align Horizontal Center" 
+                                <button
+                                    onClick={() => applyAlignment('hcenter')}
+                                    title="Align Horizontal Center"
                                     className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignHorizontalCenter className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align H Cntr</span>
                                 </button>
-                                <button 
-                                    onClick={() => applyAlignment('right')} 
-                                    title="Align Right" 
+                                <button
+                                    onClick={() => applyAlignment('right')}
+                                    title="Align Right"
                                     className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignHorizontalRight className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align Right</span>
                                 </button>
                             </div>
                             <div className="flex gap-1">
-                                <button 
-                                    onClick={() => applyAlignment('top')} 
-                                    title="Align Top" 
+                                <button
+                                    onClick={() => applyAlignment('top')}
+                                    title="Align Top"
                                     className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignVerticalTop className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align Top</span>
                                 </button>
-                                <button 
-                                    onClick={() => applyAlignment('vcenter')} 
-                                    title="Align Vertical Center" 
+                                <button
+                                    onClick={() => applyAlignment('vcenter')}
+                                    title="Align Vertical Center"
                                     className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignVerticalCenter className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align V Cntr</span>
                                 </button>
-                                <button 
-                                    onClick={() => applyAlignment('bottom')} 
-                                    title="Align Bottom" 
+                                <button
+                                    onClick={() => applyAlignment('bottom')}
+                                    title="Align Bottom"
                                     className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignVerticalBottom className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align Bottom</span>
@@ -395,7 +454,7 @@ export default function OverlayEditor() {
                 onOpenChange={setDeleteOverlayOpen}
                 title="Delete Overlay"
             >
-                <DeleteOverlayConfirmation onClose={() => setDeleteOverlayOpen(false)}/>
+                <DeleteOverlayConfirmation onClose={() => setDeleteOverlayOpen(false)} />
             </DraggableDialog>
         </div>
     )

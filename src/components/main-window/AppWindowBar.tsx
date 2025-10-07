@@ -211,7 +211,7 @@ export default function AppWindowBar() {
                         <MenubarTrigger className='px-2 py-1'>Window</MenubarTrigger>
                         <MenubarContent>
                             <MenubarItem onClick={() => window.ipcRenderer.invoke('window:open-overlay-editor')}>Open Overlay Editor</MenubarItem>
-                            <MenubarItem>Open Data Manager</MenubarItem>
+                            <MenubarItem onClick={() => window.ipcRenderer.invoke('window:open-data-configurations')}>Open Data Configurations</MenubarItem>
                             <MenubarItem onClick={() => window.ipcRenderer.invoke('window:open-eventing')}>Open Eventing Window</MenubarItem>
                         </MenubarContent>
                     </MenubarMenu>
