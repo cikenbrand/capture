@@ -20,10 +20,14 @@ export default function OverlayList() {
             setLoading(true)
             const res = await window.ipcRenderer.invoke('db:getAllOverlay')
             if (res?.ok) {
-                setOverlays(Array.isArray(res.data) ? res.data : [])
-                // Keep selection if still present
-                if (selectedId && !(res.data as OverlayItem[]).some(o => o._id === selectedId)) {
-                    setSelectedId(null)
+                const list = Array.isArray(res.data) ? (res.data as OverlayItem[]) : []
+                setOverlays(list)
+                const firstId = list.length > 0 ? list[0]._id : null
+                // Choose first overlay if none selected or previous selection no longer exists
+                if (!selectedId && firstId) {
+                    setSelectedId(firstId)
+                } else if (selectedId && !list.some(o => o._id === selectedId)) {
+                    setSelectedId(firstId)
                 }
             } else {
                 setError(res?.error || 'Failed to load overlays')
@@ -34,13 +38,6 @@ export default function OverlayList() {
     }
 
     useEffect(() => {
-        // Load current selected overlay layer from main
-        (async () => {
-            try {
-                const res = await window.ipcRenderer.invoke('app:getSelectedOverlayLayerId')
-                if (res?.ok) setSelectedId(res.data ?? null)
-            } catch { }
-        })()
         load()
         const onChanged = (e: any) => {
             try {

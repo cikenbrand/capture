@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { FaPlay } from "react-icons/fa";
+import { FaStop } from "react-icons/fa";
 import { FaPersonSwimming } from "react-icons/fa6";
 
 export default function StartDiveButton() {
@@ -7,6 +7,7 @@ export default function StartDiveButton() {
   const [selectedDiveId, setSelectedDiveId] = useState<string | null>(null)
   const [selectedDiveName, setSelectedDiveName] = useState<string | null>(null)
   const [isStarted, setIsStarted] = useState<boolean>(false)
+  const [isRecordingStarted, setIsRecordingStarted] = useState<boolean>(false)
 
   useEffect(() => {
     let done = false
@@ -73,38 +74,91 @@ export default function StartDiveButton() {
     }
   }, [selectedDiveId])
 
-  async function onStart() {
+  // Track recording state to prevent stopping a dive while recording
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await window.ipcRenderer.invoke('recording:getState')
+        if (!cancelled && res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+      } catch {}
+    })()
+    const onChanged = async () => {
+      try {
+        const res = await window.ipcRenderer.invoke('recording:getState')
+        if (res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+      } catch {}
+    }
+    window.addEventListener('recordingStateChanged', onChanged as any)
+    return () => {
+      cancelled = true
+      window.removeEventListener('recordingStateChanged', onChanged as any)
+    }
+  }, [])
+
+  async function onToggle() {
     if (!selectedDiveId) return
     try {
-      const res = await window.ipcRenderer.invoke('dive:setStarted', selectedDiveId, true)
-      if (res?.ok) {
-        try {
-          const proj = await window.ipcRenderer.invoke('app:getSelectedProjectId')
-          const projectId = proj?.ok ? (proj.data ?? null) : null
-          if (projectId) {
-            await window.ipcRenderer.invoke('db:addProjectLog', {
-              projectId,
-              event: 'Start Dive',
-              dive: selectedDiveName || null,
-            })
-            try { window.dispatchEvent(new Event('projectLogsChanged')) } catch {}
-          }
-        } catch {}
-        try {
-          const ev = new CustomEvent('divesChanged')
-          window.dispatchEvent(ev)
-        } catch {}
-        setIsStarted(true)
+      if (!isStarted) {
+        // Start dive
+        const res = await window.ipcRenderer.invoke('dive:setStarted', selectedDiveId, true)
+        if (res?.ok) {
+          try {
+            const proj = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+            const projectId = proj?.ok ? (proj.data ?? null) : null
+            if (projectId) {
+              await window.ipcRenderer.invoke('db:addProjectLog', {
+                projectId,
+                event: 'Start Dive',
+                dive: selectedDiveName || null,
+              })
+              try { window.dispatchEvent(new Event('projectLogsChanged')) } catch {}
+            }
+          } catch {}
+          try { window.dispatchEvent(new CustomEvent('divesChanged')) } catch {}
+          setIsStarted(true)
+        }
+      } else {
+        // Prevent stopping while recording is active
+        if (isRecordingStarted) return
+        const res = await window.ipcRenderer.invoke('dive:setStarted', selectedDiveId, false)
+        if (res?.ok) {
+          try {
+            const proj = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+            const projectId = proj?.ok ? (proj.data ?? null) : null
+            if (projectId) {
+              await window.ipcRenderer.invoke('db:addProjectLog', {
+                projectId,
+                event: 'Stop Dive',
+                dive: selectedDiveName || null,
+              })
+              try { window.dispatchEvent(new Event('projectLogsChanged')) } catch {}
+            }
+          } catch {}
+          try { window.dispatchEvent(new CustomEvent('divesChanged')) } catch {}
+          setIsStarted(false)
+        }
       }
     } catch {}
   }
 
-  const disabled = !selectedProjectId || !selectedDiveId || isStarted
+  const disabled = !selectedProjectId || !selectedDiveId || (isStarted && isRecordingStarted)
+  const title = !isStarted ? 'Start Dive' : 'Stop Dive'
+  const className = `${!isStarted ? 'bg-blue-600 hover:bg-blue-700 text-black/80' : 'bg-red-600 hover:bg-red-700 text-white'} flex items-center justify-center gap-3 px-1.5 h-[35px] w-full active:bg-[#202832] rounded-[2px] active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none`
 
   return (
-    <button title="Start Dive" disabled={disabled} onClick={onStart} className="flex items-center justify-center gap-2 px-1.5 h-[28px] hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-      <FaPersonSwimming className="h-4.5 w-4.5" fill="#57E44C"/>
-      <span className="text-[14px] font-semibold">Start Dive</span>
+    <button title={title} disabled={disabled} onClick={onToggle} className={className}>
+      {!isStarted ? (
+        <>
+          <FaPersonSwimming className="h-5 w-5" fill="#81CF41"/>
+          <span className="text-[16px] font-bold uppercase">Start Dive</span>
+        </>
+      ) : (
+        <>
+          <FaStop className="h-[15px] w-[15px]" fill="white"/>
+          <span className="text-[16px] font-bold uppercase">Stop Dive</span>
+        </>
+      )}
     </button>
   )
 }

@@ -4,12 +4,11 @@ import { DraggableDialog } from "@/components/ui/draggable-dialog"
 import AddNewDive from "./components/main-window/AddNewDiveForm"
 import { useEffect, useRef, useState } from "react"
 import { BiPlus } from "react-icons/bi";
-import { MdCameraRoll, MdDelete, MdEdit } from "react-icons/md";
+import { MdCameraRoll, MdEdit } from "react-icons/md";
 import DiveSelection from "./components/main-window/DiveSelection"
 import EditDiveForm from "./components/main-window/EditDiveForm"
 import ShowDiveRemarks from "./components/main-window/ShowDiveRemarks"
 import StartDiveButton from "./components/main-window/StartDiveButton"
-import StopDiveButton from "./components/main-window/StopDiveButton"
 import CreateTaskForm from "./components/main-window/CreateTaskForm"
 import TaskSelection from "./components/main-window/TaskSelection"
 import EditTaskForm from "./components/main-window/EditTaskForm"
@@ -17,7 +16,7 @@ import ShowTaskRemarks from "./components/main-window/ShowTaskRemarks"
 import NodesTree from "./components/main-window/NodesTree"
 import AddNewNodeForm from "./components/main-window/AddNewNodeForm"
 import EditNodeDetailsForm from "./components/main-window/EditNodeDetailsForm"
-import DeleteNodeConfirmation from "./components/main-window/DeleteNodeConfirmation"
+// Delete node dialog removed
 import PreviewVirtualCam from "./components/main-window/PreviewVirtualCam"
 import { FaCircle, FaMicrophone, FaPause, FaPlay, FaStop } from "react-icons/fa"
 import { BsCameraFill } from "react-icons/bs";
@@ -50,7 +49,7 @@ function App() {
   const [isEditTaskDialogOpen, setIsEditTaskDialogOpen] = useState(false)
   const [isCreateNodeDialogOpen, setIsCreateNodeDialogOpen] = useState(false)
   const [isEditNodeDialogOpen, setIsEditNodeDialogOpen] = useState(false)
-  const [isDeleteNodeDialogOpen, setIsDeleteNodeDialogOpen] = useState(false)
+  // const [isDeleteNodeDialogOpen, setIsDeleteNodeDialogOpen] = useState(false)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [isStartSessionDialogOpen, setIsStartSessionDialogOpen] = useState(false)
   const [isStopSessionDialogOpen, setIsStopSessionDialogOpen] = useState(false)
@@ -237,14 +236,25 @@ function App() {
             </TabsList>
             <TabsContent value="dive" className="flex flex-col gap-1">
               <div className="flex gap-1">
-                <button title="New Dive" disabled={!selectedProjectId || isDiving} onClick={() => setIsCreateDiveDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                  <BiPlus className="h-6 w-6" />
-                </button>
-                <button title="Edit Dive" disabled={!selectedProjectId || !selectedDiveId || isDiving} onClick={() => setIsEditDiveDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                  <MdEdit className="h-4.5 w-4.5" />
-                </button>
                 <StartDiveButton />
-                <StopDiveButton />
+              </div>
+              <div className="flex gap-1">
+                <button 
+                  title="New Dive" 
+                  disabled={!selectedProjectId || isDiving} 
+                  onClick={() => setIsCreateDiveDialogOpen(true)} 
+                  className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                  <BiPlus className="h-5 w-5" />
+                  <span className="font-medium">Add Dive</span>
+                </button>
+                <button 
+                title="Edit Dive" 
+                disabled={!selectedProjectId || !selectedDiveId || isDiving} 
+                onClick={() => setIsEditDiveDialogOpen(true)} 
+                className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                  <MdEdit className="h-4.5 w-4.5" />
+                  <span className="font-medium">Edit Dive</span>
+                </button>
               </div>
               <DiveSelection />
               <ShowDiveRemarks />
@@ -256,11 +266,21 @@ function App() {
             </TabsList>
             <TabsContent value="task" className="flex flex-col gap-1">
               <div className="flex gap-1">
-                <button title="New Task" disabled={!selectedProjectId} onClick={() => setIsCreateTaskDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                  <BiPlus className="h-6 w-6" />
+                <button
+                  title="New Task"
+                  disabled={!selectedProjectId}
+                  onClick={() => setIsCreateTaskDialogOpen(true)}
+                  className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                  <BiPlus className="h-5 w-5" />
+                  <span className="font-medium">Add Task</span>
                 </button>
-                <button title="Edit Task" disabled={!selectedProjectId || !selectedTaskId} onClick={() => setIsEditTaskDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                <button
+                  title="Edit Task"
+                  disabled={!selectedProjectId || !selectedTaskId}
+                  onClick={() => setIsEditTaskDialogOpen(true)}
+                  className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <MdEdit className="h-4.5 w-4.5" />
+                  <span className="font-medium">Edit Task</span>
                 </button>
               </div>
               <TaskSelection />
@@ -273,14 +293,21 @@ function App() {
             </TabsList>
             <TabsContent value="workpack" className="flex flex-col gap-1">
               <div className="flex gap-1">
-                <button title="New Node" disabled={!selectedProjectId || recordingState.isRecordingStarted} onMouseDown={(e) => e.preventDefault()} onClick={() => setIsCreateNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                  <BiPlus className="h-6 w-6" />
+                <button 
+                  title="New Node" 
+                  disabled={!selectedProjectId || recordingState.isRecordingStarted} 
+                  onMouseDown={(e) => e.preventDefault()} onClick={() => setIsCreateNodeDialogOpen(true)} 
+                  className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                  <BiPlus className="h-5 w-5" />
+                  <span className="font-medium">Add Item</span>
                 </button>
-                <button title="Edit Node" disabled={!selectedProjectId || !selectedNodeId || recordingState.isRecordingStarted} onClick={() => setIsEditNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                <button 
+                  title="Edit Node" 
+                  disabled={!selectedProjectId || !selectedNodeId || recordingState.isRecordingStarted} 
+                  onClick={() => setIsEditNodeDialogOpen(true)} 
+                  className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <MdEdit className="h-4.5 w-4.5" />
-                </button>
-                <button title="Delete Node" disabled={!selectedProjectId || !selectedNodeId || recordingState.isRecordingStarted} onClick={() => setIsDeleteNodeDialogOpen(true)} className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                  <MdDelete className="h-4.5 w-4.5" />
+                  <span className="font-medium">Edit Item</span>
                 </button>
               </div>
               <ShowNodesRemarks />
@@ -368,9 +395,9 @@ function App() {
                   <ArrowDrawingTool />
                   <CircleDrawingTool />
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
-                  <button 
-                    title="Mute Microphone" 
-                    disabled={isSessionActionDisabled} 
+                  <button
+                    title="Mute Microphone"
+                    disabled={isSessionActionDisabled}
                     className="flex items-center justify-center h-[28px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                     <FaMicrophone className="h-4 w-4" />
                     <span className="font-medium">Mute Microphone</span>
@@ -426,9 +453,7 @@ function App() {
       <DraggableDialog open={isEditNodeDialogOpen} onOpenChange={setIsEditNodeDialogOpen} title="Edit Node">
         <EditNodeDetailsForm onClose={() => setIsEditNodeDialogOpen(false)} />
       </DraggableDialog>
-      <DraggableDialog open={isDeleteNodeDialogOpen} onOpenChange={setIsDeleteNodeDialogOpen} title="Delete Node">
-        <DeleteNodeConfirmation onClose={() => setIsDeleteNodeDialogOpen(false)} />
-      </DraggableDialog>
+      {/* Delete Node dialog removed */}
       <DraggableDialog open={isStartSessionDialogOpen} onOpenChange={setIsStartSessionDialogOpen} title="Start Session">
         <StartSessionForm onClose={() => setIsStartSessionDialogOpen(false)} />
       </DraggableDialog>

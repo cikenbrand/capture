@@ -1,5 +1,7 @@
 import { BrowserWindow } from "electron"
 import path from "node:path"
+import { getAllOverlay } from "../db/getAllOverlay"
+import { createOverlay } from "../db/createOverlay"
 
 let splash: BrowserWindow | null = null
 
@@ -24,6 +26,15 @@ export function createSplashWindow(timeoutMs: number): BrowserWindow {
   splash.loadFile(splashFile)
 
   splash.once("ready-to-show", () => splash?.show())
+
+  ;(async () => {
+    try {
+      const overlays = await getAllOverlay()
+      if (!overlays || overlays.length === 0) {
+        try { await createOverlay({ name: "Overlay 1" }) } catch {}
+      }
+    } catch {}
+  })()
 
   // attach timeout info ke window object → boleh check kat createWindow()
   ;(splash as any).timeoutMs = timeoutMs

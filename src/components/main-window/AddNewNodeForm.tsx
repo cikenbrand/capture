@@ -63,17 +63,16 @@ export default function AddNewNodeForm({ onClose }: Props) {
       })
       if (res?.ok) {
         const newId: string | undefined = (res?.data?._id?.toString?.() ?? res?.data?._id) as string | undefined
-        if (newId) {
+        // Keep the parent selected after creation
+        if (parentId) {
+          try { await window.ipcRenderer.invoke('app:setSelectedNodeId', parentId) } catch {}
           try {
-            await window.ipcRenderer.invoke('app:setSelectedNodeId', newId)
-          } catch {}
-          try {
-            const evSel = new CustomEvent('selectedNodeChanged', { detail: newId })
+            const evSel = new CustomEvent('selectedNodeChanged', { detail: parentId })
             window.dispatchEvent(evSel)
           } catch {}
         }
         try {
-          const ev = new CustomEvent('nodesChanged')
+          const ev = new CustomEvent('nodesChanged', { detail: { id: newId, parentId, action: 'created' } })
           window.dispatchEvent(ev)
         } catch {}
         onClose()

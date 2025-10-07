@@ -1,6 +1,7 @@
-import require$$1$4, { BrowserWindow, ipcMain, app, dialog } from "electron";
+import require$$1$4, { ipcMain, BrowserWindow, app, dialog } from "electron";
 import path$m from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
+import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
 import { spawn, spawnSync } from "node:child_process";
 import fs$j from "node:fs";
 import OBSWebSocket from "obs-websocket-js";
@@ -20,8 +21,110 @@ import require$$4$1 from "url";
 import require$$1$3 from "string_decoder";
 import require$$14 from "zlib";
 import require$$4$2 from "http";
-import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
 import fsp from "node:fs/promises";
+const OBS_EXECUTABLE_PATH = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\");
+const OBS_WORKING_DIR = "C:\\Program Files\\obs-studio\\bin\\64bit".replace(/\\/g, "\\");
+const OBS_WEBSOCKET_URL = "ws://127.0.0.1:4455";
+const OBS_LAUNCH_PARAMS = ["--startvirtualcam", "--disable-shutdown-check"];
+path$m.join(
+  process.env.APPDATA || path$m.join(process.env.USERPROFILE || "", "AppData", "Roaming"),
+  "obs-studio",
+  "basic",
+  "profiles",
+  "Default",
+  "basic.ini"
+);
+const OVERLAY_WS_PORT = 3620;
+const MONGODB_URI = "mongodb://localhost:27017/capture";
+const SPLASHSCREEN_DURATION_MS = 5e3;
+let cachedClient$t = null;
+async function getClient$t() {
+  if (cachedClient$t) return cachedClient$t;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$t = client;
+  return client;
+}
+async function getAllOverlay() {
+  const client = await getClient$t();
+  const db = client.db("capture");
+  const overlays = db.collection("overlays");
+  return overlays.find({}).sort({ createdAt: -1 }).toArray();
+}
+ipcMain.handle("db:getAllOverlay", async () => {
+  try {
+    const overlays = await getAllOverlay();
+    const plain = overlays.map((o) => ({
+      _id: o._id.toString(),
+      name: o.name,
+      createdAt: o.createdAt,
+      updatedAt: o.updatedAt
+    }));
+    return { ok: true, data: plain };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient$s = null;
+async function getClient$s() {
+  if (cachedClient$s) return cachedClient$s;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$s = client;
+  return client;
+}
+async function createOverlay(input) {
+  const client = await getClient$s();
+  const db = client.db("capture");
+  const overlays = db.collection("overlays");
+  const now = /* @__PURE__ */ new Date();
+  const trimmedName = input.name.trim();
+  if (!trimmedName) throw new Error("Overlay name is required");
+  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const existing = await overlays.findOne({ name: { $regex: `^${escapeRegex(trimmedName)}$`, $options: "i" } });
+  if (existing) throw new Error("An overlay with this name already exists");
+  const doc = {
+    name: trimmedName,
+    createdAt: now,
+    updatedAt: now
+  };
+  const result = await overlays.insertOne(doc);
+  return { _id: result.insertedId, ...doc };
+}
+ipcMain.handle("db:createOverlay", async (_event, input) => {
+  var _a, _b, _c, _d;
+  try {
+    const created = await createOverlay(input);
+    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
+    try {
+      const payload = { id, action: "created", name: ((_d = (_c = input == null ? void 0 : input.name) == null ? void 0 : _c.trim) == null ? void 0 : _d.call(_c)) || "" };
+      for (const win2 of BrowserWindow.getAllWindows()) {
+        try {
+          win2.webContents.send("overlays:changed", payload);
+        } catch {
+        }
+      }
+    } catch {
+    }
+    return { ok: true, data: id };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 let splash = null;
 function createSplashWindow(timeoutMs) {
   splash = new BrowserWindow({
@@ -40,6 +143,18 @@ function createSplashWindow(timeoutMs) {
   const splashFile = path$m.join(publicRoot, "htmls", "splashscreen.html");
   splash.loadFile(splashFile);
   splash.once("ready-to-show", () => splash == null ? void 0 : splash.show());
+  (async () => {
+    try {
+      const overlays = await getAllOverlay();
+      if (!overlays || overlays.length === 0) {
+        try {
+          await createOverlay({ name: "Overlay 1" });
+        } catch {
+        }
+      }
+    } catch {
+    }
+  })();
   splash.timeoutMs = timeoutMs;
   return splash;
 }
@@ -118,21 +233,6 @@ function createExportProjectWindow() {
   }
   return win2;
 }
-const OBS_EXECUTABLE_PATH = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\");
-const OBS_WORKING_DIR = "C:\\Program Files\\obs-studio\\bin\\64bit".replace(/\\/g, "\\");
-const OBS_WEBSOCKET_URL = "ws://127.0.0.1:4455";
-const OBS_LAUNCH_PARAMS = ["--startvirtualcam", "--disable-shutdown-check"];
-path$m.join(
-  process.env.APPDATA || path$m.join(process.env.USERPROFILE || "", "AppData", "Roaming"),
-  "obs-studio",
-  "basic",
-  "profiles",
-  "Default",
-  "basic.ini"
-);
-const OVERLAY_WS_PORT = 3620;
-const MONGODB_URI = "mongodb://localhost:27017/capture";
-const SPLASHSCREEN_DURATION_MS = 5e3;
 function openObs() {
   if (!fs$j.existsSync(OBS_EXECUTABLE_PATH)) {
     throw new Error(`OBS executable not found at: ${OBS_EXECUTABLE_PATH}`);
@@ -14146,9 +14246,9 @@ NsisUpdater$1.NsisUpdater = NsisUpdater;
     }
   });
 })(main$1);
-let cachedClient$t = null;
-async function getClient$t() {
-  if (cachedClient$t) return cachedClient$t;
+let cachedClient$r = null;
+async function getClient$r() {
+  if (cachedClient$r) return cachedClient$r;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14157,11 +14257,11 @@ async function getClient$t() {
     }
   });
   await client.connect();
-  cachedClient$t = client;
+  cachedClient$r = client;
   return client;
 }
 async function createProject(input) {
-  const client = await getClient$t();
+  const client = await getClient$r();
   const db = client.db("capture");
   const projects = db.collection("projects");
   const now = /* @__PURE__ */ new Date();
@@ -14195,94 +14295,6 @@ ipcMain.handle("db:createProject", async (_event, input) => {
     const created = await createProject(input);
     const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
     return { ok: true, data: id };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
-  }
-});
-let cachedClient$s = null;
-async function getClient$s() {
-  if (cachedClient$s) return cachedClient$s;
-  const client = new MongoClient(MONGODB_URI, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
-    }
-  });
-  await client.connect();
-  cachedClient$s = client;
-  return client;
-}
-async function createOverlay(input) {
-  const client = await getClient$s();
-  const db = client.db("capture");
-  const overlays = db.collection("overlays");
-  const now = /* @__PURE__ */ new Date();
-  const trimmedName = input.name.trim();
-  if (!trimmedName) throw new Error("Overlay name is required");
-  const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const existing = await overlays.findOne({ name: { $regex: `^${escapeRegex(trimmedName)}$`, $options: "i" } });
-  if (existing) throw new Error("An overlay with this name already exists");
-  const doc = {
-    name: trimmedName,
-    createdAt: now,
-    updatedAt: now
-  };
-  const result = await overlays.insertOne(doc);
-  return { _id: result.insertedId, ...doc };
-}
-ipcMain.handle("db:createOverlay", async (_event, input) => {
-  var _a, _b, _c, _d;
-  try {
-    const created = await createOverlay(input);
-    const id = ((_b = (_a = created == null ? void 0 : created._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? created;
-    try {
-      const payload = { id, action: "created", name: ((_d = (_c = input == null ? void 0 : input.name) == null ? void 0 : _c.trim) == null ? void 0 : _d.call(_c)) || "" };
-      for (const win2 of BrowserWindow.getAllWindows()) {
-        try {
-          win2.webContents.send("overlays:changed", payload);
-        } catch {
-        }
-      }
-    } catch {
-    }
-    return { ok: true, data: id };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return { ok: false, error: message };
-  }
-});
-let cachedClient$r = null;
-async function getClient$r() {
-  if (cachedClient$r) return cachedClient$r;
-  const client = new MongoClient(MONGODB_URI, {
-    serverApi: {
-      version: ServerApiVersion.v1,
-      strict: true,
-      deprecationErrors: true
-    }
-  });
-  await client.connect();
-  cachedClient$r = client;
-  return client;
-}
-async function getAllOverlay() {
-  const client = await getClient$r();
-  const db = client.db("capture");
-  const overlays = db.collection("overlays");
-  return overlays.find({}).sort({ createdAt: -1 }).toArray();
-}
-ipcMain.handle("db:getAllOverlay", async () => {
-  try {
-    const overlays = await getAllOverlay();
-    const plain = overlays.map((o) => ({
-      _id: o._id.toString(),
-      name: o.name,
-      createdAt: o.createdAt,
-      updatedAt: o.updatedAt
-    }));
-    return { ok: true, data: plain };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };

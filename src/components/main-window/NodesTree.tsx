@@ -17,7 +17,7 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
     hotkeysCoreFeature,
   ], [])
   const initialState = useMemo(() => ({
-    expandedItems: expanded && expanded.length ? expanded : ['root', 'nodes-root'],
+    expandedItems: expanded && expanded.length ? expanded : ['root', 'project-root'],
     selectedItems: selectedId ? [selectedId] : [],
   }), [expanded, selectedId])
 
@@ -49,6 +49,22 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
     features,
   })
 
+  // Drive expansion/selection from props when they change, without remounting the tree
+  useEffect(() => {
+    try {
+      const next = expanded && expanded.length ? expanded : ["root", "project-root"]
+      const uniq = Array.from(new Set(next))
+      ;(tree as any).setExpandedItems?.(uniq)
+    } catch {}
+  }, [expanded, tree])
+
+  useEffect(() => {
+    try {
+      const sel = selectedId ? [selectedId] : []
+      ;(tree as any).setSelectedItems?.(sel)
+    } catch {}
+  }, [selectedId, tree])
+
   return (
     <Tree
       className="relative before:absolute before:inset-0 before:-ms-1 before:bg-[repeating-linear-gradient(to_right,transparent_0,transparent_calc(var(--tree-indent)-1px),rgba(255,255,255,0.1)_calc(var(--tree-indent)-1px),rgba(255,255,255,0.1)_calc(var(--tree-indent)))]"
@@ -64,9 +80,9 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
             className="pb-0!"
             onClickCapture={async () => {
               try {
-                const id = item.getId()
+            const id = item.getId()
                 const isFolder = typeof item.isFolder === 'function' ? (item.isFolder() || false) : false
-                const nextId = id === 'nodes-root' ? null : id
+            const nextId = (id === 'root' || id === 'project-root') ? null : id
                 console.log('[NodesTree] selected node id:', nextId)
                 // Log hierarchical levels from top to selected
                 let pathNames: string[] = []
@@ -74,7 +90,7 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
                   const pathIds: string[] = []
                   let cur: string | undefined = nextId
                   let guard = 0
-                  while (cur && cur !== 'nodes-root' && cur !== 'root' && guard++ < 1000) {
+                  while (cur && cur !== 'project-root' && cur !== 'root' && guard++ < 1000) {
                     pathIds.push(cur)
                     cur = parentOf[cur]
                   }
@@ -115,13 +131,18 @@ const MemoTreeContent = memo(TreeContent)
 
 export default function NodesTree() {
   const [projectId, setProjectId] = useState<string | null>(null)
-  const [items, setItems] = useState<Record<string, Item>>({ root: { name: 'Nodes', children: [] } })
+  const [items, setItems] = useState<Record<string, Item>>({ root: { name: 'Project', children: ['project-root'] }, 'project-root': { name: 'Project', children: [] } })
   const [_loading, setLoading] = useState(false)
   const [itemsVersion, setItemsVersion] = useState(0)
-  const [expandedIds, setExpandedIds] = useState<string[]>(['root', 'nodes-root'])
+  const [expandedIds, setExpandedIds] = useState<string[]>(['root', 'project-root'])
   const [pendingExpandIds, setPendingExpandIds] = useState<string[] | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isRecordingStarted, setIsRecordingStarted] = useState(false)
+  const pendingSelectIdRef = useRef<string | null>(null)
+  const pendingFocusParentIdRef = useRef<string | null>(null)
+  const expandedIdsRef = useRef<string[]>(['root', 'project-root'])
+
+  useEffect(() => { expandedIdsRef.current = expandedIds }, [expandedIds])
 
   // WebSocket connections per overlay channel (1..4) to send node selection path
   const socketsRef = useRef<Record<number, WebSocket | null>>({})
@@ -187,15 +208,30 @@ export default function NodesTree() {
   // Fetch nodes for the selected project and flatten to items record
   useEffect(() => {
     let cancelled = false
-    const refresh = () => {
+    const refresh = (e?: any) => {
       if (cancelled) return
+      try {
+        const action = e?.detail?.action as string | undefined
+        const newId = e?.detail?.id as string | undefined
+        const parentId = e?.detail?.parentId as string | undefined
+        if (action === 'deleted') {
+          pendingSelectIdRef.current = parentId ?? null
+          pendingFocusParentIdRef.current = parentId ?? null
+        } else if (action === 'created') {
+          // Keep parent selected after adding an item
+          pendingSelectIdRef.current = parentId ?? null
+          pendingFocusParentIdRef.current = parentId ?? null
+        } else if (newId) {
+          pendingSelectIdRef.current = newId
+        }
+      } catch {}
       load()
     }
     async function load() {
       if (!projectId) {
         // Clear tree when no project is selected
-        setItems({ root: { name: 'Nodes', children: [] } })
-        setExpandedIds(['root'])
+        setItems({ root: { name: 'Project', children: ['project-root'] }, 'project-root': { name: 'Project', children: [] } })
+        setExpandedIds(['root', 'project-root'])
         setSelectedId(null)
         setItemsVersion(v => v + 1)
         return
@@ -207,10 +243,10 @@ export default function NodesTree() {
           window.ipcRenderer.invoke('db:getAllNodes', projectId),
         ])
         if (cancelled) return
-        const rootName = proj?.ok && proj?.data?.name ? String(proj.data.name) : 'Nodes'
+        const rootName = proj?.ok && proj?.data?.name ? String(proj.data.name) : 'Project'
         if (res?.ok) {
           const roots = (res.data || []) as Array<{ _id: string, name: string, children: any[] }>
-          const next: Record<string, Item> = { root: { name: rootName, children: [] } }
+          const next: Record<string, Item> = { root: { name: rootName, children: ['project-root'] }, 'project-root': { name: rootName, children: [] } }
           const parentOf: Record<string, string | undefined> = {}
 
           const walk = (node: any, parentId?: string) => {
@@ -223,20 +259,19 @@ export default function NodesTree() {
           }
 
           const topIds = roots.map((n) => walk(n))
-          const nodesContainerId = 'nodes-root'
-          next[nodesContainerId] = { name: 'Nodes', children: topIds }
-          next.root.children = [nodesContainerId]
-          topIds.forEach((id) => { parentOf[id] = nodesContainerId })
-          parentOf[nodesContainerId] = 'root'
+          next['project-root'].children = topIds
+          topIds.forEach((id) => { parentOf[id] = 'project-root' })
+          parentOf['project-root'] = 'root'
 
           setItems(next)
-          // Re-expand to the path of the currently selected node
+          // Re-expand to the path of the currently selected node or pending new node
           try {
             const selRes = await window.ipcRenderer.invoke('app:getSelectedNodeId')
             const selId: string | null = selRes?.ok ? (selRes.data ?? null) : null
-            setSelectedId(selId)
-            const expandedPath: string[] = ['root', 'nodes-root']
-            let cur: string | undefined = selId ?? undefined
+            const targetId = pendingSelectIdRef.current || selId
+            setSelectedId(targetId ?? null)
+            const expandedPath: string[] = ['root', 'project-root']
+            let cur: string | undefined = targetId ?? undefined
             let guard = 0
             while (cur && parentOf[cur] && guard++ < 1000) {
               const parent = parentOf[cur]
@@ -244,21 +279,24 @@ export default function NodesTree() {
               cur = parent
             }
             const combined = new Set(expandedPath)
+            // Preserve previously expanded folders using ref to avoid stale closure
+            try { (expandedIdsRef.current || []).forEach(id => combined.add(id)) } catch {}
             if (pendingExpandIds && pendingExpandIds.length) {
               pendingExpandIds.forEach(id => combined.add(id))
             }
             setExpandedIds(Array.from(combined))
             setPendingExpandIds(null)
+            pendingSelectIdRef.current = null
+            pendingFocusParentIdRef.current = null
           } catch {}
           setItemsVersion(v => v + 1)
         } else {
-          const nodesContainerId = 'nodes-root'
           setItems({
-            root: { name: rootName, children: [nodesContainerId] },
-            [nodesContainerId]: { name: 'Nodes', children: [] },
+            root: { name: rootName, children: ['project-root'] },
+            'project-root': { name: rootName, children: [] },
           })
           setItemsVersion(v => v + 1)
-          setExpandedIds(['root', 'nodes-root'])
+          setExpandedIds(['root', 'project-root'])
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -293,27 +331,33 @@ export default function NodesTree() {
 
   return (
     <div className={`flex h-full flex-col gap-2 *:first:grow ${isRecordingStarted ? 'pointer-events-none opacity-30' : ''}`}>
-      <div>
-        <MemoTreeContent
-          key={itemsVersion}
-          data={items}
-          expanded={expandedIds}
-          selectedId={selectedId}
-          onItemClick={(id, isFolder, pathNames) => {
-            if (isRecordingStarted) return
-            if (isFolder) {
-              setPendingExpandIds((prev) => {
-                const next = new Set(prev || [])
-                next.add(id)
-                return Array.from(next)
-              })
-            }
-            if (Array.isArray(pathNames) && pathNames.length) {
-              try { broadcastNodeLevels(pathNames) } catch {}
-            }
-          }}
-        />
-      </div>
+      {projectId ? (
+        <div>
+          <MemoTreeContent
+            key={itemsVersion}
+            data={items}
+            expanded={expandedIds}
+            selectedId={selectedId}
+            onItemClick={(id, isFolder, pathNames) => {
+              if (isRecordingStarted) return
+              if (isFolder) {
+                setPendingExpandIds((prev) => {
+                  const next = new Set(prev || [])
+                  next.add(id)
+                  return Array.from(next)
+                })
+              }
+              if (Array.isArray(pathNames) && pathNames.length) {
+                try { broadcastNodeLevels(pathNames) } catch {}
+              }
+            }}
+          />
+        </div>
+      ) : (
+        <div className="flex items-center justify-center h-full text-white/70 text-sm border border-black bg-[#21262E]">
+          No project selected
+        </div>
+      )}
     </div>
   )
 }

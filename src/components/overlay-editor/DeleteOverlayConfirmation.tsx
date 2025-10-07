@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button } from "../ui/button";
+import { toast } from "sonner"
 
 type Props = {
     onClose: () => void
@@ -40,6 +41,16 @@ export default function DeleteOverlayConfirmation({ onClose }: Props) {
         }
         try {
             setSubmitting(true)
+            // Prevent deleting the last remaining overlay
+            try {
+                const all = await window.ipcRenderer.invoke('db:getAllOverlay')
+                const list = all?.ok && Array.isArray(all.data) ? all.data as any[] : []
+                if (list.length <= 1) {
+                    try { toast.error('At least one overlay must exist') } catch { }
+                    onClose()
+                    return
+                }
+            } catch { }
             const result = await window.ipcRenderer.invoke('db:deleteOverlay', { id: overlayId })
             if (result?.ok) {
                 try {
@@ -55,6 +66,9 @@ export default function DeleteOverlayConfirmation({ onClose }: Props) {
                 try {
                     const ev = new CustomEvent('overlaysChanged', { detail: { id: overlayId, action: 'deleted' } })
                     window.dispatchEvent(ev)
+                } catch { }
+                try {
+                    toast.success(overlayName ? `Deleted overlay "${overlayName}"` : 'Overlay deleted')
                 } catch { }
                 onClose()
             } else {
