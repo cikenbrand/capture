@@ -267,6 +267,29 @@ function createPictureInPictureWindow() {
   }
   return win2;
 }
+function createEventingWindow() {
+  const win2 = new BrowserWindow({
+    width: 900,
+    height: 650,
+    show: true,
+    frame: false,
+    backgroundColor: "#0f0f0f",
+    icon: path$m.join(process.env.VITE_PUBLIC || getRendererDist(), "dc.ico"),
+    webPreferences: {
+      preload: path$m.join(process.env.APP_ROOT || path$m.join(__dirname, "..", ".."), "dist-electron", "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: false
+    }
+  });
+  const devUrl = getDevUrl();
+  if (devUrl) {
+    win2.loadURL(`${devUrl}?window=eventing`);
+  } else {
+    win2.loadFile(path$m.join(getRendererDist(), "index.html"), { query: { window: "eventing" } });
+  }
+  return win2;
+}
 function openObs() {
   if (!fs$j.existsSync(OBS_EXECUTABLE_PATH)) {
     throw new Error(`OBS executable not found at: ${OBS_EXECUTABLE_PATH}`);
@@ -16794,6 +16817,7 @@ let win = null;
 let splashWin = null;
 let overlayEditorWin = null;
 let pipWin = null;
+let eventingWin = null;
 function delay(ms2) {
   return new Promise((r) => setTimeout(r, ms2));
 }
@@ -17050,6 +17074,22 @@ ipcMain.handle("window:open-pip", async () => {
     pipWin = createPictureInPictureWindow();
     pipWin.on("closed", () => {
       pipWin = null;
+    });
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("window:open-eventing", async () => {
+  try {
+    if (eventingWin && !eventingWin.isDestroyed()) {
+      eventingWin.show();
+      eventingWin.focus();
+      return true;
+    }
+    eventingWin = createEventingWindow();
+    eventingWin.on("closed", () => {
+      eventingWin = null;
     });
     return true;
   } catch {
