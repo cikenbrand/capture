@@ -2,9 +2,9 @@ import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI } from '../settings'
 import { ipcMain } from 'electron'
 
-export interface NewNode {
+export interface NewNodes {
   projectId: string
-  name: string
+  names: string[]
   parentId?: string
   remarks?: string
 }
@@ -15,6 +15,7 @@ export interface NodeDoc {
   name: string
   parentId?: ObjectId
   level: number
+  status?: 'completed' | 'ongoing' | 'not-started'
   remarks?: string
   createdAt: Date
   updatedAt: Date
@@ -36,7 +37,7 @@ async function getClient(): Promise<MongoClient> {
   return client
 }
 
-export async function createNode(input: NewNode): Promise<NodeDoc> {
+export async function createNodes(input: NewNodes): Promise<NodeDoc[]> {
   const client = await getClient()
   const db = client.db('capture')
   const nodes = db.collection<NodeDoc>('nodes')
@@ -58,23 +59,32 @@ export async function createNode(input: NewNode): Promise<NodeDoc> {
   }
 
   const remarks = typeof input.remarks === 'string' ? input.remarks.trim() : undefined
-  const doc: Omit<NodeDoc, '_id'> & Partial<Pick<NodeDoc, 'parentId' | 'remarks'>> = {
+  const names = Array.isArray(input.names) ? input.names.map(n => String(n)).map(n => n.trim()).filter(n => n.length > 0) : []
+  if (names.length === 0) throw new Error('At least one node name is required')
+
+  const docs: Array<Omit<NodeDoc, '_id'>> = names.map((nm) => ({
     projectId: projectObjectId,
-    name: input.name.trim(),
-    ...(parentObjectId ? { parentId: parentObjectId } : {}),
-    ...(remarks ? { remarks } : {}),
+    name: nm,
+    ...(parentObjectId ? { parentId: parentObjectId } : {}) as any,
+    ...(remarks ? { remarks } : {}) as any,
     level,
+    status: 'not-started',
     createdAt: now,
     updatedAt: now,
-  }
+  }))
 
-  const result = await nodes.insertOne(doc as any)
-  return { _id: result.insertedId, ...(doc as any) }
+  const result = await nodes.insertMany(docs as any)
+  const created: NodeDoc[] = docs.map((doc, idx) => {
+    // insertedIds keys are the index positions as strings
+    const insertedId = (result.insertedIds as any)[idx]
+    return { _id: insertedId, ...(doc as any) }
+  })
+  return created
 }
 
 ipcMain.handle('db:createNode', async (_event, input) => {
   try {
-    const created = await createNode(input)
+    const created = await createNodes(input)
     return { ok: true, data: created }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

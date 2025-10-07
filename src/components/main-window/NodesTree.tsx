@@ -6,6 +6,7 @@ import { Tree, TreeItem, TreeItemLabel } from "@/components/ui/tree"
 interface Item {
   name: string
   children?: string[]
+  status?: 'completed' | 'ongoing' | 'not-started'
 }
 
 const indent = 20
@@ -117,8 +118,18 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
               } catch {}
             }}
           >
-            <TreeItemLabel className="rounded-none py-1">
-              <span className="flex items-center gap-2">{item.getItemName() || '(deleted)'}</span>
+            <TreeItemLabel className="rounded-none py-1 text-left">
+              <span className="flex items-center gap-2 w-full justify-between">
+                <span className="flex-1 min-w-0 max-w-[240px] truncate whitespace-nowrap text-left">{item.getItemName() || '(deleted)'}</span>
+                {(() => {
+                  const id = item.getId()
+                  const isRoot = id === 'root' || id === 'project-root'
+                  if (isRoot) return null
+                  const status = (data as any)[id]?.status as string | undefined
+                  const color = status === 'completed' ? '#22c55e' : status === 'ongoing' ? '#3b82f6' : '#9ca3af'
+                  return <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                })()}
+              </span>
             </TreeItemLabel>
           </TreeItem>
         )
@@ -252,7 +263,7 @@ export default function NodesTree() {
           const walk = (node: any, parentId?: string) => {
             const id = String(node._id)
             const childIds: string[] = Array.isArray(node.children) ? node.children.map((c: any) => c._id?.toString?.() ?? c._id) : []
-            next[id] = { name: node.name, children: childIds }
+            next[id] = { name: node.name, children: childIds, status: (node as any).status || 'not-started' }
             if (parentId) parentOf[id] = parentId
             if (Array.isArray(node.children)) node.children.forEach((c: any) => walk(c, id))
             return id
@@ -328,7 +339,7 @@ export default function NodesTree() {
   }, [])
 
   return (
-    <div className={`flex h-full flex-col gap-2 *:first:grow ${isRecordingStarted ? 'pointer-events-none opacity-30' : ''}`}>
+    <div className={`flex h-full flex-col gap-2 *:first:grow ${isRecordingStarted ? 'pointer-events-none' : ''}`}>
       {projectId ? (
         <div>
           <MemoTreeContent

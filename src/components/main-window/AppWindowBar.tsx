@@ -28,6 +28,7 @@ export default function AppWindowBar() {
     const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
     const [selectedProjectName, setSelectedProjectName] = useState<string | null>(null)
     const [recentProjects, setRecentProjects] = useState<{ _id: string; name: string; lastSelectedDiveId?: string | null; lastSelectedTaskId?: string | null; lastSelectedNodeId?: string | null }[]>([])
+    const [isRecordingStarted, setIsRecordingStarted] = useState(false)
 
     useEffect(() => {
         let done = false
@@ -92,6 +93,27 @@ export default function AppWindowBar() {
         }
     }, [])
 
+    useEffect(() => {
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await window.ipcRenderer.invoke('recording:getState')
+                if (!cancelled && res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+            } catch {}
+        })()
+        const onChanged = async () => {
+            try {
+                const res = await window.ipcRenderer.invoke('recording:getState')
+                if (res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+            } catch {}
+        }
+        window.addEventListener('recordingStateChanged', onChanged as any)
+        return () => {
+            cancelled = true
+            window.removeEventListener('recordingStateChanged', onChanged as any)
+        }
+    }, [])
+
     return (
         <div className='h-9 w-full drag flex items-center justify-between pl-2' >
             <div className="flex gap-2 w-full items-center">
@@ -102,20 +124,20 @@ export default function AppWindowBar() {
                     <MenubarMenu>
                         <MenubarTrigger className='px-2 py-1'>File</MenubarTrigger>
                         <MenubarContent>
-                            <MenubarItem onClick={() => setNewProjectOpen(true)}>
+                            <MenubarItem onClick={() => setNewProjectOpen(true)} disabled={isRecordingStarted}>
                                 New Project
                             </MenubarItem>
-                            <MenubarItem onClick={() => setOpenProjectOpen(true)}>
+                            <MenubarItem onClick={() => setOpenProjectOpen(true)} disabled={isRecordingStarted}>
                                 Open Project
                             </MenubarItem>
                             <MenubarSub>
-                                <MenubarSubTrigger>Open Recent Projects</MenubarSubTrigger>
+                                <MenubarSubTrigger disabled={isRecordingStarted}>Open Recent Projects</MenubarSubTrigger>
                                 <MenubarSubContent>
                                     {recentProjects.length === 0 ? (
                                         <MenubarItem data-disabled className="opacity-50">(none)</MenubarItem>
                                     ) : (
                                         recentProjects.map(p => (
-                                            <MenubarItem key={p._id} onClick={async () => {
+                                            <MenubarItem key={p._id} disabled={isRecordingStarted} onClick={async () => {
                                                 try {
                                                     await window.ipcRenderer.invoke('app:setSelectedProjectId', p._id)
                                                     setSelectedProjectId(p._id)
@@ -147,11 +169,11 @@ export default function AppWindowBar() {
                             </MenubarSub>
 
                             <MenubarSeparator />
-                            <MenubarItem onClick={() => setEditProjectOpen(true)} disabled={!selectedProjectId}>
+                            <MenubarItem onClick={() => setEditProjectOpen(true)} disabled={!selectedProjectId || isRecordingStarted}>
                                 Edit Project
                             </MenubarItem>
                             <MenubarItem
-                                disabled={!selectedProjectId}
+                                disabled={!selectedProjectId || isRecordingStarted}
                                 onClick={async () => {
                                     try {
                                         await window.ipcRenderer.invoke('app:setSelectedProjectId', null)
@@ -190,6 +212,13 @@ export default function AppWindowBar() {
                         <MenubarContent>
                             <MenubarItem onClick={() => window.ipcRenderer.invoke('window:open-overlay-editor')}>Open Overlay Editor</MenubarItem>
                             <MenubarItem>Open Data Manager</MenubarItem>
+                            <MenubarItem onClick={() => window.ipcRenderer.invoke('window:open-eventing')}>Open Eventing Window</MenubarItem>
+                        </MenubarContent>
+                    </MenubarMenu>
+                    <MenubarMenu>
+                        <MenubarTrigger className='px-2 py-1'>Preview</MenubarTrigger>
+                        <MenubarContent>
+                            <MenubarItem onClick={() => { try { window.ipcRenderer.invoke('window:open-pip') } catch {} }}>Open Picture in Picture Window</MenubarItem>
                         </MenubarContent>
                     </MenubarMenu>
                     <MenubarMenu>

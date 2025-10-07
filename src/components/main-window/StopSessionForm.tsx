@@ -1,11 +1,14 @@
-import { memo } from "react"
+import { memo, useState } from "react"
 import { Button } from "../ui/button"
+import { Checkbox } from "../ui/checkbox"
+import { toast } from "sonner"
 
 type Props = {
   onClose: () => void
 }
 
 export default memo(function StopSessionForm({ onClose }: Props) {
+  const [markCompleted, setMarkCompleted] = useState(false)
   async function handleStop() {
     try {
       await window.ipcRenderer.invoke('obs:stop-recording')
@@ -66,8 +69,20 @@ export default memo(function StopSessionForm({ onClose }: Props) {
           fileName: fileNames.length ? fileNames.join(', ') : null,
         })
         try { window.dispatchEvent(new Event('projectLogsChanged')) } catch {}
+
+        // Optionally mark current node as completed
+        try {
+          if (markCompleted && nodeId) {
+            await window.ipcRenderer.invoke('db:editNode', nodeId, { status: 'completed' })
+            try {
+              const ev = new CustomEvent('nodesChanged', { detail: { id: nodeId, action: 'edited' } })
+              window.dispatchEvent(ev)
+            } catch {}
+          }
+        } catch {}
       }
     } catch {}
+    try { toast.success('Recording stopped') } catch {}
     onClose()
   }
   return (
@@ -75,6 +90,10 @@ export default memo(function StopSessionForm({ onClose }: Props) {
       <div className="text-white/80">
         Are you sure you want to stop the session?
       </div>
+      <label className="flex items-center gap-2 text-white/80">
+        <Checkbox checked={markCompleted} onCheckedChange={(v) => setMarkCompleted(v === true)} />
+        <span>Mark current component as Completed</span>
+      </label>
       <div className="mt-2 flex justify-end gap-2">
         <Button onClick={onClose}>Cancel</Button>
         <Button onClick={handleStop}>Stop Session</Button>

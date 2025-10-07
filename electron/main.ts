@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createSplashWindow } from './windows/splashscreen'
-import { createMainWindow, createOverlayEditorWindow, createExportProjectWindow } from './windows/main'
+import { createMainWindow, createOverlayEditorWindow, createExportProjectWindow, createPictureInPictureWindow, createEventingWindow } from './windows/main'
 import { openObs } from './obs/openOBS'
 import { exitOBS } from './obs/websocket_functions/exitOBS'
 import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
@@ -85,6 +85,8 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 let win: BrowserWindow | null = null
 let splashWin: BrowserWindow | null = null
 let overlayEditorWin: BrowserWindow | null = null
+let pipWin: BrowserWindow | null = null
+let eventingWin: BrowserWindow | null = null
 
 // ——— helpers ———
 function delay(ms: number) {
@@ -322,6 +324,42 @@ ipcMain.handle('export-window:close', async () => {
   } catch {
     return false
   }
+})
+ipcMain.handle('window:open-pip', async () => {
+  try {
+    if (pipWin && !pipWin.isDestroyed()) {
+      pipWin.show()
+      pipWin.focus()
+      return true
+    }
+    pipWin = createPictureInPictureWindow()
+    pipWin.on('closed', () => { pipWin = null })
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('window:open-eventing', async () => {
+  try {
+    if (eventingWin && !eventingWin.isDestroyed()) {
+      eventingWin.show()
+      eventingWin.focus()
+      return true
+    }
+    eventingWin = createEventingWindow()
+    eventingWin.on('closed', () => { eventingWin = null })
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('pip-window:minimize', async () => {
+  try { pipWin?.minimize(); return true } catch { return false }
+})
+ipcMain.handle('pip-window:close', async () => {
+  try { pipWin?.close(); return true } catch { return false }
 })
 ipcMain.handle('overlay-window:minimize', async () => {
   try {

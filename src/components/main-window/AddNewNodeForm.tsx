@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Button } from "../ui/button"
-import { Input } from "../ui/input"
+import { Textarea } from "../ui/textarea"
 
 type Props = {
   onClose: () => void
@@ -10,7 +10,7 @@ export default function AddNewNodeForm({ onClose }: Props) {
   const [projectId, setProjectId] = useState<string | null>(null)
   const [parentId, setParentId] = useState<string | null>(null)
   const [name, setName] = useState("")
-  const [remarks, setRemarks] = useState("")
+  // remarks removed
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -55,14 +55,19 @@ export default function AddNewNodeForm({ onClose }: Props) {
     }
     try {
       setSubmitting(true)
+      const names = name
+        .split(',')
+        .map(n => n.trim())
+        .filter(n => n.length > 0)
       const res = await window.ipcRenderer.invoke('db:createNode', {
         projectId,
-        name: name.trim(),
+        names,
         parentId: parentId || undefined,
-        remarks: remarks.trim() || undefined,
       })
       if (res?.ok) {
-        const newId: string | undefined = (res?.data?._id?.toString?.() ?? res?.data?._id) as string | undefined
+        const created = Array.isArray(res?.data) ? res.data : []
+        const first = created[0]
+        const newId: string | undefined = first?._id?.toString?.() ?? first?._id
         // Keep the parent selected after creation
         if (parentId) {
           try { await window.ipcRenderer.invoke('app:setSelectedNodeId', parentId) } catch {}
@@ -86,16 +91,32 @@ export default function AddNewNodeForm({ onClose }: Props) {
     }
   }
 
+  function onPasteNames(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+    try {
+      const text = e.clipboardData.getData('text/plain') ?? ''
+      if (!text) return
+      // Detect multi-line paste (from Sheets/Excel); normalize into comma-separated list
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0)
+      if (lines.length <= 1) return
+      e.preventDefault()
+      const joined = lines.join(', ')
+      const target = e.currentTarget
+      const start = typeof (target as any).selectionStart === 'number' ? (target as any).selectionStart as number : target.value.length
+      const end = typeof (target as any).selectionEnd === 'number' ? (target as any).selectionEnd as number : target.value.length
+      const before = target.value.slice(0, start)
+      const after = target.value.slice(end)
+      const next = `${before}${joined}${after}`
+      setName(next)
+    } catch { }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <span>Node Name</span>
-        <Input value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="Node name" />
+        <span>Node Name(s)</span>
+        <Textarea value={name} onChange={(e) => setName(e.target.value)} onPaste={onPasteNames} autoFocus placeholder="Example: Item A, Item B, Item C" />
       </div>
-      <div className="flex flex-col gap-1">
-        <span>Remarks</span>
-        <Input value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Optional remarks" />
-      </div>
+      {/* Remarks input removed */}
       {error ? <div className="text-red-400 text-sm">{error}</div> : null}
       <div className="mt-2 flex justify-end gap-2">
         <Button onClick={onClose} disabled={submitting}>Cancel</Button>

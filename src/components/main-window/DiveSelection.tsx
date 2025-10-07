@@ -163,6 +163,7 @@ export default function DiveSelection() {
   }, [projectId, loading, dives.length])
 
   async function onChange(nextId: string) {
+    if (isStarted) return
     setSelectedDiveId(nextId)
     try {
       await window.ipcRenderer.invoke('app:setSelectedDiveId', nextId)
@@ -197,11 +198,13 @@ export default function DiveSelection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDiveId, dives])
 
-  const disabled = !projectId || loading || !dives.length || isStarted
+  const disabled = !projectId || loading || !dives.length
 
   return (
     <Select value={selectedDiveId ?? undefined} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="w-full">
+      <SelectTrigger className={`w-full ${isStarted ? 'cursor-not-allowed' : ''}`}
+        title={isStarted ? 'Dive in progress - selection locked' : undefined}
+      >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

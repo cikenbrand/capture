@@ -64,6 +64,7 @@ ipcMain.handle('db:getAllNodes', async (_event, projectId: string) => {
       projectId: n.projectId?.toString?.() ?? n.projectId,
       parentId: n.parentId ? (n.parentId.toString?.() ?? n.parentId) : undefined,
       name: n.name,
+      status: (n as any).status ?? 'not-started',
       level: n.level,
       createdAt: n.createdAt,
       updatedAt: n.updatedAt,

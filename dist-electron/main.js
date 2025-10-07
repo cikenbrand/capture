@@ -233,6 +233,40 @@ function createExportProjectWindow() {
   }
   return win2;
 }
+function createPictureInPictureWindow() {
+  const win2 = new BrowserWindow({
+    width: 480,
+    height: 270,
+    show: true,
+    frame: false,
+    alwaysOnTop: true,
+    backgroundColor: "#0f0f0f",
+    icon: path$m.join(process.env.VITE_PUBLIC || getRendererDist(), "dc.ico"),
+    webPreferences: {
+      preload: path$m.join(process.env.APP_ROOT || path$m.join(__dirname, "..", ".."), "dist-electron", "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: false
+    }
+  });
+  try {
+    win2.setAspectRatio(16 / 9);
+    win2.setMinimumSize(320, 180);
+    win2.setAlwaysOnTop(true, "screen-saver");
+    try {
+      win2.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    } catch {
+    }
+  } catch {
+  }
+  const devUrl = getDevUrl();
+  if (devUrl) {
+    win2.loadURL(`${devUrl}?window=picture-in-picture`);
+  } else {
+    win2.loadFile(path$m.join(getRendererDist(), "index.html"), { query: { window: "picture-in-picture" } });
+  }
+  return win2;
+}
 function openObs() {
   if (!fs$j.existsSync(OBS_EXECUTABLE_PATH)) {
     throw new Error(`OBS executable not found at: ${OBS_EXECUTABLE_PATH}`);
@@ -14675,7 +14709,7 @@ async function getClient$j() {
   cachedClient$j = client;
   return client;
 }
-async function createNode(input) {
+async function createNodes(input) {
   const client = await getClient$j();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
@@ -14693,21 +14727,28 @@ async function createNode(input) {
     level = (parent.level ?? 0) + 1;
   }
   const remarks = typeof input.remarks === "string" ? input.remarks.trim() : void 0;
-  const doc = {
+  const names = Array.isArray(input.names) ? input.names.map((n) => String(n)).map((n) => n.trim()).filter((n) => n.length > 0) : [];
+  if (names.length === 0) throw new Error("At least one node name is required");
+  const docs = names.map((nm) => ({
     projectId: projectObjectId,
-    name: input.name.trim(),
+    name: nm,
     ...parentObjectId ? { parentId: parentObjectId } : {},
     ...remarks ? { remarks } : {},
     level,
+    status: "not-started",
     createdAt: now,
     updatedAt: now
-  };
-  const result = await nodes.insertOne(doc);
-  return { _id: result.insertedId, ...doc };
+  }));
+  const result = await nodes.insertMany(docs);
+  const created = docs.map((doc, idx) => {
+    const insertedId = result.insertedIds[idx];
+    return { _id: insertedId, ...doc };
+  });
+  return created;
 }
 ipcMain.handle("db:createNode", async (_event, input) => {
   try {
-    const created = await createNode(input);
+    const created = await createNodes(input);
     return { ok: true, data: created };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -14728,7 +14769,39 @@ async function getClient$i() {
   cachedClient$i = client;
   return client;
 }
-async function editNode(nodeId, updates) {
+async function getDescendantIds(nodes, rootId) {
+  const queue = [rootId];
+  const all = [];
+  while (queue.length) {
+    const current = queue.shift();
+    const children = await nodes.find({ parentId: current }).project({ _id: 1 }).toArray();
+    for (const c of children) {
+      const cid = c._id;
+      all.push(cid);
+      queue.push(cid);
+    }
+  }
+  return all;
+}
+async function recomputeAncestors(nodes, startParentId, now) {
+  let parentId = startParentId;
+  while (parentId) {
+    const children = await nodes.find({ parentId }).project({ status: 1 }).toArray();
+    const total = children.length;
+    let nextStatus = "not-started";
+    if (total > 0) {
+      const completed = children.filter((c) => c.status === "completed").length;
+      const started = children.filter((c) => c.status === "completed" || c.status === "ongoing").length;
+      if (completed === total) nextStatus = "completed";
+      else if (started > 0) nextStatus = "ongoing";
+      else nextStatus = "not-started";
+    }
+    await nodes.updateOne({ _id: parentId }, { $set: { status: nextStatus, updatedAt: now } });
+    const parent = await nodes.findOne({ _id: parentId }, { projection: { parentId: 1 } });
+    parentId = parent == null ? void 0 : parent.parentId;
+  }
+}
+async function editNode(nodeId, updates, options) {
   const client = await getClient$i();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
@@ -14737,6 +14810,7 @@ async function editNode(nodeId, updates) {
   const set2 = { updatedAt: now };
   if (typeof updates.name === "string") set2.name = updates.name.trim();
   if (typeof updates.remarks === "string") set2.remarks = updates.remarks.trim();
+  if (typeof updates.status === "string") set2.status = updates.status;
   const updated = await nodes.findOneAndUpdate(
     { _id },
     { $set: set2 },
@@ -14745,11 +14819,25 @@ async function editNode(nodeId, updates) {
   if (!updated) {
     throw new Error("Node not found");
   }
+  try {
+    if (updates.status === "completed" && (options == null ? void 0 : options.cascade)) {
+      const descendants = await getDescendantIds(nodes, _id);
+      if (descendants.length) {
+        await nodes.updateMany({ _id: { $in: descendants } }, { $set: { status: "completed", updatedAt: now } });
+      }
+    }
+    const parent = await nodes.findOne({ _id }, { projection: { parentId: 1 } });
+    const parentId = parent == null ? void 0 : parent.parentId;
+    if (parentId) {
+      await recomputeAncestors(nodes, parentId, now);
+    }
+  } catch {
+  }
   return updated;
 }
-ipcMain.handle("db:editNode", async (_event, nodeId, updates) => {
+ipcMain.handle("db:editNode", async (_event, nodeId, updates, options) => {
   try {
-    const updated = await editNode(nodeId, updates);
+    const updated = await editNode(nodeId, updates, options);
     return { ok: true, data: updated };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -14803,6 +14891,7 @@ ipcMain.handle("db:getAllNodes", async (_event, projectId) => {
         projectId: ((_d = (_c = n.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? n.projectId,
         parentId: n.parentId ? ((_f = (_e = n.parentId).toString) == null ? void 0 : _f.call(_e)) ?? n.parentId : void 0,
         name: n.name,
+        status: n.status ?? "not-started",
         level: n.level,
         createdAt: n.createdAt,
         updatedAt: n.updatedAt,
@@ -14895,6 +14984,7 @@ ipcMain.handle("db:getSelectedNodeDetails", async (_event, nodeId) => {
       projectId: doc.projectId.toString(),
       parentId: doc.parentId ? doc.parentId.toString() : void 0,
       name: doc.name,
+      status: doc.status ?? "not-started",
       remarks: doc.remarks ?? void 0,
       level: doc.level,
       createdAt: doc.createdAt,
@@ -16703,6 +16793,7 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path$m.join(process.env.APP_ROOT
 let win = null;
 let splashWin = null;
 let overlayEditorWin = null;
+let pipWin = null;
 function delay(ms2) {
   return new Promise((r) => setTimeout(r, ms2));
 }
@@ -16944,6 +17035,38 @@ ipcMain.handle("export-window:toggle-maximize", async () => {
 ipcMain.handle("export-window:close", async () => {
   try {
     exportProjectWin == null ? void 0 : exportProjectWin.close();
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("window:open-pip", async () => {
+  try {
+    if (pipWin && !pipWin.isDestroyed()) {
+      pipWin.show();
+      pipWin.focus();
+      return true;
+    }
+    pipWin = createPictureInPictureWindow();
+    pipWin.on("closed", () => {
+      pipWin = null;
+    });
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("pip-window:minimize", async () => {
+  try {
+    pipWin == null ? void 0 : pipWin.minimize();
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("pip-window:close", async () => {
+  try {
+    pipWin == null ? void 0 : pipWin.close();
     return true;
   } catch {
     return false;

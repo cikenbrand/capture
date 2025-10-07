@@ -8,17 +8,17 @@ export default function ShowNodesRemarks() {
     // Load current selected node id and keep in sync
     useEffect(() => {
         let done = false
-        ;(async () => {
-            try {
-                const res = await window.ipcRenderer.invoke('app:getSelectedNodeId')
-                if (!done && res?.ok) setSelectedNodeId(res.data ?? null)
-            } catch {}
-        })()
+            ; (async () => {
+                try {
+                    const res = await window.ipcRenderer.invoke('app:getSelectedNodeId')
+                    if (!done && res?.ok) setSelectedNodeId(res.data ?? null)
+                } catch { }
+            })()
         const onNodeChanged = (e: any) => {
             try {
                 const id = e?.detail ?? null
                 setSelectedNodeId(id)
-            } catch {}
+            } catch { }
         }
         window.addEventListener('selectedNodeChanged', onNodeChanged as any)
         return () => {
@@ -55,11 +55,16 @@ export default function ShowNodesRemarks() {
     }, [selectedNodeId])
 
     return (
-        <Input
-            value={selectedNodeId && remarks.trim().length > 0 ? remarks : ""}
-            readOnly
-            disabled={!selectedNodeId}
-            placeholder={!selectedNodeId ? "No node selected" : (remarks.trim().length > 0 ? "" : "No remarks")}
-        />
+        <div className="flex gap-2 items-center text-nowrap">
+            <span>Remarks :</span>
+            <Input
+                className="h-6.5"
+                value={selectedNodeId && remarks.trim().length > 0 ? remarks : ""}
+                readOnly
+                disabled={!selectedNodeId}
+                placeholder={!selectedNodeId ? "No node selected" : (remarks.trim().length > 0 ? "" : "No remarks")}
+            />
+        </div>
+
     )
 }

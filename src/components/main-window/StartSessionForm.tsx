@@ -100,6 +100,15 @@ export default memo(function StartSessionForm({ onClose }: Props) {
         if (id) await window.ipcRenderer.invoke('app:setActiveSessionId', id)
       } catch {}
 
+      // Mark the selected node as Ongoing at session start
+      try {
+        await window.ipcRenderer.invoke('db:editNode', nodeId, { status: 'ongoing' })
+        try {
+          const ev = new CustomEvent('nodesChanged', { detail: { id: nodeId, action: 'edited' } })
+          window.dispatchEvent(ev)
+        } catch {}
+      } catch {}
+
       // Add project log: Recording started
       try {
         const detDive = await window.ipcRenderer.invoke('db:getSelectedDiveDetails', diveId)
@@ -231,7 +240,7 @@ export default memo(function StartSessionForm({ onClose }: Props) {
             </div>
             <div className="mt-2 flex justify-end gap-2">
                 <Button onClick={onClose}>Cancel</Button>
-                <Button onClick={handleStart}>Start Session</Button>
+        <Button onClick={handleStart} disabled={!(previewEnabled || channel1Enabled || channel2Enabled || channel3Enabled || channel4Enabled)}>Start Session</Button>
             </div>
         </div>
     )

@@ -37,6 +37,8 @@ import StopClipRecordingForm from "./components/main-window/StopClipRecordingFor
 import SessionTimer from "./components/main-window/SessionTimer"
 import ClipTimer from "./components/main-window/ClipTimer"
 import TakeSnapshotForm from "./components/main-window/TakeSnapshotForm"
+import ShowNodesStatus from "./components/main-window/ShowNodesStatus"
+import ShowSelectedComponent from "./components/main-window/ShowSelectedComponent"
 
 function App() {
   const [isCreateDiveDialogOpen, setIsCreateDiveDialogOpen] = useState(false)
@@ -268,7 +270,7 @@ function App() {
               <div className="flex gap-1">
                 <button
                   title="New Task"
-                  disabled={!selectedProjectId}
+                  disabled={!selectedProjectId || recordingState.isRecordingStarted}
                   onClick={() => setIsCreateTaskDialogOpen(true)}
                   className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <BiPlus className="h-5 w-5" />
@@ -276,7 +278,7 @@ function App() {
                 </button>
                 <button
                   title="Edit Task"
-                  disabled={!selectedProjectId || !selectedTaskId}
+                  disabled={!selectedProjectId || !selectedTaskId || recordingState.isRecordingStarted}
                   onClick={() => setIsEditTaskDialogOpen(true)}
                   className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
                   <MdEdit className="h-4.5 w-4.5" />
@@ -310,7 +312,9 @@ function App() {
                   <span className="font-medium">Edit Item</span>
                 </button>
               </div>
+              <ShowSelectedComponent/>
               <ShowNodesRemarks />
+              <ShowNodesStatus/>
               <div className="bg-[#21262E] p-1 h-full">
                 <NodesTree />
               </div>

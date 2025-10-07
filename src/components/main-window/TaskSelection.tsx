@@ -161,6 +161,7 @@ export default function TaskSelection() {
   }, [projectId, loading, tasks.length])
 
   async function onChange(nextId: string) {
+    if (isRecordingStarted) return
     setSelectedTaskId(nextId)
     try {
       await window.ipcRenderer.invoke('app:setSelectedTaskId', nextId)
@@ -197,11 +198,16 @@ export default function TaskSelection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTaskId, tasks])
 
-  const disabled = isRecordingStarted || !projectId || loading || !tasks.length
+  const disabled = !projectId || loading || !tasks.length
 
   return (
     <Select value={selectedTaskId ?? undefined} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className="w-full">
+      <SelectTrigger
+        className={`w-full ${isRecordingStarted ? 'cursor-not-allowed' : ''}`}
+        title={isRecordingStarted ? 'Session in progress - selection locked' : undefined}
+        onMouseDown={(e) => { if (isRecordingStarted) { e.preventDefault(); e.stopPropagation(); } }}
+        onKeyDown={(e) => { if (isRecordingStarted) { e.preventDefault(); e.stopPropagation(); } }}
+      >
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

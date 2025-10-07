@@ -41,6 +41,7 @@ ipcMain.handle('db:getSelectedNodeDetails', async (_event, nodeId: string) => {
       projectId: doc.projectId.toString(),
       parentId: doc.parentId ? doc.parentId.toString() : undefined,
       name: doc.name,
+      status: (doc as any).status ?? 'not-started',
       remarks: doc.remarks ?? undefined,
       level: doc.level,
       createdAt: doc.createdAt,
