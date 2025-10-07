@@ -271,6 +271,7 @@ export default function NodesTree() {
             const targetId = pendingSelectIdRef.current || selId
             setSelectedId(targetId ?? null)
             const expandedPath: string[] = ['root', 'project-root']
+            if (targetId) expandedPath.push(targetId)
             let cur: string | undefined = targetId ?? undefined
             let guard = 0
             while (cur && parentOf[cur] && guard++ < 1000) {
@@ -279,11 +280,8 @@ export default function NodesTree() {
               cur = parent
             }
             const combined = new Set(expandedPath)
-            // Preserve previously expanded folders using ref to avoid stale closure
-            try { (expandedIdsRef.current || []).forEach(id => combined.add(id)) } catch {}
-            if (pendingExpandIds && pendingExpandIds.length) {
-              pendingExpandIds.forEach(id => combined.add(id))
-            }
+            // Keep only the current focus path to avoid unintended global expansion
+            if (pendingFocusParentIdRef.current) combined.add(pendingFocusParentIdRef.current)
             setExpandedIds(Array.from(combined))
             setPendingExpandIds(null)
             pendingSelectIdRef.current = null
