@@ -33,6 +33,10 @@ export default defineConfig({
                 'gcp-metadata',
                 '@aws-sdk/credential-providers',
                 'mongodb-client-encryption',
+                // Keep SerialPort native modules external to avoid __dirname in ESM errors
+                'serialport',
+                '@serialport/bindings-cpp',
+                'node-gyp-build',
               ],
             },
           },

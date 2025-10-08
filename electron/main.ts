@@ -72,8 +72,12 @@ import './obs/websocket_functions/takeSnapshot'
 import './db/getProjectLogs'
 import './db/deleteOverlayImage'
 import './db/exportOverlay'
+import './getter-setter/serialDeviceState'
+import { getCOMPorts } from './serial-data/getCOMPorts'
 import './db/importOverlay'
 import './db/exportOverlay'
+import './db/createDataKey'
+import './db/fetchDataKey'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -375,6 +379,38 @@ ipcMain.handle('window:open-data-configurations', async () => {
   }
 })
 
+ipcMain.handle('data-config-window:minimize', async () => {
+  try {
+    dataConfigWin?.minimize()
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('data-config-window:toggle-maximize', async () => {
+  try {
+    if (!dataConfigWin || dataConfigWin.isDestroyed()) return false
+    if (dataConfigWin.isMaximized()) {
+      dataConfigWin.unmaximize()
+    } else {
+      dataConfigWin.maximize()
+    }
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('data-config-window:close', async () => {
+  try {
+    dataConfigWin?.close()
+    return true
+  } catch {
+    return false
+  }
+})
+
 ipcMain.handle('pip-window:minimize', async () => {
   try { pipWin?.minimize(); return true } catch { return false }
 })
@@ -441,6 +477,16 @@ ipcMain.handle('window:close', async () => {
     return true
   } catch {
     return false
+  }
+})
+
+ipcMain.handle('serial:getCOMPorts', async () => {
+  try {
+    const ports = await getCOMPorts()
+    return { ok: true, data: ports }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
   }
 })
 

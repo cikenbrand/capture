@@ -1,12 +1,13 @@
 import { SerialPort } from 'serialport'
 import { EventEmitter } from 'node:events'
+import { ReadlineParser } from '@serialport/parser-readline'
 
 export type Parity = 'none' | 'even' | 'odd' | 'mark' | 'space'
 export type StopBits = 1 | 2
 export type DataBits = 5 | 6 | 7 | 8
 
 export interface SerialLiveData {
-  onData: (handler: (data: Buffer) => void) => void
+  onData: (handler: (data: Buffer | string) => void) => void
   onError: (handler: (error: Error) => void) => void
   onClose: (handler: () => void) => void
   close: () => Promise<void>
@@ -37,8 +38,9 @@ export async function openSerialDevice(
 
   const emitter = new EventEmitter()
 
-  const handleData = (data: Buffer) => {
-    emitter.emit('data', data)
+  const handleLine = (line: string) => {
+    // Normalize CRLF endings and emit as text
+    try { emitter.emit('data', line.replace(/\r$/, '')) } catch {}
   }
   const handleError = (error: Error) => {
     emitter.emit('error', error)
@@ -47,7 +49,8 @@ export async function openSerialDevice(
     emitter.emit('close')
   }
 
-  port.on('data', handleData)
+  const parser = port.pipe(new ReadlineParser({ delimiter: '\n' }))
+  parser.on('data', handleLine)
   port.on('error', handleError)
   port.on('close', handleClose)
 
@@ -56,7 +59,7 @@ export async function openSerialDevice(
     onError: (handler) => emitter.on('error', handler),
     onClose: (handler) => emitter.on('close', handler),
     close: async () => {
-      port.off('data', handleData)
+      try { parser.off('data', handleLine) } catch {}
       port.off('error', handleError)
       port.off('close', handleClose)
       await new Promise<void>((resolve) => {
