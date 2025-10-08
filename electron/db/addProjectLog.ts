@@ -10,7 +10,6 @@ export interface NewProjectLogInput {
   components?: unknown
   fileName?: string | null
   anomaly?: string | null
-  remarks?: string | null
   data?: unknown
 }
 
@@ -26,7 +25,6 @@ export interface ProjectLogDoc {
   components?: unknown
   fileName?: string | null
   anomaly?: string | null
-  remarks?: string | null
   data?: unknown
   createdAt: Date
   updatedAt: Date
@@ -74,7 +72,6 @@ export async function addProjectLog(input: NewProjectLogInput): Promise<ProjectL
     ...(typeof input.components !== 'undefined' ? { components: input.components } : {}),
     ...(input.fileName ? { fileName: String(input.fileName).trim() || null } : { fileName: null }),
     ...(input.anomaly ? { anomaly: String(input.anomaly).trim() || null } : { anomaly: null }),
-    ...(input.remarks ? { remarks: String(input.remarks).trim() || null } : { remarks: null }),
     ...(typeof input.data !== 'undefined' ? { data: input.data } : {}),
     createdAt: now,
     updatedAt: now,

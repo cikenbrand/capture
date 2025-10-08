@@ -13,7 +13,6 @@ export interface ProjectLogItem {
   components?: unknown
   fileName?: string | null
   anomaly?: string | null
-  remarks?: string | null
   data?: unknown
   createdAt: Date
   updatedAt: Date
@@ -59,7 +58,6 @@ export async function getProjectLogs(projectId: string, limit = 100, offset = 0)
     components: d.components,
     fileName: d.fileName ?? null,
     anomaly: d.anomaly ?? null,
-    remarks: d.remarks ?? null,
     data: d.data,
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,

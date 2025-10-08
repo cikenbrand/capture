@@ -18,7 +18,6 @@ type ProjectLog = {
     components?: unknown
     fileName?: string | null
     anomaly?: string | null
-    remarks?: string | null
     data?: unknown
 }
 
@@ -83,7 +82,6 @@ export default function AllLogsTable() {
                         <TableHead className="w-[220px]">Components</TableHead>
                         <TableHead className="w-[240px]">File Name</TableHead>
                         <TableHead className="w-[160px]">Anomaly</TableHead>
-                        <TableHead className="w-[240px]">Remarks</TableHead>
                         <TableHead className="w-[240px]">Data</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -107,7 +105,6 @@ export default function AllLogsTable() {
                                 <TableCell className="max-w-[220px] whitespace-nowrap overflow-hidden text-ellipsis">{renderVal(log.components)}</TableCell>
                                 <TableCell className="max-w-[240px] whitespace-nowrap overflow-hidden text-ellipsis">{renderVal(log.fileName)}</TableCell>
                                 <TableCell className="max-w-[160px] whitespace-nowrap overflow-hidden text-ellipsis">{renderVal(log.anomaly)}</TableCell>
-                                <TableCell className="max-w-[240px] whitespace-nowrap overflow-hidden text-ellipsis">{renderVal(log.remarks)}</TableCell>
                                 <TableCell className="max-w-[240px] whitespace-nowrap overflow-hidden text-ellipsis">{renderVal(log.data)}</TableCell>
                             </TableRow>
                         ))
