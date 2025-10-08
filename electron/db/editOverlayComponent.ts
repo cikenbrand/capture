@@ -36,6 +36,7 @@ type EditableFields = Partial<{
   twentyFourHour: boolean
   useUTC: boolean
   dataType: string
+  dataKey: string | null
   nodeLevel: number
   imagePath: string
   opacity: number
@@ -63,6 +64,7 @@ function buildSetObject(updates: EditableFields): Record<string, any> {
   if (typeof updates.twentyFourHour === 'boolean') $set.twentyFourHour = updates.twentyFourHour
   if (typeof updates.useUTC === 'boolean') $set.useUTC = updates.useUTC
   if (typeof updates.dataType === 'string') $set.dataType = updates.dataType
+  if (typeof (updates as any).dataKey !== 'undefined') $set.dataKey = (updates as any).dataKey
   if (typeof updates.nodeLevel === 'number') $set.nodeLevel = updates.nodeLevel
   if (typeof updates.imagePath === 'string') $set.imagePath = updates.imagePath
   if (typeof (updates as any).opacity === 'number') {

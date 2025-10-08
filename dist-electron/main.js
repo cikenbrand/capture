@@ -15711,6 +15711,7 @@ async function createOverlayComponent(input) {
       break;
     case "data":
       customFields.dataType = input.dataType ?? "string";
+      customFields.dataKey = typeof input.dataKey === "string" && input.dataKey.trim() ? input.dataKey.trim() : null;
       break;
     case "node":
       customFields.nodeLevel = input.nodeLevel ?? 1;
@@ -15834,6 +15835,7 @@ function buildSetObject(updates) {
   if (typeof updates.twentyFourHour === "boolean") $set.twentyFourHour = updates.twentyFourHour;
   if (typeof updates.useUTC === "boolean") $set.useUTC = updates.useUTC;
   if (typeof updates.dataType === "string") $set.dataType = updates.dataType;
+  if (typeof updates.dataKey !== "undefined") $set.dataKey = updates.dataKey;
   if (typeof updates.nodeLevel === "number") $set.nodeLevel = updates.nodeLevel;
   if (typeof updates.imagePath === "string") $set.imagePath = updates.imagePath;
   if (typeof updates.opacity === "number") {
@@ -15935,6 +15937,7 @@ async function getOverlayComponentsForRender(overlayId) {
     twentyFourHour: 1,
     useUTC: 1,
     dataType: 1,
+    dataKey: 1,
     nodeLevel: 1,
     imagePath: 1,
     opacity: 1,
@@ -15967,6 +15970,7 @@ ipcMain.handle("db:getOverlayComponentsForRender", async (_event, input) => {
       twentyFourHour: i.twentyFourHour,
       useUTC: i.useUTC,
       dataType: i.dataType,
+      dataKey: i.dataKey ?? null,
       nodeLevel: i.nodeLevel,
       imagePath: i.imagePath,
       opacity: i.opacity,
@@ -17145,6 +17149,41 @@ ipcMain.handle("serial:updateDeviceState", async (_e, patch2) => {
   }
 });
 let live = null;
+let lastBroadcastAt = 0;
+async function broadcastSerialSnapshot(isOpen, fields) {
+  try {
+    const now = Date.now();
+    if (now - lastBroadcastAt < 150) {
+      return;
+    }
+    lastBroadcastAt = now;
+    const mod = await import("ws");
+    const WS = mod && (mod.WebSocket || mod.default);
+    const payload = JSON.stringify({ serial: { isOpen, fields } });
+    for (let ch = 1; ch <= 4; ch++) {
+      try {
+        const ws = new WS(`ws://127.0.0.1:${OVERLAY_WS_PORT || 3620}/overlay?ch=${ch}`);
+        const sendOnce = () => {
+          try {
+            ws.send(payload);
+          } catch {
+          }
+          try {
+            ws.close();
+          } catch {
+          }
+        };
+        ws.on("open", sendOnce);
+        try {
+          if (ws.readyState === 1) sendOnce();
+        } catch {
+        }
+      } catch {
+      }
+    }
+  } catch {
+  }
+}
 async function openCurrentSerial() {
   if (live) return true;
   const cfg = getSerialDeviceState();
@@ -17168,6 +17207,7 @@ async function openCurrentSerial() {
           var _a;
           return { key: ((_a = prev == null ? void 0 : prev[i]) == null ? void 0 : _a.key) ?? null, value: v };
         });
+        void broadcastSerialSnapshot(true, serialDeviceState.currentFields);
       } catch {
       }
     };
@@ -17178,6 +17218,7 @@ async function openCurrentSerial() {
       serialDeviceState.data = [];
       serialDeviceState.currentFields = [];
       live = null;
+      void broadcastSerialSnapshot(false, []);
     };
     conn.onData(onData);
     conn.onError(onError);

@@ -487,6 +487,30 @@ function formatTimeDisplay(raw: string, format: string | undefined, twentyFourHo
 
 function TextOverlayContent({ component }: { component: any }) {
     const style = buildTextSpanStyle(component)
+    // Helper: live serial data polling for data components
+    const [serialOpen, setSerialOpen] = useState(false)
+    const [serialValue, setSerialValue] = useState<string>("")
+    useEffect(() => {
+        if (component.type !== 'data') return
+        let cancelled = false
+        const id = setInterval(async () => {
+            try {
+                const res = await window.ipcRenderer.invoke('serial:getDeviceState')
+                if (!cancelled && res?.ok && res.data) {
+                    const s = res.data as any
+                    setSerialOpen(!!s.isOpen)
+                    if (s.isOpen && Array.isArray(s.currentFields) && component.dataKey) {
+                        const match = s.currentFields.find((f: any) => (f?.key ?? null) === component.dataKey)
+                        setSerialValue(match ? String(match.value ?? '') : '')
+                    } else {
+                        setSerialValue("")
+                    }
+                }
+            } catch { }
+        }, 500)
+        return () => { cancelled = true; clearInterval(id) }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [component?.type, component?.dataKey])
     if (component.type === 'time') {
         const value = useTime({ twentyFourHour: component.twentyFourHour ?? true, useUTC: component.useUTC ?? false })
         return (
@@ -500,7 +524,9 @@ function TextOverlayContent({ component }: { component: any }) {
         return <span style={style}>{value}</span>
     }
     if (component.type === 'data') {
-        return <span style={style}>{component.customText || component.name}</span>
+        const placeholder = component.dataKey || component.customText || component.name
+        const content = serialOpen && serialValue ? serialValue : placeholder
+        return <span style={style}>{content}</span>
     }
     if (component.type === 'dive') {
         return <span style={style}>{component.customText || component.name}</span>

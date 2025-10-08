@@ -33,6 +33,7 @@ type OverlayComponentForEdit = {
     textStyle?: TextStyleShape
     nodeLevel?: number
     projectDetail?: 'name' | 'client' | 'vessel' | 'location' | 'contractor'
+    dataKey?: string | null
 }
 
 const FONT_WEIGHT_OPTIONS = [
@@ -140,6 +141,8 @@ export default function EditComponentForm({ onClose }: Props) {
     const [useUTC, setUseUTC] = useState(false)
     const [nodeLevel, setNodeLevel] = useState(1)
     const [projectDetail, setProjectDetail] = useState<'name' | 'client' | 'vessel' | 'location' | 'contractor'>('name')
+    const [dataKey, setDataKey] = useState<string | null>(null)
+    const [availableDataKeys, setAvailableDataKeys] = useState<Array<{ _id: string; name: string }>>([])
     const [imageUploading, setImageUploading] = useState(false)
     const [imageDeleting, setImageDeleting] = useState(false)
     const [imageOpacity, setImageOpacity] = useState('1')
@@ -227,6 +230,7 @@ export default function EditComponentForm({ onClose }: Props) {
                     setUseUTC(match?.useUTC ?? false)
                     setNodeLevel(typeof (match as any)?.nodeLevel === 'number' ? (match as any).nodeLevel : 1)
                     setProjectDetail((match as any)?.projectDetail ?? 'name')
+                    setDataKey((match as any)?.dataKey ?? null)
                     setImageOpacity(String((match as any)?.opacity ?? 1))
                 }
             } catch {
@@ -258,6 +262,19 @@ export default function EditComponentForm({ onClose }: Props) {
             active = false
             window.removeEventListener('selectedOverlayComponentIdsChanged', onSelectedIdsChanged as any)
         }
+    }, [])
+
+    useEffect(() => {
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await window.ipcRenderer.invoke('db:fetchDataKeys')
+                if (!cancelled && res?.ok && Array.isArray(res.data)) {
+                    setAvailableDataKeys(res.data.map((k: any) => ({ _id: String(k._id), name: String(k.name) })))
+                }
+            } catch {}
+        })()
+        return () => { cancelled = true }
     }, [])
 
     const broadcastUpdate = useCallback((ids: string[]) => {
@@ -827,6 +844,44 @@ export default function EditComponentForm({ onClose }: Props) {
                                 }}
                                 disabled={!canEdit}
                             />
+                        </div>
+                    </div>
+                ) : null}
+
+                {componentType === 'data' ? (
+                    <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-1">
+                            <span>Data Type</span>
+                            <Select
+                                value={dataKey ?? 'undefined'}
+                                onValueChange={async (v) => {
+                                    const next = v === 'undefined' ? null : v
+                                    setDataKey(next)
+                                    try {
+                                        const res = await window.ipcRenderer.invoke('db:editOverlayComponent', { ids: selectedIds, updates: { dataKey: next } })
+                                        if (res?.ok) {
+                                            setOverlayComponents((prev) => prev.map((component) => (
+                                                selectedIds.includes(component._id)
+                                                    ? { ...component, dataKey: next ?? null }
+                                                    : component
+                                            )))
+                                            broadcastUpdate(selectedIds)
+                                            try { const ev = new CustomEvent('overlay:refresh'); window.dispatchEvent(ev) } catch {}
+                                        }
+                                    } catch {}
+                                }}
+                                disabled={!canEdit}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select data key" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="undefined">undefined</SelectItem>
+                                    {availableDataKeys.map(k => (
+                                        <SelectItem key={k._id} value={k.name}>{k.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                 ) : null}

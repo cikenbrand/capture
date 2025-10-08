@@ -45,6 +45,7 @@ export interface NewOverlayComponent {
   twentyFourHour?: boolean // for time
   useUTC?: boolean // for time
   dataType?: string // for data
+  dataKey?: string | null // for data (name of key)
   nodeLevel?: number // for node
   imagePath?: string // for image
   opacity?: number // 0..1, for image
@@ -119,6 +120,7 @@ export async function createOverlayComponent(input: NewOverlayComponent): Promis
       break
     case 'data':
       customFields.dataType = input.dataType ?? 'string'
+      ;(customFields as any).dataKey = (typeof input.dataKey === 'string' && input.dataKey.trim()) ? input.dataKey.trim() : null
       break
     case 'node':
       customFields.nodeLevel = input.nodeLevel ?? 1

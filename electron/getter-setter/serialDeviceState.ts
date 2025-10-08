@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { openSerialDevice, type DataBits as DataBitsNum, type StopBits as StopBitsNum, type Parity as ParityVal, type SerialLiveData } from '../serial-data/openSerialDevice'
+import { OVERLAY_WS_PORT } from '../settings'
 
 export type SerialDeviceState = {
   device: string | null
@@ -54,6 +55,33 @@ ipcMain.handle('serial:updateDeviceState', async (_e, patch: Partial<SerialDevic
 
 let live: SerialLiveData | null = null
 
+let lastBroadcastAt = 0
+async function broadcastSerialSnapshot(isOpen: boolean, fields: { key: string | null, value: string }[]) {
+  try {
+    const now = Date.now()
+    if (now - lastBroadcastAt < 150) {
+      // throttle to ~6-7 fps
+      return
+    }
+    lastBroadcastAt = now
+    const mod: any = await import('ws')
+    const WS = (mod && (mod.WebSocket || mod.default)) as any
+    const payload = JSON.stringify({ serial: { isOpen, fields } })
+    for (let ch = 1; ch <= 4; ch++) {
+      try {
+        const ws = new WS(`ws://127.0.0.1:${OVERLAY_WS_PORT || 3620}/overlay?ch=${ch}`)
+        const sendOnce = () => {
+          try { ws.send(payload) } catch {}
+          try { ws.close() } catch {}
+        }
+        ws.on('open', sendOnce)
+        // If already open (unlikely), send immediately
+        try { if (ws.readyState === 1) sendOnce() } catch {}
+      } catch {}
+    }
+  } catch {}
+}
+
 async function openCurrentSerial(): Promise<boolean> {
   if (live) return true
   const cfg = getSerialDeviceState()
@@ -76,6 +104,7 @@ async function openCurrentSerial(): Promise<boolean> {
         const parts = line.split(',').map(s => s.trim())
         const prev = serialDeviceState.currentFields
         serialDeviceState.currentFields = parts.map((v, i) => ({ key: prev?.[i]?.key ?? null, value: v }))
+        void broadcastSerialSnapshot(true, serialDeviceState.currentFields)
       } catch {}
     }
     const onError = (_err: Error) => {}
@@ -84,6 +113,7 @@ async function openCurrentSerial(): Promise<boolean> {
       serialDeviceState.data = []
       serialDeviceState.currentFields = []
       live = null
+      void broadcastSerialSnapshot(false, [])
     }
     conn.onData(onData)
     conn.onError(onError)

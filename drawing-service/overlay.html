@@ -137,6 +137,16 @@
                     fetchAndRenderComponents(currentOverlayId);
                   }
                 }
+                // Accept serial snapshot broadcast
+                if (parsed.serial && typeof parsed.serial === 'object') {
+                  try {
+                    const s = parsed.serial;
+                    window.__serialOpen = true;
+                    window.__serialFields = Array.isArray(s.fields) ? s.fields : [];
+                  } catch {}
+                  // Update data texts immediately when serial snapshot arrives
+                  try { updateDataTexts(); } catch {}
+                }
                 if (Array.isArray(parsed.nodeLevels)) {
                   try { window.__nodeLevels = parsed.nodeLevels } catch {}
                   updateNodeTexts();
@@ -299,6 +309,18 @@
                   const val = (window.__nodeLevels && Array.isArray(window.__nodeLevels) && window.__nodeLevels[idx]) || ''
                   return String(val || '')
                 }
+                if (c.type === 'data') {
+                  try {
+                    const isOpen = window.__serialOpen === true;
+                    const fields = Array.isArray(window.__serialFields) ? window.__serialFields : [];
+                    const key = c.dataKey || '';
+                    if (isOpen && key) {
+                      const match = fields.find(f => (f && f.key) === key);
+                      if (match && typeof match.value !== 'undefined') return String(match.value);
+                    }
+                    return String(c.dataKey || c.name || '');
+                  } catch { return String(c.dataKey || c.name || ''); }
+                }
                 if (c.type === 'task') {
                   return String(currentTaskName || c.customText || c.name || '');
                 }
@@ -338,6 +360,10 @@
               if (c.type === 'project') {
                 try { item.setAttribute('data-kind', 'project'); } catch {}
                 try { item.setAttribute('data-project-detail', String(c.projectDetail || 'name')); } catch {}
+              }
+              if (c.type === 'data') {
+                try { item.setAttribute('data-kind', 'data'); } catch {}
+                try { item.setAttribute('data-key', String(c.dataKey || '')); } catch {}
               }
 
               box.appendChild(content);
@@ -396,6 +422,28 @@
                 const value = (currentProject && currentProject[detail]) || 'undefined';
                 const content = el.querySelector('.text-content');
                 if (content && typeof content.textContent !== 'undefined') content.textContent = String(value);
+              } catch {}
+            });
+          } catch {}
+        }
+
+        function updateDataTexts() {
+          try {
+            const items = stageEl.querySelectorAll('.overlay-item[data-kind="data"]');
+            const isOpen = window.__serialOpen === true;
+            const fields = Array.isArray(window.__serialFields) ? window.__serialFields : [];
+            items.forEach((el) => {
+              try {
+                const key = String(el.getAttribute('data-key') || '');
+                let value = '';
+                if (isOpen && key) {
+                  const match = fields.find((f) => f && f.key === key);
+                  value = match ? String(match.value || '') : '';
+                }
+                const content = el.querySelector('.text-content');
+                if (content && typeof content.textContent !== 'undefined') {
+                  content.textContent = value || key || '';
+                }
               } catch {}
             });
           } catch {}
