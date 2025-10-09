@@ -35,7 +35,11 @@ export async function getEventLogsForActiveSession(): Promise<EventLogRow[]> {
     .find({ sessionId: new ObjectId(String(sessionId)) })
     .sort({ createdAt: 1 })
     .toArray()
-  return rows
+  // Normalize _id to plain string for renderer (avoid structured clone of ObjectId)
+  return rows.map((r: any) => ({
+    ...r,
+    _id: typeof r._id?.toHexString === 'function' ? r._id.toHexString() : String(r._id),
+  }))
 }
 
 ipcMain.handle('db:getEventLogsForActiveSession', async () => {

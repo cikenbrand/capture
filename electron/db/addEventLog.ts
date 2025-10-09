@@ -73,8 +73,9 @@ export async function addEventLog(input: NewEventLogInput): Promise<EventLogDoc>
 ipcMain.handle('db:addEventLog', async (_event, input: NewEventLogInput) => {
   try {
     const created = await addEventLog(input)
-    const id = (created as any)?._id?.toString?.() ?? created
-    return { ok: true, data: id }
+    const id = (created as any)?._id
+    const plainId = typeof id?.toHexString === 'function' ? id.toHexString() : String(id)
+    return { ok: true, data: plainId }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { ok: false, error: message }

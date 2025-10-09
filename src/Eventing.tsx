@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 
 export default function Eventing() {
     const [recordingState, setRecordingState] = useState({ isRecordingStarted: false, isRecordingPaused: false, isRecordingStopped: false, isClipRecordingStarted: false })
-    const [eventRows, setEventRows] = useState<{ eventName: string; eventCode: string; startTime: string; endTime: string }[]>([])
+    const [eventRows, setEventRows] = useState<{ id: string; eventName: string; eventCode: string; startTime: string; endTime: string }[]>([])
     const [timelineNowMs, setTimelineNowMs] = useState(0)
 
     useEffect(() => {
@@ -15,11 +15,31 @@ export default function Eventing() {
         return () => clearInterval(id)
     }, [])
     useEffect(() => {
+        if (recordingState.isRecordingStopped) {
+            setEventRows([])
+        }
+    }, [recordingState.isRecordingStopped])
+    useEffect(() => {
         let cancelled = false
         ;(async () => {
             try {
                 const res = await window.ipcRenderer.invoke('recording:getState')
                 if (!cancelled && res?.ok) setRecordingState(res.data)
+            } catch {}
+            try {
+                const rows = await window.ipcRenderer.invoke('db:getEventLogsForActiveSession')
+                if (!cancelled && rows?.ok && Array.isArray(rows.data)) {
+                    const getId = (v: any) => {
+                        if (typeof v === 'string') return v
+                        if (v && typeof v === 'object') {
+                            try { const h = (v as any).toHexString?.(); if (typeof h === 'string' && h) return h } catch {}
+                            if (typeof v.$oid === 'string') return v.$oid
+                            try { const s = v.toString?.(); if (typeof s === 'string' && s && s !== '[object Object]') return s } catch {}
+                        }
+                        return ''
+                    }
+                    setEventRows(rows.data.map((r: any) => ({ id: getId(r._id), eventName: r.eventName, eventCode: r.eventCode, startTime: r.startTime, endTime: r.endTime })))
+                }
             } catch {}
         })()
         const onRecordingStateChanged = () => { (async () => { try { const res = await window.ipcRenderer.invoke('recording:getState'); if (res?.ok) setRecordingState(res.data) } catch {} })() }
@@ -32,6 +52,57 @@ export default function Eventing() {
             try { window.ipcRenderer.off('recordingStateChanged' as any, onRecordingStateChanged as any) } catch {}
         }
     }, [])
+
+    function formatHMSFromMs(ms: number): string {
+        const total = Math.max(0, Math.floor(ms / 1000))
+        const hh = String(Math.floor(total / 3600)).padStart(2, '0')
+        const mm = String(Math.floor((total % 3600) / 60)).padStart(2, '0')
+        const ss = String(total % 60).padStart(2, '0')
+        return `${hh}:${mm}:${ss}`
+    }
+    function parseHMS(hms: string): number {
+        const parts = String(hms || '').split(':')
+        if (parts.length !== 3) return 0
+        const [h, m, s] = parts.map((p) => Number(p) || 0)
+        return ((h * 3600) + (m * 60) + s) * 1000
+    }
+    async function refreshEventLogs() {
+        try {
+            const res = await window.ipcRenderer.invoke('db:getEventLogsForActiveSession')
+            if (res?.ok && Array.isArray(res.data)) {
+                const getId = (v: any) => {
+                    if (typeof v === 'string') return v
+                    if (v && typeof v === 'object') {
+                        try { const h = (v as any).toHexString?.(); if (typeof h === 'string' && h) return h } catch {}
+                        if (typeof v.$oid === 'string') return v.$oid
+                        try { const s = v.toString?.(); if (typeof s === 'string' && s && s !== '[object Object]') return s } catch {}
+                    }
+                    return ''
+                }
+                setEventRows(res.data.map((r: any) => ({ id: getId(r._id), eventName: r.eventName, eventCode: r.eventCode, startTime: r.startTime, endTime: r.endTime })))
+            }
+        } catch {}
+    }
+    function colorForCode(code: string): string {
+        const c = String(code || '').toUpperCase()
+        switch (c) {
+            case 'CP': return '#1BAA63'
+            case 'AN': return '#A855F7'
+            case 'PD': return '#15803D'
+            case 'FS': return '#F59E0B'
+            case 'EX': return '#D97706'
+            case 'BU': return '#B45309'
+            case 'CD': return '#EF4444'
+            case 'FJ': return '#EC4899'
+            case 'DN': return '#F43F5E'
+            case 'CPH': return '#F472B6'
+            case 'DB': return '#3B82F6'
+            case 'CR': return '#10B981'
+            case 'TPD': return '#84CC16'
+            case 'FN': return '#06B6D4'
+            default: return '#6B7280'
+        }
+    }
     return (
         <div className='h-screen flex flex-col bg-[#1D2229] overflow-clip'>
             <EventingTopBar />
@@ -46,19 +117,16 @@ export default function Eventing() {
                                 disabled={recordingState.isRecordingStopped || !recordingState.isRecordingStarted}
                                 onChipClick={async ({ label, code }) => {
                                     try {
-                                        // Use current timeline seconds as start/end sample for now
-                                        const startMs = 0
-                                        const endMs = 1000
+                                        const curS = (recordingState as any)?.sessionTimerSeconds ?? 0
+                                        const startMs = curS * 1000
+                                        const endMs = startMs + 1000
                                         await window.ipcRenderer.invoke('db:addEventLog', {
                                             eventName: label,
                                             eventCode: code,
                                             startTime: startMs,
                                             endTime: endMs,
                                         })
-                                        const res = await window.ipcRenderer.invoke('db:getEventLogsForActiveSession')
-                                        if (res?.ok && Array.isArray(res.data)) {
-                                            setEventRows(res.data.map((r: any) => ({ eventName: r.eventName, eventCode: r.eventCode, startTime: r.startTime, endTime: r.endTime })))
-                                        }
+                                        await refreshEventLogs()
                                     } catch {}
                                 }}
                             />
@@ -76,8 +144,22 @@ export default function Eventing() {
                                 disablePlayheadDrag
                                 autoPanToCurrent
                             >
-                                <TimelineItem id={1} timeMs={0} startMs={0} endMs={1000} color="green" label="CP Stab"/>
-                                <TimelineItem id={2} timeMs={0} startMs={0} endMs={1000} color="yellow" label="Free Span"/>
+                                {eventRows.map((ev) => (
+                                    <TimelineItem
+                                        key={ev.id}
+                                        id={ev.id}
+                                        startMs={parseHMS(ev.startTime)}
+                                        endMs={parseHMS(ev.endTime)}
+                                        color={colorForCode(ev.eventCode)}
+                                        label={ev.eventName}
+                                        onChange={async ({ startMs, endMs }) => {
+                                            try {
+                                                await window.ipcRenderer.invoke('db:editEventLog', ev.id, { startTime: formatHMSFromMs(startMs), endTime: formatHMSFromMs(endMs) })
+                                                await refreshEventLogs()
+                                            } catch {}
+                                        }}
+                                    />
+                                ))}
                             </Timeline>
                             <span className="text-white/80 text-sm">
                                 {(() => {                                           

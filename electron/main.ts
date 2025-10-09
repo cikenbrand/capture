@@ -80,6 +80,7 @@ import './db/createDataKey'
 import './db/fetchDataKey'
 import './db/addEventLog'
 import './db/getEventLogs'
+import './db/editEventLog'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
