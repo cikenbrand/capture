@@ -16562,7 +16562,8 @@ let recordingState = {
   isRecordingStarted: false,
   isRecordingPaused: false,
   isRecordingStopped: false,
-  isClipRecordingStarted: false
+  isClipRecordingStarted: false,
+  sessionTimerSeconds: 0
 };
 function getRecordingState() {
   return recordingState;

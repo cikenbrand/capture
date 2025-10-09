@@ -69,7 +69,12 @@ export default function SessionTimer() {
     if (shouldRun) {
       if (intervalRef.current == null) {
         intervalRef.current = window.setInterval(() => {
-          setElapsedSeconds((s) => s + 1)
+          setElapsedSeconds((s) => {
+            const next = s + 1
+            try { window.ipcRenderer.invoke('recording:updateState', { sessionTimerSeconds: next }) } catch {}
+            try { window.dispatchEvent(new Event('recordingStateChanged')) } catch {}
+            return next
+          })
         }, 1000)
       }
     } else {

@@ -5,6 +5,7 @@ export type RecordingState = {
   isRecordingPaused: boolean
   isRecordingStopped: boolean
   isClipRecordingStarted: boolean
+  sessionTimerSeconds: number
 }
 
 let recordingState: RecordingState = {
@@ -12,6 +13,7 @@ let recordingState: RecordingState = {
   isRecordingPaused: false,
   isRecordingStopped: false,
   isClipRecordingStarted: false,
+  sessionTimerSeconds: 0,
 }
 
 export function getRecordingState(): RecordingState {

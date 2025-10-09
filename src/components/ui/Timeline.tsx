@@ -11,6 +11,10 @@ type TimelineProps = {
     playheadMsRef?: React.MutableRefObject<number | null>;
     // Whether to follow the external playhead ref (e.g., while playing). Defaults to true
     followExternalPlayhead?: boolean;
+    // Disable dragging the blue playhead handle
+    disablePlayheadDrag?: boolean;
+    // Keep the current time within view by panning when near edges
+    autoPanToCurrent?: boolean;
     children?: React.ReactNode;
 };
 
@@ -29,11 +33,12 @@ type TimelineItemProps = {
 	onChange?: (next: { startMs: number; endMs: number }) => void;
 };
 
-export default function Timeline({ durationMs, valueMs, onChange, initialViewDurationMs, playheadMsRef, followExternalPlayhead = true, children }: TimelineProps) {
+export default function Timeline({ durationMs, valueMs, onChange, initialViewDurationMs, playheadMsRef, followExternalPlayhead = true, disablePlayheadDrag = false, autoPanToCurrent = true, children }: TimelineProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
-	const [internalMs, setInternalMs] = useState(0);
-	const currentMs = valueMs ?? internalMs;
+    const [internalMs, setInternalMs] = useState(valueMs ?? 0);
+    const currentMs = valueMs ?? internalMs;
 	const [selectedId, setSelectedId] = useState<ItemId | null>(null);
+	const [isFollowEnabled, setIsFollowEnabled] = useState<boolean>(autoPanToCurrent);
 
     const [containerWidth, setContainerWidth] = useState(0);
     const [containerHeight, setContainerHeight] = useState(0);
@@ -52,11 +57,28 @@ export default function Timeline({ durationMs, valueMs, onChange, initialViewDur
 		return () => ro.disconnect();
 	}, []);
 
-    // Reset view when duration or initial view duration changes
+	// Initialize view once on mount
+	const didInitRef = useRef(false);
+	useEffect(() => {
+		setViewStartMs(0);
+		setViewDurationMs(Math.max(0, Math.min(durationMs, initialViewDurationMs ?? durationMs)));
+		didInitRef.current = true;
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
+
+	// When total duration grows, preserve current scroll position unless following is enabled
+	useEffect(() => {
+		if (!didInitRef.current) return;
+		setViewStartMs((prev) => {
+			const maxStart = Math.max(0, durationMs - viewDurationMs);
+			return Math.max(0, Math.min(prev, maxStart));
+		});
+	}, [durationMs, viewDurationMs]);
+
+    // Keep internal time in sync with incoming valueMs
     useEffect(() => {
-        setViewStartMs(0);
-        setViewDurationMs(Math.max(0, Math.min(durationMs, initialViewDurationMs ?? durationMs)));
-    }, [durationMs, initialViewDurationMs]);
+        if (typeof valueMs === 'number') setInternalMs(valueMs);
+    }, [valueMs]);
 
 	const setMs = useCallback(
 		(next: number) => {
@@ -119,6 +141,21 @@ export default function Timeline({ durationMs, valueMs, onChange, initialViewDur
 		return () => unsub();
 	}, [x, containerWidth, labelX]);
 
+	// Auto-pan to keep the playhead visible when follow is enabled
+	useEffect(() => {
+		if (!isFollowEnabled) return;
+        const left = viewStartMs;
+        const right = viewStartMs + viewDurationMs;
+        const margin = viewDurationMs * 0.1; // 10% margin
+        if (currentMs > right - margin) {
+            const nextStart = Math.max(0, Math.min(currentMs - viewDurationMs * 0.9, durationMs - viewDurationMs));
+            setViewStartMs(nextStart);
+        } else if (currentMs < left + margin) {
+            const nextStart = Math.max(0, Math.min(currentMs - viewDurationMs * 0.1, durationMs - viewDurationMs));
+            setViewStartMs(nextStart);
+        }
+	}, [isFollowEnabled, currentMs, viewStartMs, viewDurationMs, durationMs]);
+
     // If an external playhead ref is provided, drive x from it each frame without emitting onChange
     useEffect(() => {
         if (!playheadMsRef || !followExternalPlayhead) return;
@@ -134,8 +171,28 @@ export default function Timeline({ durationMs, valueMs, onChange, initialViewDur
         return () => cancelAnimationFrame(raf);
     }, [playheadMsRef, msToX, x, isDragging, followExternalPlayhead]);
 
+    // When no external playhead is provided, derive playhead from currentMs so it follows session time
+    useEffect(() => {
+        if (playheadMsRef) return;
+        x.set(msToX(currentMs));
+        // Only pan the view if follow mode is ON
+        if (isFollowEnabled) {
+            const left = viewStartMs;
+            const right = viewStartMs + viewDurationMs;
+            const margin = viewDurationMs * 0.1;
+            if (currentMs > right - margin) {
+                const nextStart = Math.max(0, Math.min(currentMs - viewDurationMs * 0.9, durationMs - viewDurationMs));
+                setViewStartMs(nextStart);
+            } else if (currentMs < left + margin) {
+                const nextStart = Math.max(0, Math.min(currentMs - viewDurationMs * 0.1, durationMs - viewDurationMs));
+                setViewStartMs(nextStart);
+            }
+        }
+    }, [currentMs, msToX, x, playheadMsRef, isFollowEnabled, viewStartMs, viewDurationMs, durationMs]);
+
 	// Click to seek
-	const onContainerClick = useCallback((e: React.MouseEvent) => {
+    const onContainerClick = useCallback((e: React.MouseEvent) => {
+        if (disablePlayheadDrag) return; // ignore seeks when playhead is locked
 		const host = containerRef.current;
 		if (!host) return;
 		const rect = host.getBoundingClientRect();
@@ -143,7 +200,7 @@ export default function Timeline({ durationMs, valueMs, onChange, initialViewDur
 		setSelectedId(null);
 		x.set(nextX);
 		setMs(xToMs(nextX));
-	}, [x, setMs, xToMs]);
+    }, [disablePlayheadDrag, x, setMs, xToMs]);
 
 	// Render simple background grid with repeating columns
 	const gridStyle = useMemo(() => ({
@@ -222,6 +279,8 @@ export default function Timeline({ durationMs, valueMs, onChange, initialViewDur
 		setViewStartMs(nextStart);
 	}, [durationMs, viewDurationMs]);
 
+    // no-op (removed lock-to-right behavior)
+
     return (
 		<div className="w-full h-full select-none flex flex-col">
 			<div
@@ -231,6 +290,18 @@ export default function Timeline({ durationMs, valueMs, onChange, initialViewDur
 				onMouseDown={onContainerClick}
 				onWheel={onWheel}
 			>
+				{/* Follow toggle button */}
+				<div className="absolute top-1 right-1 z-20">
+					<button
+						onClick={(e) => { e.stopPropagation(); setIsFollowEnabled((v) => !v) }}
+						className={`h-[18px] px-1 rounded text-[10px] border ${isFollowEnabled ? 'bg-sky-500/20 text-white border-white/20' : 'bg-black/40 text-white/60 border-white/10'} hover:bg-white/10`}
+						title={isFollowEnabled ? 'Disable follow' : 'Enable follow'}
+						aria-pressed={isFollowEnabled}
+					>
+						{isFollowEnabled ? 'Follow: On' : 'Follow: Off'}
+					</button>
+				</div>
+
 				{/* Time labels */}
 				<div className="absolute top-0 left-0 right-0 h-5">
 					{labels.map((m) => (
@@ -247,16 +318,18 @@ export default function Timeline({ durationMs, valueMs, onChange, initialViewDur
 				</Ctx.Provider>
 
 				{/* Playhead/handle using motion drag */}
-				<motion.div
-					className="absolute top-0 bottom-0 w-px bg-sky-400"
-					style={{ x }}
-					drag="x"
-					dragMomentum={false}
-					dragConstraints={{ left: 0, right: Math.max(0, containerWidth) }}
-                    onDragStart={() => setIsDragging(true)}
-                    onDrag={() => setMs(xToMs(x.get()))}
-                    onDragEnd={() => { setIsDragging(false); setMs(xToMs(x.get())); }}
-				>
+                <motion.div
+                    className="absolute top-0 bottom-0 w-px bg-sky-400"
+                    style={{ x }}
+                    {...(disablePlayheadDrag ? {} : {
+                        drag: "x" as const,
+                        dragMomentum: false,
+                        dragConstraints: { left: 0, right: Math.max(0, containerWidth) },
+                        onDragStart: () => setIsDragging(true),
+                        onDrag: () => setMs(xToMs(x.get())),
+                        onDragEnd: () => { setIsDragging(false); setMs(xToMs(x.get())); },
+                    })}
+                >
 					{/* <div className="absolute -top-1 -left-2 right-[-8px] h-0 w-0 border-l-8 border-r-8 border-b-[10px] border-l-transparent border-r-transparent border-b-sky-400" /> */}
 					<Bookmark className="absolute -top-1 -left-3 text-sky-400" fill="currentColor" />
 				</motion.div>

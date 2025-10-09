@@ -33,7 +33,7 @@ export default function Eventing() {
         }
     }, [])
     return (
-        <div className='h-screen flex flex-col bg-[#1D2229]'>
+        <div className='h-screen flex flex-col bg-[#1D2229] overflow-clip'>
             <EventingTopBar />
             <div className="flex-1 flex p-2 gap-1">
                 <div className="flex-1 flex flex-col gap-1">
@@ -64,16 +64,30 @@ export default function Eventing() {
                             />
                         </TabsContent>
                     </Tabs>
-
-                    <Tabs defaultValue="timeline" className="flex-none h-[200px]">
+                    <Tabs defaultValue="timeline" className="flex-none h-[250px]">
                         <TabsList>
                             <TabsTrigger value="timeline">Timeline</TabsTrigger>
                         </TabsList>
                         <TabsContent value="timeline" className="flex flex-col gap-1">
-                            <Timeline durationMs={50000}>
+                            <Timeline
+                                durationMs={Math.max(60_000, ((recordingState as any)?.sessionTimerSeconds ?? 0) * 1000 + 1_000)}
+                                valueMs={((recordingState as any)?.isRecordingStarted ? ((recordingState as any)?.sessionTimerSeconds ?? 0) * 1000 : 1_000)}
+                                initialViewDurationMs={60_000}
+                                disablePlayheadDrag
+                                autoPanToCurrent
+                            >
                                 <TimelineItem id={1} timeMs={0} startMs={0} endMs={1000} color="green" label="CP Stab"/>
                                 <TimelineItem id={2} timeMs={0} startMs={0} endMs={1000} color="yellow" label="Free Span"/>
                             </Timeline>
+                            <span className="text-white/80 text-sm">
+                                {(() => {                                           
+                                    const s = (recordingState as any)?.sessionTimerSeconds ?? 0
+                                    const hh = String(Math.floor(s / 3600)).padStart(2, '0')
+                                    const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0')
+                                    const ss = String(s % 60).padStart(2, '0')               
+                                    return `${hh}:${mm}:${ss}`
+                                })()}
+                            </span>
                         </TabsContent>
                     </Tabs>
 
