@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 
 export type RecordingState = {
   isRecordingStarted: boolean
@@ -34,6 +34,12 @@ ipcMain.handle('recording:getState', async () => {
 ipcMain.handle('recording:updateState', async (_e, patch: Partial<RecordingState>) => {
   try {
     updateRecordingState(patch || {})
+    try {
+      // Broadcast to all renderer windows so every window updates immediately
+      for (const win of BrowserWindow.getAllWindows()) {
+        try { win.webContents.send('recordingStateChanged') } catch {}
+      }
+    } catch {}
     return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
