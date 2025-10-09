@@ -367,6 +367,38 @@ ipcMain.handle('window:open-eventing', async () => {
   }
 })
 
+ipcMain.handle('eventing-window:minimize', async () => {
+  try {
+    eventingWin?.minimize()
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('eventing-window:toggle-maximize', async () => {
+  try {
+    if (!eventingWin || eventingWin.isDestroyed()) return false
+    if (eventingWin.isMaximized()) {
+      eventingWin.unmaximize()
+    } else {
+      eventingWin.maximize()
+    }
+    return true
+  } catch {
+    return false
+  }
+})
+
+ipcMain.handle('eventing-window:close', async () => {
+  try {
+    eventingWin?.close()
+    return true
+  } catch {
+    return false
+  }
+})
+
 ipcMain.handle('window:open-data-configurations', async () => {
   try {
     if (dataConfigWin && !dataConfigWin.isDestroyed()) {

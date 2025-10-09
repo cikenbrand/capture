@@ -17504,6 +17504,7 @@ async function addEventLog(input) {
     eventCode: String(input.eventCode || "").trim(),
     startTime: coerceTime$1(input.startTime),
     endTime: coerceTime$1(input.endTime),
+    ...typeof input.data !== "undefined" ? { data: input.data } : {},
     createdAt: now,
     updatedAt: now
   };
@@ -17889,6 +17890,35 @@ ipcMain.handle("window:open-eventing", async () => {
     eventingWin.on("closed", () => {
       eventingWin = null;
     });
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("eventing-window:minimize", async () => {
+  try {
+    eventingWin == null ? void 0 : eventingWin.minimize();
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("eventing-window:toggle-maximize", async () => {
+  try {
+    if (!eventingWin || eventingWin.isDestroyed()) return false;
+    if (eventingWin.isMaximized()) {
+      eventingWin.unmaximize();
+    } else {
+      eventingWin.maximize();
+    }
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("eventing-window:close", async () => {
+  try {
+    eventingWin == null ? void 0 : eventingWin.close();
     return true;
   } catch {
     return false;

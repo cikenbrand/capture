@@ -31,6 +31,7 @@ type TimelineItemProps = {
 	color?: string;
 	label?: string;
 	onChange?: (next: { startMs: number; endMs: number }) => void;
+    onSelect?: (id: ItemId) => void;
 };
 
 export default function Timeline({ durationMs, valueMs, onChange, initialViewDurationMs, playheadMsRef, followExternalPlayhead = true, disablePlayheadDrag = false, autoPanToCurrent = true, children }: TimelineProps) {
@@ -355,7 +356,7 @@ export default function Timeline({ durationMs, valueMs, onChange, initialViewDur
 	);
 }
 
-export function TimelineItem({ id, timeMs, startMs, endMs, color = "#22c55e", label, onChange }: TimelineItemProps) {
+export function TimelineItem({ id, timeMs, startMs, endMs, color = "#22c55e", label, onChange, onSelect }: TimelineItemProps) {
     const { durationMs, containerWidth, containerHeight, msToX, xToMs, selectedId, setSelectedId, setLaneTop, removeLane, findSnapTop } = useTimelineContext();
     // Ensure each instance has a unique identity even if 'id' props are duplicated
     const internalIdRef = useRef<ItemId>(id ?? Symbol('timeline-item'));
@@ -424,7 +425,7 @@ export function TimelineItem({ id, timeMs, startMs, endMs, color = "#22c55e", la
                 dragElastic={0}
                 style={{ x: leftX, y: topY, width: widthX, backgroundColor: withAlpha(color, 0.3), borderColor: isSelected ? `#60a5fa` : `${color}`, boxShadow: isSelected ? `0 0 0 2px #60a5fa` : undefined }}
                 whileDrag={{ zIndex: 100 }}
-                onMouseDown={(e) => { e.stopPropagation(); setSelectedId?.(effectiveId); }}
+                onMouseDown={(e) => { e.stopPropagation(); setSelectedId?.(effectiveId); try { onSelect?.(effectiveId) } catch {} }}
                 onDragEnd={() => {
                     // Snap to nearest lane if within threshold
                     const candidate = topY.get();
@@ -453,7 +454,7 @@ export function TimelineItem({ id, timeMs, startMs, endMs, color = "#22c55e", la
                     style={{ x: leftHandleDragX }}
 					drag="x"
 					dragMomentum={false}
-                    onMouseDown={(e) => { e.stopPropagation(); setSelectedId?.(effectiveId); }}
+                    onMouseDown={(e) => { e.stopPropagation(); setSelectedId?.(effectiveId); try { onSelect?.(effectiveId) } catch {} }}
 					onDrag={(_, info) => {
 						const curLeft = leftX.get();
 						const curWidth = widthX.get();
@@ -475,7 +476,7 @@ export function TimelineItem({ id, timeMs, startMs, endMs, color = "#22c55e", la
                     style={{ x: rightHandleDragX }}
 					drag="x"
 					dragMomentum={false}
-                    onMouseDown={(e) => { e.stopPropagation(); setSelectedId?.(effectiveId); }}
+                    onMouseDown={(e) => { e.stopPropagation(); setSelectedId?.(effectiveId); try { onSelect?.(effectiveId) } catch {} }}
 					onDrag={(_, info) => {
 						const curLeft = leftX.get();
 						const curWidth = widthX.get();
@@ -499,10 +500,10 @@ export function TimelineItem({ id, timeMs, startMs, endMs, color = "#22c55e", la
 	}
 
 	// Marker fallback
-	const leftPx = msToX(Number(timeMs ?? 0));
-	const isSelected = selectedId != null && id != null && selectedId === id;
+    const leftPx = msToX(Number(timeMs ?? 0));
+    const isSelected = selectedId != null && effectiveId != null && selectedId === effectiveId;
 	return (
-		<div className="absolute top-6 bottom-6" style={{ left: leftPx }} onMouseDown={(e) => { e.stopPropagation(); setSelectedId?.(id ?? null); }}>
+		<div className="absolute top-6 bottom-6" style={{ left: leftPx }} onMouseDown={(e) => { e.stopPropagation(); setSelectedId?.(effectiveId); try { onSelect?.(effectiveId) } catch {} }}>
 			<div className="-translate-x-1/2 h-full w-[6px] rounded bg-white/10" style={{ boxShadow: isSelected ? `0 0 0 2px ${color}55` : undefined }} />
 			<div
 				className="absolute -top-4 left-1/2 -translate-x-1/2 px-1.5 py-0.5 rounded text-[10px] bg-black/60 border border-white/10 text-white/70 whitespace-nowrap"

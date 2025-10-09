@@ -7,8 +7,9 @@ import { useEffect, useState } from "react";
 
 export default function Eventing() {
     const [recordingState, setRecordingState] = useState({ isRecordingStarted: false, isRecordingPaused: false, isRecordingStopped: false, isClipRecordingStarted: false })
-    const [eventRows, setEventRows] = useState<{ id: string; eventName: string; eventCode: string; startTime: string; endTime: string }[]>([])
+    const [eventRows, setEventRows] = useState<{ id: string; eventName: string; eventCode: string; startTime: string; endTime: string; data?: unknown }[]>([])
     const [timelineNowMs, setTimelineNowMs] = useState(0)
+    const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
 
     useEffect(() => {
         const id = setInterval(() => setTimelineNowMs((v) => v + 1000), 1000)
@@ -38,7 +39,7 @@ export default function Eventing() {
                         }
                         return ''
                     }
-                    setEventRows(rows.data.map((r: any) => ({ id: getId(r._id), eventName: r.eventName, eventCode: r.eventCode, startTime: r.startTime, endTime: r.endTime })))
+                    setEventRows(rows.data.map((r: any) => ({ id: getId(r._id), eventName: r.eventName, eventCode: r.eventCode, startTime: r.startTime, endTime: r.endTime, data: r.data })))
                 }
             } catch {}
         })()
@@ -79,7 +80,7 @@ export default function Eventing() {
                     }
                     return ''
                 }
-                setEventRows(res.data.map((r: any) => ({ id: getId(r._id), eventName: r.eventName, eventCode: r.eventCode, startTime: r.startTime, endTime: r.endTime })))
+                setEventRows(res.data.map((r: any) => ({ id: getId(r._id), eventName: r.eventName, eventCode: r.eventCode, startTime: r.startTime, endTime: r.endTime, data: r.data })))
             }
         } catch {}
     }
@@ -120,13 +121,29 @@ export default function Eventing() {
                                         const curS = (recordingState as any)?.sessionTimerSeconds ?? 0
                                         const startMs = curS * 1000
                                         const endMs = startMs + 1000
-                                        await window.ipcRenderer.invoke('db:addEventLog', {
+                                        const addRes = await window.ipcRenderer.invoke('db:addEventLog', {
                                             eventName: label,
                                             eventCode: code,
                                             startTime: startMs,
                                             endTime: endMs,
+                                            data: await (async () => {
+                                                try {
+                                                    const ser = await window.ipcRenderer.invoke('serial:getDeviceState')
+                                                    if (ser?.ok && ser.data?.isOpen && Array.isArray(ser.data.currentFields)) {
+                                                        const entries = ser.data.currentFields
+                                                            .filter((f: any) => f && typeof f.value === 'string' && f.value.length > 0)
+                                                            .map((f: any, i: number) => ({ key: f.key ?? `f${i+1}`, value: f.value }))
+                                                        if (entries.length) return entries
+                                                    }
+                                                } catch {}
+                                                return undefined
+                                            })(),
                                         })
                                         await refreshEventLogs()
+                                        try {
+                                            const id = addRes?.ok ? (addRes.data ?? null) : null
+                                            if (typeof id === 'string' && id) setSelectedEventId(id)
+                                        } catch {}
                                     } catch {}
                                 }}
                             />
@@ -152,6 +169,7 @@ export default function Eventing() {
                                         endMs={parseHMS(ev.endTime)}
                                         color={colorForCode(ev.eventCode)}
                                         label={ev.eventName}
+                                        onSelect={() => setSelectedEventId(ev.id)}
                                         onChange={async ({ startMs, endMs }) => {
                                             try {
                                                 await window.ipcRenderer.invoke('db:editEventLog', ev.id, { startTime: formatHMSFromMs(startMs), endTime: formatHMSFromMs(endMs) })
@@ -187,20 +205,38 @@ export default function Eventing() {
                                                 <TableHead className="w-[100px]">Event Code</TableHead>
                                                 <TableHead className="w-[120px]">Start Time</TableHead>
                                                 <TableHead className="w-[120px]">End Time</TableHead>
+                                                <TableHead className="w-[120px]">Data</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {eventRows.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={4}>No events</TableCell>
+                                                    <TableCell colSpan={5}>No events</TableCell>
                                                 </TableRow>
                                             ) : (
                                                 eventRows.map((r, idx) => (
-                                                    <TableRow key={idx} className="border-b border-white/10">
+                                                    <TableRow key={idx} className={`border-b border-white/10 ${selectedEventId === r.id ? 'bg-[#1f2a37]' : ''}`}>
                                                         <TableCell>{r.eventName}</TableCell>
                                                         <TableCell>{r.eventCode}</TableCell>
                                                         <TableCell>{r.startTime}</TableCell>
                                                         <TableCell>{r.endTime}</TableCell>
+                                                        <TableCell>
+                                                            {(() => {
+                                                                const v = r.data
+                                                                if (v == null) return ''
+                                                                try {
+                                                                    if (Array.isArray(v)) {
+                                                                        return (v as any[]).map((e: any, i) => {
+                                                                            const k = (e && typeof e.key === 'string' && e.key.trim()) ? e.key : `f${i+1}`
+                                                                            const val = String(e?.value ?? '')
+                                                                            return `${k}=${val}`
+                                                                        }).join(', ')
+                                                                    }
+                                                                    if (typeof v === 'object') return JSON.stringify(v)
+                                                                    return String(v)
+                                                                } catch { return String(v) }
+                                                            })()}
+                                                        </TableCell>
                                                     </TableRow>
                                                 ))
                                             )}

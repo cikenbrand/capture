@@ -1,6 +1,7 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { ipcMain } from 'electron'
 import { MONGODB_URI } from '../settings'
+import { getSerialDeviceState } from '../getter-setter/serialDeviceState'
 import { getActiveSessionId } from '../getter-setter/activeSession'
 
 export interface NewEventLogInput {
@@ -8,6 +9,7 @@ export interface NewEventLogInput {
   eventCode: string
   startTime: string | number
   endTime: string | number
+  data?: unknown
 }
 
 export interface EventLogDoc {
@@ -62,6 +64,7 @@ export async function addEventLog(input: NewEventLogInput): Promise<EventLogDoc>
     eventCode: String(input.eventCode || '').trim(),
     startTime: coerceTime(input.startTime),
     endTime: coerceTime(input.endTime),
+    ...(typeof input.data !== 'undefined' ? { data: input.data } : {}),
     createdAt: now,
     updatedAt: now,
   }

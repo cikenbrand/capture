@@ -12,21 +12,21 @@ export default function EventingTopBar() {
                 <button
                     title="Minimize"
                     className='h-full w-12 no-drag flex items-center justify-center text-white hover:bg-white/15'
-                    onClick={() => window.ipcRenderer.invoke('overlay-window:minimize')}
+                    onClick={() => window.ipcRenderer.invoke('eventing-window:minimize')}
                 >
                     <VscChromeMinimize className="h-4 w-4 text-white/50" />
                 </button>
                 <button
                     title="Restore/Maximize"
                     className='h-full w-12 no-drag flex items-center justify-center text-white hover:bg-white/15'
-                    onClick={() => window.ipcRenderer.invoke('overlay-window:toggle-maximize')}
+                    onClick={() => window.ipcRenderer.invoke('eventing-window:toggle-maximize')}
                 >
                     <FaRegWindowRestore className="h-3 w-3 text-white/50" />
                 </button>
                 <button
                     title="Close"
                     className='group h-full w-12 no-drag flex items-center justify-center text-white hover:bg-red-600'
-                    onClick={() => window.ipcRenderer.invoke('overlay-window:close')}
+                    onClick={() => window.ipcRenderer.invoke('eventing-window:close')}
                 >
                     <VscChromeClose className="h-4 w-4 text-white/50 group-hover:text-white" />
                 </button>
