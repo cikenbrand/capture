@@ -80,8 +80,8 @@ export default function PictureInPicture() {
 
     const constraints = useMemo(() => ({
         video: selectedDeviceId
-            ? ({ deviceId: { exact: selectedDeviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } as MediaTrackConstraints)
-            : true,
+            ? ({ deviceId: { exact: selectedDeviceId }, width: { min: 1280, ideal: 1920, max: 3840 }, height: { min: 720, ideal: 1080, max: 2160 }, frameRate: { ideal: 60, max: 60 } } as MediaTrackConstraints)
+            : ({ width: { min: 1280, ideal: 1920, max: 3840 }, height: { min: 720, ideal: 1080, max: 2160 }, frameRate: { ideal: 60, max: 60 } } as MediaTrackConstraints),
         audio: false,
     }), [selectedDeviceId])
 

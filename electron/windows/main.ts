@@ -1,5 +1,5 @@
 // windows/mainWindow.ts
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, screen } from 'electron'
 import path from 'node:path'
 
 // Hard-coded (no external props): resolve dev/prod entrypoints here, safely at runtime
@@ -174,5 +174,39 @@ export function createDataConfigurationsWindow() {
     win.loadFile(path.join(getRendererDist(), 'index.html'), { query: { window: 'data-configurations' } as any })
   }
 
+  return win
+}
+
+export function createChannelPreviewWindow(displayLabel: string, channel: number) {
+  const displays = screen.getAllDisplays()
+  const target = displays.find(d => (d.label ?? '').trim() === (displayLabel ?? '').trim()) || displays.find(d => !d.internal) || screen.getPrimaryDisplay()
+  const bounds = target.bounds
+
+  const win = new BrowserWindow({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    show: true,
+    frame: false,
+    backgroundColor: '#000000',
+    fullscreen: true,
+    icon: path.join(process.env.VITE_PUBLIC || getRendererDist(), 'dc.ico'),
+    webPreferences: {
+      preload: path.join(process.env.APP_ROOT || path.join(__dirname, '..', '..'), 'dist-electron', 'preload.mjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: false
+    },
+  })
+
+  const devUrl = getDevUrl()
+  if (devUrl) {
+    win.loadURL(`${devUrl}?window=channel-preview&channel=${encodeURIComponent(String(channel))}`)
+  } else {
+    win.loadFile(path.join(getRendererDist(), 'index.html'), { query: { window: 'channel-preview', channel: String(channel) } as any })
+  }
+
+  try { win.setFullScreen(true) } catch {}
   return win
 }

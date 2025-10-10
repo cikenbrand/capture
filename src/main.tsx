@@ -4,6 +4,7 @@ import App from './App.tsx'
 import OverlayEditor from './OverlayEditor'
 import ExportProject from './ExportProject'
 import PictureInPicture from './PictureInPicture'
+import FullScreenPreview from './FullScreenPreview'
 import Eventing from './Eventing'
 import DataConfigurations from './DataConfigurations'
 import { Toaster } from "@/components/ui/sonner"
@@ -18,6 +19,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     {which === 'overlay-editor' ? <OverlayEditor />
       : which === 'export-project' ? <ExportProject />
       : which === 'picture-in-picture' ? <PictureInPicture />
+      : which === 'channel-preview' ? <FullScreenPreview />
       : which === 'eventing' ? <Eventing />
       : which === 'data-configurations' ? <DataConfigurations />
       : <App />}

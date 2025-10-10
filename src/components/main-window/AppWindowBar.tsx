@@ -29,6 +29,7 @@ export default function AppWindowBar() {
     const [selectedProjectName, setSelectedProjectName] = useState<string | null>(null)
     const [recentProjects, setRecentProjects] = useState<{ _id: string; name: string; lastSelectedDiveId?: string | null; lastSelectedTaskId?: string | null; lastSelectedNodeId?: string | null }[]>([])
     const [isRecordingStarted, setIsRecordingStarted] = useState(false)
+    const [externalMonitors, setExternalMonitors] = useState<string[]>([])
 
     useEffect(() => {
         let done = false
@@ -83,7 +84,7 @@ export default function AppWindowBar() {
                     const top5 = (all.data as any[]).slice(0, 5).map(p => ({ _id: p._id, name: p.name, lastSelectedDiveId: p.lastSelectedDiveId ?? null, lastSelectedTaskId: p.lastSelectedTaskId ?? null, lastSelectedNodeId: p.lastSelectedNodeId ?? null }))
                     setRecentProjects(top5)
                 }
-            } catch {}
+            } catch { }
         }
         window.addEventListener('projectsChanged', onProjectsChanged as any)
         return () => {
@@ -95,23 +96,47 @@ export default function AppWindowBar() {
 
     useEffect(() => {
         let cancelled = false
-        ;(async () => {
-            try {
-                const res = await window.ipcRenderer.invoke('recording:getState')
-                if (!cancelled && res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
-            } catch {}
-        })()
+            ; (async () => {
+                try {
+                    const res = await window.ipcRenderer.invoke('recording:getState')
+                    if (!cancelled && res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+                } catch { }
+            })()
         const onChanged = async () => {
             try {
                 const res = await window.ipcRenderer.invoke('recording:getState')
                 if (res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
-            } catch {}
+            } catch { }
         }
         window.addEventListener('recordingStateChanged', onChanged as any)
         return () => {
             cancelled = true
             window.removeEventListener('recordingStateChanged', onChanged as any)
         }
+    }, [])
+
+    useEffect(() => {
+        let done = false
+            ; (async () => {
+                try {
+                    const res = await window.ipcRenderer.invoke('system:getExternalMonitors')
+                    if (!done && res?.ok && Array.isArray(res.data)) {
+                        setExternalMonitors(res.data as string[])
+                    } else if (!done) {
+                        setExternalMonitors([])
+                    }
+                } catch {
+                    if (!done) setExternalMonitors([])
+                }
+            })()
+        const onDisplaysChanged = async () => {
+            try {
+                const res = await window.ipcRenderer.invoke('system:getExternalMonitors')
+                if (res?.ok && Array.isArray(res.data)) setExternalMonitors(res.data as string[])
+            } catch { }
+        }
+        // If you later wire events from main to notify display changes, handle here.
+        return () => { done = true }
     }, [])
 
     return (
@@ -186,12 +211,12 @@ export default function AppWindowBar() {
                                             try {
                                                 const ev2 = new CustomEvent('selectedDiveChanged', { detail: null })
                                                 window.dispatchEvent(ev2)
-                                            // Clear selected task as well
-                                            await window.ipcRenderer.invoke('app:setSelectedTaskId', null)
-                                            try {
-                                                const ev3 = new CustomEvent('selectedTaskChanged', { detail: null })
-                                                window.dispatchEvent(ev3)
-                                            } catch { }
+                                                // Clear selected task as well
+                                                await window.ipcRenderer.invoke('app:setSelectedTaskId', null)
+                                                try {
+                                                    const ev3 = new CustomEvent('selectedTaskChanged', { detail: null })
+                                                    window.dispatchEvent(ev3)
+                                                } catch { }
                                                 // Clear selected node as well
                                                 await window.ipcRenderer.invoke('app:setSelectedNodeId', null)
                                                 try {
@@ -218,8 +243,30 @@ export default function AppWindowBar() {
                     <MenubarMenu>
                         <MenubarTrigger className='px-2 py-1'>Preview</MenubarTrigger>
                         <MenubarContent>
-                            <MenubarItem onClick={() => { try { window.ipcRenderer.invoke('window:open-pip') } catch {} }}>Open Picture in Picture Window</MenubarItem>
+                            <MenubarItem onClick={() => { try { window.ipcRenderer.invoke('window:open-pip') } catch { } }}>Open Picture in Picture Window</MenubarItem>
+                            <MenubarSeparator/>
+                            <MenubarSub>
+                                <MenubarSubTrigger disabled={isRecordingStarted}>Monitors</MenubarSubTrigger>
+                                <MenubarSubContent>
+                                    {externalMonitors.length === 0 ? (
+                                        <MenubarItem data-disabled className="opacity-50">(none)</MenubarItem>
+                                    ) : (
+                                        externalMonitors.map((name, idx) => (
+                                            <MenubarSub key={`${name}-${idx}`}>
+                                                <MenubarSubTrigger disabled={isRecordingStarted}>{name}</MenubarSubTrigger>
+                                                <MenubarSubContent>
+                                                    <MenubarItem disabled={isRecordingStarted} onClick={() => { try { window.ipcRenderer.invoke('window:open-channel-preview', name, 1) } catch {} }}>Channel 1</MenubarItem>
+                                                    <MenubarItem disabled={isRecordingStarted} onClick={() => { try { window.ipcRenderer.invoke('window:open-channel-preview', name, 2) } catch {} }}>Channel 2</MenubarItem>
+                                                    <MenubarItem disabled={isRecordingStarted} onClick={() => { try { window.ipcRenderer.invoke('window:open-channel-preview', name, 3) } catch {} }}>Channel 3</MenubarItem>
+                                                    <MenubarItem disabled={isRecordingStarted} onClick={() => { try { window.ipcRenderer.invoke('window:open-channel-preview', name, 4) } catch {} }}>Channel 4</MenubarItem>
+                                                </MenubarSubContent>
+                                            </MenubarSub>
+                                        ))
+                                    )}
+                                </MenubarSubContent>
+                            </MenubarSub>
                         </MenubarContent>
+
                     </MenubarMenu>
                     <MenubarMenu>
                         <MenubarTrigger className='px-2 py-1'>Settings</MenubarTrigger>
@@ -311,7 +358,7 @@ export default function AppWindowBar() {
                 title="Video Configurations"
                 width={800}
             >
-                <VideoDeviceConfigurations/>
+                <VideoDeviceConfigurations />
             </DraggableDialog>
         </div >
     )

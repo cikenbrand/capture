@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createSplashWindow } from './windows/splashscreen'
-import { createMainWindow, createOverlayEditorWindow, createExportProjectWindow, createPictureInPictureWindow, createEventingWindow, createDataConfigurationsWindow } from './windows/main'
+import { createMainWindow, createOverlayEditorWindow, createExportProjectWindow, createPictureInPictureWindow, createEventingWindow, createDataConfigurationsWindow, createChannelPreviewWindow } from './windows/main'
 import { openObs } from './obs/openOBS'
 import { exitOBS } from './obs/websocket_functions/exitOBS'
 import { checkIfOBSOpenOrNot } from './obs/checkIfOBSOpenOrNot'
@@ -81,6 +81,8 @@ import './db/fetchDataKey'
 import './db/addEventLog'
 import './db/getEventLogs'
 import './db/editEventLog'
+import { getExternalMonitorList } from './other_functions/getExternalMonitorList'
+import './other_functions/getExternalMonitorList'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -508,7 +510,7 @@ ipcMain.handle('window:toggle-maximize', async () => {
 
 ipcMain.handle('window:close', async () => {
   try {
-    win?.close()
+    app.quit()
     return true
   } catch {
     return false
@@ -519,6 +521,28 @@ ipcMain.handle('serial:getCOMPorts', async () => {
   try {
     const ports = await getCOMPorts()
     return { ok: true, data: ports }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
+
+ipcMain.handle('system:getExternalMonitors', async () => {
+  try {
+    const names = await getExternalMonitorList()
+    return { ok: true, data: names }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
+
+ipcMain.handle('window:open-channel-preview', async (_e, displayLabel: string, channel: number) => {
+  try {
+    if (typeof channel !== 'number' || channel < 1 || channel > 4) return { ok: false, error: 'invalid channel' }
+    const win = createChannelPreviewWindow(displayLabel, channel)
+    win.on('closed', () => { /* no-op */ })
+    return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { ok: false, error: message }

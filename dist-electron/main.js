@@ -1,7 +1,7 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-import require$$1$4, { ipcMain, BrowserWindow, app, dialog } from "electron";
+import require$$1$4, { ipcMain, BrowserWindow, screen, app, dialog } from "electron";
 import path$m from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
@@ -319,6 +319,39 @@ function createDataConfigurationsWindow() {
     win2.loadURL(`${devUrl}?window=data-configurations`);
   } else {
     win2.loadFile(path$m.join(getRendererDist(), "index.html"), { query: { window: "data-configurations" } });
+  }
+  return win2;
+}
+function createChannelPreviewWindow(displayLabel, channel) {
+  const displays = screen.getAllDisplays();
+  const target = displays.find((d) => (d.label ?? "").trim() === (displayLabel ?? "").trim()) || displays.find((d) => !d.internal) || screen.getPrimaryDisplay();
+  const bounds = target.bounds;
+  const win2 = new BrowserWindow({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    show: true,
+    frame: false,
+    backgroundColor: "#000000",
+    fullscreen: true,
+    icon: path$m.join(process.env.VITE_PUBLIC || getRendererDist(), "dc.ico"),
+    webPreferences: {
+      preload: path$m.join(process.env.APP_ROOT || path$m.join(__dirname, "..", ".."), "dist-electron", "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: false
+    }
+  });
+  const devUrl = getDevUrl();
+  if (devUrl) {
+    win2.loadURL(`${devUrl}?window=channel-preview&channel=${encodeURIComponent(String(channel))}`);
+  } else {
+    win2.loadFile(path$m.join(getRendererDist(), "index.html"), { query: { window: "channel-preview", channel: String(channel) } });
+  }
+  try {
+    win2.setFullScreen(true);
+  } catch {
   }
   return win2;
 }
@@ -17605,6 +17638,21 @@ ipcMain.handle("db:editEventLog", async (_event, id, patch2) => {
     return { ok: false, error: message };
   }
 });
+async function getExternalMonitorList() {
+  try {
+    if (!app.isReady()) {
+      await app.whenReady();
+    }
+    const displays = screen.getAllDisplays().filter((d) => !d.internal);
+    const labels = displays.map((d) => (d.label ?? "").trim()).filter((name) => Boolean(name));
+    const unique = Array.from(new Set(labels));
+    unique.sort((a, b) => a.localeCompare(b));
+    return unique;
+  } catch (error2) {
+    console.error("Failed to list external monitors:", error2);
+    return [];
+  }
+}
 const __dirname$1 = path$m.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$m.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -18037,7 +18085,7 @@ ipcMain.handle("window:toggle-maximize", async () => {
 });
 ipcMain.handle("window:close", async () => {
   try {
-    win == null ? void 0 : win.close();
+    app.quit();
     return true;
   } catch {
     return false;
@@ -18047,6 +18095,27 @@ ipcMain.handle("serial:getCOMPorts", async () => {
   try {
     const ports = await getCOMPorts();
     return { ok: true, data: ports };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("system:getExternalMonitors", async () => {
+  try {
+    const names = await getExternalMonitorList();
+    return { ok: true, data: names };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("window:open-channel-preview", async (_e, displayLabel, channel) => {
+  try {
+    if (typeof channel !== "number" || channel < 1 || channel > 4) return { ok: false, error: "invalid channel" };
+    const win2 = createChannelPreviewWindow(displayLabel, channel);
+    win2.on("closed", () => {
+    });
+    return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };
