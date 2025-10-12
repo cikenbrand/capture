@@ -4,6 +4,7 @@ import fssync from 'node:fs'
 import path from 'node:path'
 import { getExportedProjectHierarchy } from '../db/getExportedProjectHierarchy'
 import { getSelectedProjectDetails } from '../db/getSelectedProjectDetails'
+import { getProjectLogs } from '../db/getProjectLogs'
 
 type HierNode = { type: 'dive' | 'node' | 'session' | 'video' | 'image'; children?: Record<string, HierNode>; path?: string }
 
@@ -76,6 +77,48 @@ async function exportNode(node: HierNode, targetDir: string) {
   }
 }
 
+function csvQuote(value: unknown): string {
+  const s = value === null || value === undefined ? '' : (typeof value === 'string' ? value : JSON.stringify(value))
+  const cleaned = String(s)
+  const escaped = cleaned.replace(/"/g, '""')
+  return `"${escaped}"`
+}
+
+async function writeProjectLogsCsv(projectId: string, outRoot: string) {
+  const rows: string[] = []
+  // header
+  rows.push([
+    'date', 'time', 'event', 'dive', 'task', 'components', 'fileName', 'anomaly', 'data', 'last edited',
+  ].join(','))
+
+  const limit = 1000
+  let offset = 0
+  // fetch in pages in case there are many logs
+  while (true) {
+    const page = await getProjectLogs(projectId, limit, offset)
+    if (!Array.isArray(page) || page.length === 0) break
+    for (const it of page) {
+      rows.push([
+        csvQuote(it.date),
+        csvQuote(it.time),
+        csvQuote(it.event),
+        csvQuote(it.dive ?? ''),
+        csvQuote(it.task ?? ''),
+        csvQuote(it.components ?? ''),
+        csvQuote(it.fileName ?? ''),
+        csvQuote(it.anomaly ?? ''),
+        csvQuote(it.data ?? ''),
+        csvQuote(it.updatedAt),
+      ].join(','))
+    }
+    if (page.length < limit) break
+    offset += page.length
+  }
+
+  const csv = rows.join('\r\n') + '\r\n'
+  await fs.writeFile(path.join(outRoot, 'project_logs.csv'), csv, 'utf8')
+}
+
 ipcMain.handle('project:export-entire', async (_e, projectId: string, destinationDir: string) => {
   try {
     if (typeof destinationDir !== 'string' || !destinationDir.trim()) return { ok: false, error: 'invalid destinationDir' }
@@ -89,6 +132,7 @@ ipcMain.handle('project:export-entire', async (_e, projectId: string, destinatio
     const rootOut = path.join(destinationDir.trim(), sanitizeSegment(projectName || 'Project'))
     await ensureDir(rootOut)
     await walkAndExport(hierarchy || {}, rootOut)
+    try { await writeProjectLogsCsv(projectId, rootOut) } catch {}
     return { ok: true, data: rootOut }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

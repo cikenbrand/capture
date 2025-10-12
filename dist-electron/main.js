@@ -17915,6 +17915,55 @@ async function exportNode(node2, targetDir) {
     await exportNode(child, childDir);
   }
 }
+function csvQuote(value) {
+  const s = value === null || value === void 0 ? "" : typeof value === "string" ? value : JSON.stringify(value);
+  const cleaned = String(s);
+  const escaped = cleaned.replace(/"/g, '""');
+  return `"${escaped}"`;
+}
+async function writeProjectLogsCsv(projectId, outRoot) {
+  const rows = [];
+  rows.push([
+    "id",
+    "date",
+    "time",
+    "event",
+    "dive",
+    "task",
+    "components",
+    "fileName",
+    "anomaly",
+    "data",
+    "createdAt",
+    "updatedAt"
+  ].join(","));
+  const limit = 1e3;
+  let offset = 0;
+  while (true) {
+    const page = await getProjectLogs(projectId, limit, offset);
+    if (!Array.isArray(page) || page.length === 0) break;
+    for (const it of page) {
+      rows.push([
+        csvQuote(it._id),
+        csvQuote(it.date),
+        csvQuote(it.time),
+        csvQuote(it.event),
+        csvQuote(it.dive ?? ""),
+        csvQuote(it.task ?? ""),
+        csvQuote(it.components ?? ""),
+        csvQuote(it.fileName ?? ""),
+        csvQuote(it.anomaly ?? ""),
+        csvQuote(it.data ?? ""),
+        csvQuote(it.createdAt),
+        csvQuote(it.updatedAt)
+      ].join(","));
+    }
+    if (page.length < limit) break;
+    offset += page.length;
+  }
+  const csv = rows.join("\r\n") + "\r\n";
+  await fs$k.writeFile(path$m.join(outRoot, "project_logs.csv"), csv, "utf8");
+}
 ipcMain.handle("project:export-entire", async (_e, projectId, destinationDir) => {
   try {
     if (typeof destinationDir !== "string" || !destinationDir.trim()) return { ok: false, error: "invalid destinationDir" };
@@ -17925,6 +17974,10 @@ ipcMain.handle("project:export-entire", async (_e, projectId, destinationDir) =>
     const rootOut = path$m.join(destinationDir.trim(), sanitizeSegment(projectName || "Project"));
     await ensureDir(rootOut);
     await walkAndExport(hierarchy || {}, rootOut);
+    try {
+      await writeProjectLogsCsv(projectId, rootOut);
+    } catch {
+    }
     return { ok: true, data: rootOut };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
