@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { VscChevronLeft } from "react-icons/vsc"
 import { AiFillFolder, AiOutlineFile } from "react-icons/ai"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -14,9 +14,10 @@ type Props = {
     onSelect?: (id: string) => void
     hierarchy?: Record<string, any>
     onOpenPath?: (path: string[]) => void
+    rightActions?: ReactNode
 }
 
-export default function FileExplorerComponent({ items, onSelect, hierarchy, onOpenPath }: Props) {
+export default function FileExplorerComponent({ items, onSelect, hierarchy, onOpenPath, rightActions }: Props) {
     const [selectedId, setSelectedId] = useState<string | null>(null)
     const [view, setView] = useState<"details" | "large">("details")
     const [path, setPath] = useState<string[]>([])
@@ -41,8 +42,8 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
         return keys.map(k => {
             const entry = nodeChildren?.[k]
             const type = entry?.type as string | undefined
-            // Treat everything except explicit video files as navigable folders
-            const isFolder = type !== 'video'
+            // Treat everything except explicit file types as navigable folders
+            const isFolder = !(type === 'video' || type === 'image')
             return { key: k, isFolder, type }
         })
     }, [hierarchy, path])
@@ -88,15 +89,18 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                         </div>
                     ))}
                 </div>
-                <Select value={view} onValueChange={(v) => setView(v as any)}>
-                    <SelectTrigger className="w-[150px]">
-                        <SelectValue placeholder="View" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="details">List</SelectItem>
-                        <SelectItem value="large">Large icons</SelectItem>
-                    </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                    <Select value={view} onValueChange={(v) => setView(v as any)}>
+                        <SelectTrigger className="w-[150px]">
+                            <SelectValue placeholder="View" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="details">List</SelectItem>
+                            <SelectItem value="large">Large icons</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    {rightActions}
+                </div>
             </div>
             {view === 'details' && (
                 <div className="px-4 py-2 text-xs uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center">
@@ -122,6 +126,8 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                     <div className="flex-1 flex items-center gap-2 min-w-0">
                                         {it.type === 'video' ? (
                                             <AiOutlineFile className="text-white/70" size={16} />
+                                        ) : it.type === 'image' ? (
+                                            <AiOutlineFile className="text-white/70" size={16} />
                                         ) : (
                                             <AiFillFolder className="text-yellow-400" size={16} />
                                         )}
@@ -143,6 +149,8 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                     aria-selected={selectedId === it.key}
                                 >
                                     {it.type === 'video' ? (
+                                        <AiOutlineFile className="text-white/70" size={48} />
+                                    ) : it.type === 'image' ? (
                                         <AiOutlineFile className="text-white/70" size={48} />
                                     ) : (
                                         <AiFillFolder className={`text-yellow-400 ${selectedId === it.key ? 'drop-shadow-[0_0_6px_rgba(255,255,0,0.3)]' : ''}`} size={48} />

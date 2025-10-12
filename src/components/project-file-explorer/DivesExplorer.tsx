@@ -69,6 +69,27 @@ export default function DivesExplorer() {
                     hierarchy={hierarchy as any}
                     items={[]}
                     onOpenPath={(p) => setCurrentPath(p)}
+                    rightActions={(
+                        <button
+                            className="h-8 px-3 rounded bg-[#2D3743] text-white/90 hover:bg-[#3A4654]"
+                            onClick={async () => {
+                                try {
+                                    const proj = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+                                    const projectId: string | null = proj?.ok ? (proj.data ?? null) : null
+                                    if (!projectId) return
+                                    const pick = await window.ipcRenderer.invoke('dialog:selectDirectory')
+                                    if (!pick?.ok || !pick.data) return
+                                    const dest: string = pick.data
+                                    const exp = await window.ipcRenderer.invoke('project:export-entire', projectId, dest)
+                                    if (!exp?.ok) {
+                                        // optional: surface error
+                                    }
+                                } catch {}
+                            }}
+                        >
+                            Export Project
+                        </button>
+                    )}
                     onSelect={async (id) => {
                         try {
                             setSelectedId(id)
@@ -87,7 +108,7 @@ export default function DivesExplorer() {
                             }
                             const nodeChildren = (cursor && cursor.children) ? cursor.children : cursor
                             const entry = nodeChildren?.[id]
-                            if (entry && entry.type === 'video') {
+                            if (entry && (entry.type === 'video' || entry.type === 'image')) {
                                 const filePath: string | undefined = typeof entry.path === 'string' ? entry.path : undefined
                                 if (filePath) {
                                     await window.ipcRenderer.invoke('system:openFile', filePath)

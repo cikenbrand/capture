@@ -15357,6 +15357,18 @@ function fileLabelFromPath(p) {
     return null;
   }
 }
+function imageLabelFromPath(p) {
+  try {
+    if (!p || typeof p !== "string") return null;
+    const normalized = p.replace(/\\/g, "/").trim();
+    if (!normalized) return null;
+    const base = normalized.split("/").pop() || "";
+    if (!base) return null;
+    return base;
+  } catch {
+    return null;
+  }
+}
 function withMkvIfNoExt(p) {
   try {
     if (!p || typeof p !== "string") return null;
@@ -15369,7 +15381,7 @@ function withMkvIfNoExt(p) {
   }
 }
 async function getExportedProjectHierarchy(projectId) {
-  var _a;
+  var _a, _b, _c, _d, _e, _f;
   const client = await getClient$j();
   const db = client.db("capture");
   const dives = await db.collection("dives").find({ projectId: new ObjectId(projectId) }, { projection: { name: 1 } }).toArray();
@@ -15377,7 +15389,7 @@ async function getExportedProjectHierarchy(projectId) {
   for (const d of dives) {
     diveIdToName.set(d._id.toString(), String(d.name || ""));
   }
-  const sessions = await db.collection("sessions").find({ projectId: new ObjectId(projectId) }, { projection: { dive: 1, diveId: 1, nodesHierarchy: 1, createdAt: 1, preview: 1, ch1: 1, ch2: 1, ch3: 1, ch4: 1, clips: 1 } }).sort({ createdAt: 1 }).toArray();
+  const sessions = await db.collection("sessions").find({ projectId: new ObjectId(projectId) }, { projection: { dive: 1, diveId: 1, nodesHierarchy: 1, createdAt: 1, preview: 1, ch1: 1, ch2: 1, ch3: 1, ch4: 1, clips: 1, snapshots: 1 } }).sort({ createdAt: 1 }).toArray();
   const result = {};
   for (const s of sessions) {
     const diveName = ((_a = s.dive) == null ? void 0 : _a.name) && s.dive.name.trim() ? s.dive.name.trim() : diveIdToName.get(s.diveId.toString()) || `Dive ${s.diveId.toString().slice(-4)}`;
@@ -15404,6 +15416,26 @@ async function getExportedProjectHierarchy(projectId) {
       if (label && !videosNode.children[label]) {
         const p = withMkvIfNoExt(typeof pathStr === "string" ? pathStr : null);
         videosNode.children[label] = p ? { type: "video", path: p } : { type: "video" };
+      }
+    }
+    const snapshotsNode = sessionNode.children["Snapshots"];
+    if (!snapshotsNode.children) snapshotsNode.children = {};
+    const snapshotArrays = [
+      (_b = s == null ? void 0 : s.snapshots) == null ? void 0 : _b.preview,
+      (_c = s == null ? void 0 : s.snapshots) == null ? void 0 : _c.ch1,
+      (_d = s == null ? void 0 : s.snapshots) == null ? void 0 : _d.ch2,
+      (_e = s == null ? void 0 : s.snapshots) == null ? void 0 : _e.ch3,
+      (_f = s == null ? void 0 : s.snapshots) == null ? void 0 : _f.ch4
+    ];
+    for (const arr of snapshotArrays) {
+      if (Array.isArray(arr)) {
+        for (const imgPath of arr) {
+          const label = imageLabelFromPath(imgPath);
+          if (label && !snapshotsNode.children[label]) {
+            const p = typeof imgPath === "string" ? imgPath.trim() : null;
+            snapshotsNode.children[label] = p ? { type: "image", path: p } : { type: "image" };
+          }
+        }
       }
     }
     const clipPaths = Array.isArray(s.clips) ? s.clips : [];
@@ -16657,20 +16689,20 @@ async function resolveClipFilePath() {
       break;
     }
   }
-  let fileName = `${path$m.basename(filenameFormatting)}${ext}`;
-  if (!ext) {
-    try {
-      const files = fs$j.readdirSync(outDir);
-      const found = files.find((f) => f.toLowerCase().startsWith(`${path$m.basename(filenameFormatting).toLowerCase()}.`));
-      if (found) fileName = found;
-    } catch {
-    }
-  }
   let clipDir = outDir;
   try {
     const parent = path$m.dirname(outDir);
     clipDir = path$m.join(parent, "clip");
   } catch {
+  }
+  let fileName = `${path$m.basename(filenameFormatting)}${ext}`;
+  if (!ext) {
+    try {
+      const files = fs$j.readdirSync(clipDir);
+      const found = files.find((f) => f.toLowerCase().startsWith(`${path$m.basename(filenameFormatting).toLowerCase()}.`));
+      if (found) fileName = found;
+    } catch {
+    }
   }
   return path$m.join(clipDir, fileName);
 }
@@ -17814,6 +17846,86 @@ ipcMain.handle("system:openFile", async (_e, filePath) => {
       return { ok: false, error: res };
     }
     return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+async function ensureDir(dir) {
+  await fs$k.mkdir(dir, { recursive: true });
+}
+async function copyFileSafe(src2, dest) {
+  try {
+    if (!src2 || typeof src2 !== "string") return false;
+    await fs$k.access(src2).catch(() => {
+      throw new Error("missing");
+    });
+    await ensureDir(path$m.dirname(dest));
+    try {
+      await fs$k.copyFile(src2, dest);
+      return true;
+    } catch {
+      await new Promise((resolve, reject) => {
+        const rd = fs$j.createReadStream(src2);
+        rd.on("error", reject);
+        const wr = fs$j.createWriteStream(dest);
+        wr.on("error", reject);
+        wr.on("close", () => resolve());
+        rd.pipe(wr);
+      });
+      return true;
+    }
+  } catch {
+    return false;
+  }
+}
+function sanitizeSegment(seg) {
+  const s = seg.replace(/[\\/:*?"<>|]/g, "_").trim();
+  return s || "untitled";
+}
+async function walkAndExport(root2, outRoot) {
+  for (const diveName of Object.keys(root2)) {
+    const diveNode = root2[diveName];
+    const diveDir = path$m.join(outRoot, sanitizeSegment(diveName));
+    await ensureDir(diveDir);
+    const diveChildren = diveNode.children || {};
+    for (const key of Object.keys(diveChildren)) {
+      const node2 = diveChildren[key];
+      await exportNode(node2, path$m.join(diveDir, sanitizeSegment(key)));
+    }
+  }
+}
+async function exportNode(node2, targetDir) {
+  if (node2.type === "video" || node2.type === "image") {
+    await ensureDir(path$m.dirname(targetDir));
+    let src2 = node2.path || "";
+    if (src2 && !/\.[a-z0-9]{2,5}$/i.test(src2)) src2 = `${src2}.mkv`;
+    const base = path$m.basename(targetDir);
+    const dest = path$m.join(path$m.dirname(targetDir), base);
+    if (src2) {
+      await copyFileSafe(src2, dest);
+    }
+    return;
+  }
+  await ensureDir(targetDir);
+  const children = node2.children || {};
+  for (const key of Object.keys(children)) {
+    const child = children[key];
+    const childDir = path$m.join(targetDir, sanitizeSegment(key));
+    await exportNode(child, childDir);
+  }
+}
+ipcMain.handle("project:export-entire", async (_e, projectId, destinationDir) => {
+  try {
+    if (typeof destinationDir !== "string" || !destinationDir.trim()) return { ok: false, error: "invalid destinationDir" };
+    if (typeof projectId !== "string" || !projectId.trim()) return { ok: false, error: "invalid projectId" };
+    const det = await getSelectedProjectDetails(projectId);
+    const projectName = (det == null ? void 0 : det.name) || "Project";
+    const hierarchy = await getExportedProjectHierarchy(projectId);
+    const rootOut = path$m.join(destinationDir.trim(), sanitizeSegment(projectName || "Project"));
+    await ensureDir(rootOut);
+    await walkAndExport(hierarchy || {}, rootOut);
+    return { ok: true, data: rootOut };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };

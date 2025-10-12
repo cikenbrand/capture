@@ -73,22 +73,22 @@ async function resolveClipFilePath(): Promise<string | null> {
         }
     }
 
-    // Determine file name (may use directory scan if ext unknown)
-    let fileName = `${path.basename(filenameFormatting)}${ext}`
-    if (!ext) {
-        try {
-            const files = fs.readdirSync(outDir)
-            const found = files.find(f => f.toLowerCase().startsWith(`${path.basename(filenameFormatting).toLowerCase()}.`))
-            if (found) fileName = found
-        } catch {}
-    }
-
     // Map directory: sibling of recording directory named 'clip'
     let clipDir = outDir
     try {
         const parent = path.dirname(outDir)
         clipDir = path.join(parent, 'clip')
     } catch {}
+
+    // Determine file name (may use directory scan if ext unknown). Scan clipDir because clips are saved there
+    let fileName = `${path.basename(filenameFormatting)}${ext}`
+    if (!ext) {
+        try {
+            const files = fs.readdirSync(clipDir)
+            const found = files.find(f => f.toLowerCase().startsWith(`${path.basename(filenameFormatting).toLowerCase()}.`))
+            if (found) fileName = found
+        } catch {}
+    }
 
     return path.join(clipDir, fileName)
 }

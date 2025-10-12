@@ -54,7 +54,7 @@ function extractNodePathNames(root?: { name: string; children?: any }): string[]
 	return names
 }
 
-type HierNode = { type: 'dive' | 'node' | 'session' | 'video'; children?: Record<string, HierNode>; path?: string }
+type HierNode = { type: 'dive' | 'node' | 'session' | 'video' | 'image'; children?: Record<string, HierNode>; path?: string }
 
 function fileLabelFromPath(p?: string | null): string | null {
     try {
@@ -64,6 +64,19 @@ function fileLabelFromPath(p?: string | null): string | null {
         const base = normalized.split('/').pop() || ''
         if (!base) return null
         return base.toLowerCase().endsWith('.mkv') ? base : `${base}.mkv`
+    } catch {
+        return null
+    }
+}
+
+function imageLabelFromPath(p?: string | null): string | null {
+    try {
+        if (!p || typeof p !== 'string') return null
+        const normalized = p.replace(/\\/g, '/').trim()
+        if (!normalized) return null
+        const base = normalized.split('/').pop() || ''
+        if (!base) return null
+        return base
     } catch {
         return null
     }
@@ -94,7 +107,7 @@ export async function getExportedProjectHierarchy(projectId: string) {
 	}
 
     const sessions = await db.collection<SessionRow>('sessions')
-		.find({ projectId: new ObjectId(projectId) }, { projection: { dive: 1, diveId: 1, nodesHierarchy: 1, createdAt: 1, preview: 1, ch1: 1, ch2: 1, ch3: 1, ch4: 1, clips: 1 } })
+		.find({ projectId: new ObjectId(projectId) }, { projection: { dive: 1, diveId: 1, nodesHierarchy: 1, createdAt: 1, preview: 1, ch1: 1, ch2: 1, ch3: 1, ch4: 1, clips: 1, snapshots: 1 } })
 		.sort({ createdAt: 1 })
 		.toArray()
 
@@ -133,6 +146,28 @@ export async function getExportedProjectHierarchy(projectId: string) {
             if (label && !videosNode.children[label]) {
                 const p = withMkvIfNoExt(typeof pathStr === 'string' ? pathStr : null)
                 videosNode.children[label] = p ? { type: 'video', path: p } : { type: 'video' }
+            }
+        }
+
+        // Populate snapshots images under Snapshots
+        const snapshotsNode = sessionNode.children['Snapshots']
+        if (!snapshotsNode.children) snapshotsNode.children = {}
+        const snapshotArrays: Array<string[] | undefined> = [
+            (s as any)?.snapshots?.preview,
+            (s as any)?.snapshots?.ch1,
+            (s as any)?.snapshots?.ch2,
+            (s as any)?.snapshots?.ch3,
+            (s as any)?.snapshots?.ch4,
+        ]
+        for (const arr of snapshotArrays) {
+            if (Array.isArray(arr)) {
+                for (const imgPath of arr) {
+                    const label = imageLabelFromPath(imgPath)
+                    if (label && !snapshotsNode.children[label]) {
+                        const p = typeof imgPath === 'string' ? imgPath.trim() : null
+                        snapshotsNode.children[label] = p ? { type: 'image', path: p } : { type: 'image' }
+                    }
+                }
             }
         }
 
