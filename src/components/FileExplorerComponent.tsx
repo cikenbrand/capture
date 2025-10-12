@@ -115,7 +115,7 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                 <li
                                     key={it.key}
                                     className={`px-4 py-2 cursor-default flex items-center ${selectedId === it.key ? 'bg-white/10' : 'hover:bg-white/5'}`}
-                                    onClick={() => { setSelectedId(it.key); try { onSelect?.(it.key) } catch {} }}
+                                    onClick={() => { setSelectedId(it.key) }}
                                     onDoubleClick={() => openEntry(it.key, it.isFolder)}
                                     aria-selected={selectedId === it.key}
                                 >
@@ -138,7 +138,7 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                 <div
                                     key={it.key}
                                     className={`group rounded cursor-default p-3 flex flex-col items-center gap-2 ${selectedId === it.key ? 'bg-white/10 ring-1 ring-white/20' : 'hover:bg-white/5'}`}
-                                    onClick={() => { setSelectedId(it.key); try { onSelect?.(it.key) } catch {} }}
+                                    onClick={() => { setSelectedId(it.key) }}
                                     onDoubleClick={() => openEntry(it.key, it.isFolder)}
                                     aria-selected={selectedId === it.key}
                                 >

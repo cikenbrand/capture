@@ -84,6 +84,7 @@ import './db/getEventLogs'
 import './db/editEventLog'
 import { getExternalMonitorList } from './other_functions/getExternalMonitorList'
 import './other_functions/getExternalMonitorList'
+import './other_functions/openFile'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')

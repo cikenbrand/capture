@@ -14,6 +14,7 @@ type SessionRow = {
     ch2?: string
     ch3?: string
     ch4?: string
+    clips?: string[]
 }
 
 let cachedClient: MongoClient | null = null
@@ -53,7 +54,7 @@ function extractNodePathNames(root?: { name: string; children?: any }): string[]
 	return names
 }
 
-type HierNode = { type: 'dive' | 'node' | 'session' | 'video'; children?: Record<string, HierNode> }
+type HierNode = { type: 'dive' | 'node' | 'session' | 'video'; children?: Record<string, HierNode>; path?: string }
 
 function fileLabelFromPath(p?: string | null): string | null {
     try {
@@ -63,6 +64,18 @@ function fileLabelFromPath(p?: string | null): string | null {
         const base = normalized.split('/').pop() || ''
         if (!base) return null
         return base.toLowerCase().endsWith('.mkv') ? base : `${base}.mkv`
+    } catch {
+        return null
+    }
+}
+
+function withMkvIfNoExt(p?: string | null): string | null {
+    try {
+        if (!p || typeof p !== 'string') return null
+        const trimmed = p.trim()
+        if (!trimmed) return null
+        const hasExt = /\.[a-z0-9]{2,5}$/i.test(trimmed)
+        return hasExt ? trimmed : `${trimmed}.mkv`
     } catch {
         return null
     }
@@ -81,7 +94,7 @@ export async function getExportedProjectHierarchy(projectId: string) {
 	}
 
     const sessions = await db.collection<SessionRow>('sessions')
-		.find({ projectId: new ObjectId(projectId) }, { projection: { dive: 1, diveId: 1, nodesHierarchy: 1, createdAt: 1, preview: 1, ch1: 1, ch2: 1, ch3: 1, ch4: 1 } })
+		.find({ projectId: new ObjectId(projectId) }, { projection: { dive: 1, diveId: 1, nodesHierarchy: 1, createdAt: 1, preview: 1, ch1: 1, ch2: 1, ch3: 1, ch4: 1, clips: 1 } })
 		.sort({ createdAt: 1 })
 		.toArray()
 
@@ -118,7 +131,23 @@ export async function getExportedProjectHierarchy(projectId: string) {
         for (const pathStr of entries) {
             const label = fileLabelFromPath(pathStr)
             if (label && !videosNode.children[label]) {
-                videosNode.children[label] = { type: 'video' }
+                const p = withMkvIfNoExt(typeof pathStr === 'string' ? pathStr : null)
+                videosNode.children[label] = p ? { type: 'video', path: p } : { type: 'video' }
+            }
+        }
+
+        // Add Clips folder under Videos if session has clips
+        const clipPaths: string[] = Array.isArray((s as any).clips) ? ((s as any).clips as string[]) : []
+        if (clipPaths.length > 0) {
+            if (!videosNode.children['Clips']) videosNode.children['Clips'] = { type: 'node', children: {} }
+            const clipsNode = videosNode.children['Clips']
+            if (!clipsNode.children) clipsNode.children = {}
+            for (const clipPath of clipPaths) {
+                const label = fileLabelFromPath(clipPath)
+                if (label && !clipsNode.children[label]) {
+                    const p = (typeof clipPath === 'string') ? clipPath.trim() : null
+                    clipsNode.children[label] = p ? { type: 'video', path: p } : { type: 'video' }
+                }
             }
         }
 	}

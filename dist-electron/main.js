@@ -1,7 +1,7 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-import require$$1$4, { ipcMain, BrowserWindow, screen, app, dialog } from "electron";
+import require$$1$4, { ipcMain, BrowserWindow, screen, app, shell, dialog } from "electron";
 import path$m from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
@@ -24,7 +24,7 @@ import require$$4$1 from "url";
 import require$$1$3 from "string_decoder";
 import require$$14 from "zlib";
 import require$$4$2 from "http";
-import fsp from "node:fs/promises";
+import fs$k from "node:fs/promises";
 import { SerialPort } from "serialport";
 import { EventEmitter } from "node:events";
 const OBS_EXECUTABLE_PATH = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\");
@@ -15357,6 +15357,17 @@ function fileLabelFromPath(p) {
     return null;
   }
 }
+function withMkvIfNoExt(p) {
+  try {
+    if (!p || typeof p !== "string") return null;
+    const trimmed = p.trim();
+    if (!trimmed) return null;
+    const hasExt = /\.[a-z0-9]{2,5}$/i.test(trimmed);
+    return hasExt ? trimmed : `${trimmed}.mkv`;
+  } catch {
+    return null;
+  }
+}
 async function getExportedProjectHierarchy(projectId) {
   var _a;
   const client = await getClient$j();
@@ -15366,7 +15377,7 @@ async function getExportedProjectHierarchy(projectId) {
   for (const d of dives) {
     diveIdToName.set(d._id.toString(), String(d.name || ""));
   }
-  const sessions = await db.collection("sessions").find({ projectId: new ObjectId(projectId) }, { projection: { dive: 1, diveId: 1, nodesHierarchy: 1, createdAt: 1, preview: 1, ch1: 1, ch2: 1, ch3: 1, ch4: 1 } }).sort({ createdAt: 1 }).toArray();
+  const sessions = await db.collection("sessions").find({ projectId: new ObjectId(projectId) }, { projection: { dive: 1, diveId: 1, nodesHierarchy: 1, createdAt: 1, preview: 1, ch1: 1, ch2: 1, ch3: 1, ch4: 1, clips: 1 } }).sort({ createdAt: 1 }).toArray();
   const result = {};
   for (const s of sessions) {
     const diveName = ((_a = s.dive) == null ? void 0 : _a.name) && s.dive.name.trim() ? s.dive.name.trim() : diveIdToName.get(s.diveId.toString()) || `Dive ${s.diveId.toString().slice(-4)}`;
@@ -15391,7 +15402,21 @@ async function getExportedProjectHierarchy(projectId) {
     for (const pathStr of entries) {
       const label = fileLabelFromPath(pathStr);
       if (label && !videosNode.children[label]) {
-        videosNode.children[label] = { type: "video" };
+        const p = withMkvIfNoExt(typeof pathStr === "string" ? pathStr : null);
+        videosNode.children[label] = p ? { type: "video", path: p } : { type: "video" };
+      }
+    }
+    const clipPaths = Array.isArray(s.clips) ? s.clips : [];
+    if (clipPaths.length > 0) {
+      if (!videosNode.children["Clips"]) videosNode.children["Clips"] = { type: "node", children: {} };
+      const clipsNode = videosNode.children["Clips"];
+      if (!clipsNode.children) clipsNode.children = {};
+      for (const clipPath of clipPaths) {
+        const label = fileLabelFromPath(clipPath);
+        if (label && !clipsNode.children[label]) {
+          const p = typeof clipPath === "string" ? clipPath.trim() : null;
+          clipsNode.children[label] = p ? { type: "video", path: p } : { type: "video" };
+        }
       }
     }
   }
@@ -16616,7 +16641,7 @@ async function resolveClipFilePath() {
     filenameFormatting = "";
   }
   if (!filenameFormatting) return null;
-  const prefixFullPath = path$m.join(outDir, filenameFormatting);
+  path$m.join(outDir, filenameFormatting);
   const allowed = [".mkv", ".mp4", ".mov", ".flv", ".m4v"];
   let ext = "";
   const candidates = [
@@ -16632,15 +16657,22 @@ async function resolveClipFilePath() {
       break;
     }
   }
+  let fileName = `${path$m.basename(filenameFormatting)}${ext}`;
   if (!ext) {
     try {
       const files = fs$j.readdirSync(outDir);
-      const found = files.find((f) => f.startsWith(`${path$m.basename(filenameFormatting)}.`));
-      if (found) return path$m.join(outDir, found);
+      const found = files.find((f) => f.toLowerCase().startsWith(`${path$m.basename(filenameFormatting).toLowerCase()}.`));
+      if (found) fileName = found;
     } catch {
     }
   }
-  return ext ? `${prefixFullPath}${ext}` : `${prefixFullPath}`;
+  let clipDir = outDir;
+  try {
+    const parent = path$m.dirname(outDir);
+    clipDir = path$m.join(parent, "clip");
+  } catch {
+  }
+  return path$m.join(clipDir, fileName);
 }
 ipcMain.handle("obs:start-clip-recording", async () => {
   try {
@@ -16884,7 +16916,7 @@ async function takeSnapshots(payload) {
   }
   try {
     if (outDir && !fs$j.existsSync(outDir)) {
-      await fsp.mkdir(outDir, { recursive: true });
+      await fs$k.mkdir(outDir, { recursive: true });
     }
   } catch {
   }
@@ -17748,6 +17780,45 @@ async function getExternalMonitorList() {
     return [];
   }
 }
+ipcMain.handle("system:openFile", async (_e, filePath) => {
+  try {
+    if (!filePath || typeof filePath !== "string") {
+      return { ok: false, error: "invalid file path" };
+    }
+    const normalized = filePath.trim();
+    if (!normalized) return { ok: false, error: "empty file path" };
+    const hasExt = /\.[a-z0-9]{2,5}$/i.test(normalized);
+    let toOpen = normalized;
+    if (!hasExt) {
+      try {
+        const dir = path$m.dirname(normalized);
+        const base = path$m.basename(normalized);
+        const entries = await fs$k.readdir(dir);
+        const match = entries.find((f) => f.toLowerCase().startsWith(base.toLowerCase() + "."));
+        if (match) {
+          toOpen = path$m.join(dir, match);
+        } else {
+          toOpen = normalized + ".mkv";
+        }
+      } catch {
+        toOpen = normalized + ".mkv";
+      }
+    }
+    try {
+      await fs$k.access(toOpen);
+    } catch {
+      return { ok: false, error: "file does not exist" };
+    }
+    const res = await shell.openPath(toOpen);
+    if (res && typeof res === "string" && res.length > 0) {
+      return { ok: false, error: res };
+    }
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 const __dirname$1 = path$m.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$m.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];

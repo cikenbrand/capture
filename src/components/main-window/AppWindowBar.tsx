@@ -277,7 +277,7 @@ export default function AppWindowBar() {
                     <MenubarMenu>
                         <MenubarTrigger className='px-2 py-1'>Export</MenubarTrigger>
                         <MenubarContent>
-                            <MenubarItem onClick={() => window.ipcRenderer.invoke('window:open-export-project')}>Export Project Settings</MenubarItem>
+                            <MenubarItem disabled={!selectedProjectId} onClick={() => window.ipcRenderer.invoke('window:open-export-project')}>Export Project Settings</MenubarItem>
                         </MenubarContent>
                     </MenubarMenu>
                 </Menubar>

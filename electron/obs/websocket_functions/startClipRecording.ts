@@ -54,35 +54,43 @@ async function resolveClipFilePath(): Promise<string | null> {
 
 	if (!filenameFormatting) return null
 
-	const prefixFullPath = path.join(outDir, filenameFormatting)
+    const prefixFullPath = path.join(outDir, filenameFormatting)
 
-	// Try to infer extension from known filter settings keys
-	const allowed = ['.mkv', '.mp4', '.mov', '.flv', '.m4v']
-	let ext = ''
-	const candidates = [
-		filterSettings?.container,
-		filterSettings?.rec_format,
-		filterSettings?.format,
-		filterSettings?.file_extension,
-	]
-	for (const cand of candidates) {
-		const s = typeof cand === 'string' ? cand.toLowerCase() : ''
-		if (s && allowed.includes(`.${s}`)) {
-			ext = `.${s}`
-			break
-		}
-	}
+    // Try to infer extension from known filter settings keys
+    const allowed = ['.mkv', '.mp4', '.mov', '.flv', '.m4v']
+    let ext = ''
+    const candidates = [
+        filterSettings?.container,
+        filterSettings?.rec_format,
+        filterSettings?.format,
+        filterSettings?.file_extension,
+    ]
+    for (const cand of candidates) {
+        const s = typeof cand === 'string' ? cand.toLowerCase() : ''
+        if (s && allowed.includes(`.${s}`)) {
+            ext = `.${s}`
+            break
+        }
+    }
 
-	// If we still don't know, try to find a matching file in the directory
-	if (!ext) {
-		try {
-			const files = fs.readdirSync(outDir)
-			const found = files.find(f => f.startsWith(`${path.basename(filenameFormatting)}.`))
-			if (found) return path.join(outDir, found)
-		} catch {}
-	}
+    // Determine file name (may use directory scan if ext unknown)
+    let fileName = `${path.basename(filenameFormatting)}${ext}`
+    if (!ext) {
+        try {
+            const files = fs.readdirSync(outDir)
+            const found = files.find(f => f.toLowerCase().startsWith(`${path.basename(filenameFormatting).toLowerCase()}.`))
+            if (found) fileName = found
+        } catch {}
+    }
 
-	return ext ? `${prefixFullPath}${ext}` : `${prefixFullPath}`
+    // Map directory: sibling of recording directory named 'clip'
+    let clipDir = outDir
+    try {
+        const parent = path.dirname(outDir)
+        clipDir = path.join(parent, 'clip')
+    } catch {}
+
+    return path.join(clipDir, fileName)
 }
 
 ipcMain.handle('obs:start-clip-recording', async () => {

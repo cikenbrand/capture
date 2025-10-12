@@ -12,6 +12,7 @@ export default function DivesExplorer() {
     const [loading, setLoading] = useState<boolean>(false)
     const [selectedId, setSelectedId] = useState<string | null>(null)
     const [hierarchy, setHierarchy] = useState<Record<string, any> | null>(null)
+    const [currentPath, setCurrentPath] = useState<string[]>([])
 
     useEffect(() => {
         let done = false
@@ -64,7 +65,37 @@ export default function DivesExplorer() {
         <div className="h-full flex flex-col min-h-0">
             {emptyText
                 ? <div className="p-4 text-white/60 text-sm">{emptyText}</div>
-                : <FileExplorerComponent hierarchy={hierarchy as any} items={[]} onSelect={(id) => setSelectedId(id)} />}
+                : <FileExplorerComponent
+                    hierarchy={hierarchy as any}
+                    items={[]}
+                    onOpenPath={(p) => setCurrentPath(p)}
+                    onSelect={async (id) => {
+                        try {
+                            setSelectedId(id)
+                            // Resolve the selected entry in the hierarchy using currentPath
+                            let cursor: any = hierarchy
+                            for (const seg of currentPath) {
+                                if (!cursor || typeof cursor !== 'object') { cursor = {}; break }
+                                if (cursor.children && seg in cursor.children) {
+                                    cursor = cursor.children[seg]
+                                } else if (seg in cursor) {
+                                    cursor = cursor[seg]
+                                } else {
+                                    cursor = {}
+                                    break
+                                }
+                            }
+                            const nodeChildren = (cursor && cursor.children) ? cursor.children : cursor
+                            const entry = nodeChildren?.[id]
+                            if (entry && entry.type === 'video') {
+                                const filePath: string | undefined = typeof entry.path === 'string' ? entry.path : undefined
+                                if (filePath) {
+                                    await window.ipcRenderer.invoke('system:openFile', filePath)
+                                }
+                            }
+                        } catch {}
+                    }}
+                />}
         </div>
     )
 }
