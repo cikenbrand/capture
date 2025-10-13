@@ -1,6 +1,5 @@
 import ProjectFileExplorerWindowBar from "./components/project-file-explorer/ProjectFileExplorerWindowBar";
 import DivesExplorer from "./components/project-file-explorer/DivesExplorer";
-import "@cubone/react-file-manager/dist/style.css";
 
 export default function ExportProject () {
     return (

@@ -72,6 +72,7 @@ import './obs/websocket_functions/stopClipRecording'
 import './obs/websocket_functions/takeSnapshot'
 import './obs/websocket_functions/getActiveVideoSceneItem'
 import './obs/websocket_functions/setCaptureDeviceInput'
+import { sendAudioLevel } from './getter-setter/audioLevel'
 import './db/getProjectLogs'
 import './db/deleteOverlayImage'
 import './db/exportOverlay'
@@ -88,6 +89,7 @@ import { getExternalMonitorList } from './other_functions/getExternalMonitorList
 import './other_functions/getExternalMonitorList'
 import './other_functions/openFile'
 import './other_functions/exportEntireProject'
+import './getter-setter/audioLevel'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -213,6 +215,9 @@ async function createWindow() {
   if (splashWin && !splashWin.isDestroyed()) splashWin.close()
   splashWin = null
   win?.show()
+
+  // Start forwarding OBS audio level events to renderer
+  try { if (win) sendAudioLevel(win) } catch {}
 
   // 5) Check for updates (GitHub) when online
   try {

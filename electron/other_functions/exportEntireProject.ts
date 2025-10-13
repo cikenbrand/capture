@@ -5,8 +5,9 @@ import path from 'node:path'
 import { getExportedProjectHierarchy } from '../db/getExportedProjectHierarchy'
 import { getSelectedProjectDetails } from '../db/getSelectedProjectDetails'
 import { getProjectLogs } from '../db/getProjectLogs'
+import { getEventLogsForSession } from '../db/getEventLogs'
 
-type HierNode = { type: 'dive' | 'node' | 'session' | 'video' | 'image'; children?: Record<string, HierNode>; path?: string }
+type HierNode = { type: 'dive' | 'node' | 'session' | 'video' | 'image'; children?: Record<string, HierNode>; path?: string; sessionId?: string }
 
 async function ensureDir(dir: string) {
   await fs.mkdir(dir, { recursive: true })
@@ -74,6 +75,13 @@ async function exportNode(node: HierNode, targetDir: string) {
   }
   // Folder-like nodes
   await ensureDir(targetDir)
+  // For session folders, export per-session event logs CSV
+  if (node.type === 'session') {
+    const sid = node.sessionId
+    if (sid) {
+      try { await writeSessionLogsCsv(sid, targetDir) } catch {}
+    }
+  }
   const children = node.children || {}
   for (const key of Object.keys(children)) {
     const child = children[key]
@@ -121,6 +129,32 @@ async function writeProjectLogsCsv(projectId: string, outRoot: string) {
     }
     if (page.length < limit) break
     offset += page.length
+  }
+
+  const csv = rows.join('\r\n') + '\r\n'
+  await fs.writeFile(outPath, csv, 'utf8')
+}
+
+async function writeSessionLogsCsv(sessionId: string, outDir: string) {
+  const outPath = path.join(outDir, 'event_logs.csv')
+  // Do not overwrite if already exists
+  try { await fs.access(outPath); return } catch {}
+  const rows: string[] = []
+  // header
+  rows.push([
+    'eventName', 'eventCode', 'startTime', 'endTime', 'createdAt', 'updatedAt',
+  ].join(','))
+
+  const logs = await getEventLogsForSession(sessionId)
+  for (const it of logs) {
+    rows.push([
+      csvQuote((it as any).eventName ?? ''),
+      csvQuote((it as any).eventCode ?? ''),
+      csvQuote((it as any).startTime ?? ''),
+      csvQuote((it as any).endTime ?? ''),
+      csvQuote((it as any).createdAt),
+      csvQuote((it as any).updatedAt),
+    ].join(','))
   }
 
   const csv = rows.join('\r\n') + '\r\n'

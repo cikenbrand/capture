@@ -54,7 +54,7 @@ function extractNodePathNames(root?: { name: string; children?: any }): string[]
 	return names
 }
 
-type HierNode = { type: 'dive' | 'node' | 'session' | 'video' | 'image'; children?: Record<string, HierNode>; path?: string }
+type HierNode = { type: 'dive' | 'node' | 'session' | 'video' | 'image'; children?: Record<string, HierNode>; path?: string; sessionId?: string }
 
 function fileLabelFromPath(p?: string | null): string | null {
     try {
@@ -133,6 +133,8 @@ export async function getExportedProjectHierarchy(projectId: string) {
         // Store session under the deepest node (or directly under dive if no nodes)
         if (!cursor.children[sessionKey]) cursor.children[sessionKey] = { type: 'session', children: {} }
         const sessionNode = cursor.children[sessionKey]
+        // Attach the session id so downstream exporters can locate per-session data like event logs
+        ;(sessionNode as any).sessionId = (s as any)._id?.toString?.() || String((s as any)._id)
         if (!sessionNode.children) sessionNode.children = {}
         // Add Videos and Snapshots groups
         if (!sessionNode.children['Videos']) sessionNode.children['Videos'] = { type: 'node', children: {} }

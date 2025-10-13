@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { getObsClient } from './connectToOBSWebsocket'
 
-export type ObsInputType = 'live-device' | 'rtmp' | 'webrtc'
+export type ObsInputType = 'live-device' | 'rtmp' | 'webrtc' | 'none'
 
 async function listGroupChildren(groupName: string): Promise<any[]> {
   try {
@@ -57,6 +57,10 @@ export async function setActiveInputForScene(sceneName: string, sourceIndex: num
     await enableId(idWeb, true)
     await enableId(idLive, false)
     await enableId(idRtmp, false)
+  } else if (inputType === 'none') {
+    await enableId(idLive, false)
+    await enableId(idRtmp, false)
+    await enableId(idWeb, false)
   }
 
   return true

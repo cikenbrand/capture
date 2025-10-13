@@ -5,7 +5,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from ".
 import { Input } from "../ui/input"
 
 type ChannelKey = "channel-1" | "channel-2" | "channel-3" | "channel-4"
-type InputType = "live-device" | "rtmp" | "webrtc"
+type TabKey = ChannelKey | "audio"
+type InputType = "live-device" | "rtmp" | "webrtc" | "none"
 type ChannelConfig = {
     inputType: InputType
     deviceLabel?: string
@@ -15,7 +16,7 @@ type ChannelConfig = {
 }
 
 export default function VideoDeviceConfigurations() {
-    const [activeTab, setActiveTab] = useState<ChannelKey>("channel-1")
+    const [activeTab, setActiveTab] = useState<TabKey>("channel-1")
     const [labelToDeviceId, setLabelToDeviceId] = useState<Record<string, string>>({})
     const [obsDevices, setObsDevices] = useState<Array<{ id: string; name: string }>>([])
 
@@ -106,6 +107,7 @@ export default function VideoDeviceConfigurations() {
                             if (st?.rtmp) return 'rtmp'
                             if (st?.webrtc) return 'webrtc'
                             if (st?.videoCaptureDevice) return 'live-device'
+                            if (st && !st?.rtmp && !st?.webrtc && !st?.videoCaptureDevice) return 'none'
                         } catch {}
                         return fallback
                     }
@@ -198,11 +200,18 @@ export default function VideoDeviceConfigurations() {
                         <Select value={config.inputType} onValueChange={async (v) => {
                         const nextType = v as InputType
                         updateChannelConfig(channelKey, p => ({ ...p, inputType: nextType }))
+                        try {
+                            const sceneRes = await (window as any)?.ipcRenderer?.invoke?.('obs:get-current-scene')
+                            const sceneName: string = sceneRes || 'channel 1'
+                            const idx = channelKey === 'channel-1' ? 1 : channelKey === 'channel-2' ? 2 : channelKey === 'channel-3' ? 3 : 4
+                            await (window as any)?.ipcRenderer?.invoke?.('obs:set-active-video-item', sceneName, idx, nextType)
+                        } catch {}
                     }}>
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Source Type" />
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="none">None</SelectItem>
                             <SelectItem value="live-device">Live Device</SelectItem>
                             <SelectItem value="rtmp">RTMP</SelectItem>
                             <SelectItem value="webrtc">WebRTC</SelectItem>
@@ -260,12 +269,13 @@ export default function VideoDeviceConfigurations() {
     }
 
     return (
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ChannelKey)}>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabKey)}>
             <TabsList>
                 <TabsTrigger value="channel-1">Channel 1</TabsTrigger>
                 <TabsTrigger value="channel-2">Channel 2</TabsTrigger>
                 <TabsTrigger value="channel-3">Channel 3</TabsTrigger>
                 <TabsTrigger value="channel-4">Channel 4</TabsTrigger>
+                <TabsTrigger value="audio">Audio</TabsTrigger>
             </TabsList>
             <TabsContent value="channel-1" className="flex flex-col items-center gap-2">
                 {activeTab === "channel-1" ? <ChannelForm channelKey="channel-1" /> : null}
@@ -278,6 +288,19 @@ export default function VideoDeviceConfigurations() {
             </TabsContent>
             <TabsContent value="channel-4" className="flex flex-col items-center gap-2">
                 {activeTab === "channel-4" ? <ChannelForm channelKey="channel-4" /> : null}
+            </TabsContent>
+            <TabsContent value="audio" className="flex flex-col items-center gap-2">
+                <div className="flex flex-col gap-1 w-full">
+                    <span>Audio Device</span>
+                    <Select defaultValue="default">
+                        <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select audio device" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="default">Default</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </TabsContent>
         </Tabs>
     )

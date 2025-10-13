@@ -20,7 +20,7 @@ import EditNodeDetailsForm from "./components/main-window/EditNodeDetailsForm"
 import PreviewVirtualCam from "./components/main-window/PreviewVirtualCam"
 import { FaCircle, FaMicrophone, FaPause, FaPlay, FaStop } from "react-icons/fa"
 import { BsCameraFill } from "react-icons/bs";
-import AudioMeter from "./components/main-window/AudioMeter"
+import AudioMeter, { AudioMeterLive } from "./components/main-window/AudioMeter"
 import CursorToolButton from "./components/main-window/CursorToolButton"
 import FreeDrawToolButton from "./components/main-window/FreeDrawToolButton"
 import ArrowDrawingTool from "./components/main-window/ArrowDrawingTool"
@@ -406,7 +406,7 @@ function App() {
                     <FaMicrophone className="h-4 w-4" />
                     <span className="font-medium">Mute Microphone</span>
                   </button>
-                  <AudioMeter valueDb={-100} />
+                  <AudioMeterLive />
                 </div>
               </TabsContent>
             </Tabs>

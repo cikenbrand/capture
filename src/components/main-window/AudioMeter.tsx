@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { useEffect, useState } from "react"
 
 export type AudioMeterProps = {
   valueDb: number | null
@@ -53,5 +54,40 @@ export function AudioMeter({
 }
 
 export default AudioMeter
+
+
+// Live meter that subscribes to OBS audio level events from the main process
+export function AudioMeterLive({
+  minDb = -60,
+  maxDb = 0,
+  numSegments = 24,
+  className,
+}: Omit<AudioMeterProps, "valueDb">) {
+  const [db, setDb] = useState<number | null>(null)
+
+  useEffect(() => {
+    const ipc = (window as any)?.ipcRenderer
+    if (!ipc?.on || !ipc?.off) return
+    const handler = (_e: unknown, fixedDBValue: unknown) => {
+      const n = typeof fixedDBValue === 'number' ? fixedDBValue : Number(fixedDBValue)
+      if (Number.isFinite(n)) {
+        try { console.log('[AudioMeterLive]', n) } catch {}
+        setDb(n)
+      }
+    }
+    try { ipc.on('obs:audio-level', handler) } catch {}
+    return () => { try { ipc.off('obs:audio-level', handler) } catch {} }
+  }, [])
+
+  return (
+    <AudioMeter
+      valueDb={db}
+      minDb={minDb}
+      maxDb={maxDb}
+      numSegments={numSegments}
+      className={className}
+    />
+  )
+}
 
 

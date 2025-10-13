@@ -7,7 +7,7 @@ import { pathToFileURL, fileURLToPath } from "node:url";
 import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
 import { spawn, spawnSync } from "node:child_process";
 import fs$j from "node:fs";
-import OBSWebSocket from "obs-websocket-js";
+import OBSWebSocket, { EventSubscription } from "obs-websocket-js";
 import http from "node:http";
 import require$$1 from "fs";
 import require$$0 from "constants";
@@ -372,33 +372,58 @@ function openObs() {
   return child.pid ?? -1;
 }
 let obsClient = null;
+let connecting = null;
 function getObsClient() {
   return obsClient;
 }
 async function connectToOBSWebsocket(timeoutMs = 4e3) {
-  try {
-    if (obsClient) {
-      return true;
+  if (obsClient) return true;
+  if (connecting) {
+    try {
+      await withTimeout(connecting, timeoutMs);
+      return !!obsClient;
+    } catch {
+      return false;
     }
-    const client = new OBSWebSocket();
-    const connectPromise = client.connect(OBS_WEBSOCKET_URL);
-    const timeoutPromise = new Promise((_, reject) => {
-      const t2 = setTimeout(() => {
-        clearTimeout(t2);
-        reject(new Error("OBS connect timeout"));
-      }, timeoutMs);
-    });
-    await Promise.race([connectPromise, timeoutPromise]);
+  }
+  const client = new OBSWebSocket();
+  connecting = client.connect(OBS_WEBSOCKET_URL, void 0, {
+    eventSubscriptions: EventSubscription.InputVolumeMeters
+  }).then(() => {
     obsClient = client;
+    try {
+      console.log("[obs] connected; subscribed InputVolumeMeters");
+    } catch {
+    }
+  }).finally(() => {
+    connecting = null;
+  });
+  try {
+    await withTimeout(connecting, timeoutMs);
     return true;
   } catch {
     try {
-      await (obsClient == null ? void 0 : obsClient.disconnect());
+      await client.disconnect();
     } catch {
     }
     obsClient = null;
     return false;
   }
+}
+function withTimeout(p, ms2) {
+  return new Promise((resolve, reject) => {
+    const id = setTimeout(() => reject(new Error("OBS connect timeout")), ms2);
+    p.then(
+      (v) => {
+        clearTimeout(id);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(id);
+        reject(e);
+      }
+    );
+  });
 }
 async function exitOBS() {
   const obs = getObsClient();
@@ -15381,7 +15406,7 @@ function withMkvIfNoExt(p) {
   }
 }
 async function getExportedProjectHierarchy(projectId) {
-  var _a, _b, _c, _d, _e, _f;
+  var _a, _b, _c, _d, _e, _f, _g, _h;
   const client = await getClient$j();
   const db = client.db("capture");
   const dives = await db.collection("dives").find({ projectId: new ObjectId(projectId) }, { projection: { name: 1 } }).toArray();
@@ -15405,6 +15430,7 @@ async function getExportedProjectHierarchy(projectId) {
     }
     if (!cursor.children[sessionKey]) cursor.children[sessionKey] = { type: "session", children: {} };
     const sessionNode = cursor.children[sessionKey];
+    sessionNode.sessionId = ((_c = (_b = s._id) == null ? void 0 : _b.toString) == null ? void 0 : _c.call(_b)) || String(s._id);
     if (!sessionNode.children) sessionNode.children = {};
     if (!sessionNode.children["Videos"]) sessionNode.children["Videos"] = { type: "node", children: {} };
     if (!sessionNode.children["Snapshots"]) sessionNode.children["Snapshots"] = { type: "node", children: {} };
@@ -15421,11 +15447,11 @@ async function getExportedProjectHierarchy(projectId) {
     const snapshotsNode = sessionNode.children["Snapshots"];
     if (!snapshotsNode.children) snapshotsNode.children = {};
     const snapshotArrays = [
-      (_b = s == null ? void 0 : s.snapshots) == null ? void 0 : _b.preview,
-      (_c = s == null ? void 0 : s.snapshots) == null ? void 0 : _c.ch1,
-      (_d = s == null ? void 0 : s.snapshots) == null ? void 0 : _d.ch2,
-      (_e = s == null ? void 0 : s.snapshots) == null ? void 0 : _e.ch3,
-      (_f = s == null ? void 0 : s.snapshots) == null ? void 0 : _f.ch4
+      (_d = s == null ? void 0 : s.snapshots) == null ? void 0 : _d.preview,
+      (_e = s == null ? void 0 : s.snapshots) == null ? void 0 : _e.ch1,
+      (_f = s == null ? void 0 : s.snapshots) == null ? void 0 : _f.ch2,
+      (_g = s == null ? void 0 : s.snapshots) == null ? void 0 : _g.ch3,
+      (_h = s == null ? void 0 : s.snapshots) == null ? void 0 : _h.ch4
     ];
     for (const arr of snapshotArrays) {
       if (Array.isArray(arr)) {
@@ -17084,6 +17110,10 @@ async function setActiveInputForScene(sceneName, sourceIndex, inputType) {
     await enableId(idWeb, true);
     await enableId(idLive, false);
     await enableId(idRtmp, false);
+  } else if (inputType === "none") {
+    await enableId(idLive, false);
+    await enableId(idRtmp, false);
+    await enableId(idWeb, false);
   }
   return true;
 }
@@ -17346,6 +17376,41 @@ ipcMain.handle("obs:get-active-video-items-for-scene", async (_e, sceneName) => 
     return { ok: false, error: message };
   }
 });
+let audioLevelListener = null;
+function sendAudioLevel(mainWindow) {
+  const obs = getObsClient();
+  if (!obs) return false;
+  if (audioLevelListener) return true;
+  audioLevelListener = (data) => {
+    try {
+      const inputs = Array.isArray(data == null ? void 0 : data.inputs) ? data.inputs : [];
+      for (const input of inputs) {
+        const name = String((input == null ? void 0 : input.inputName) ?? "");
+        if (name.toLowerCase() !== "audio input device") continue;
+        const levels = input == null ? void 0 : input.inputLevelsMul;
+        if (!Array.isArray(levels) || levels.length === 0) return;
+        const flat = [].concat(...levels);
+        if (!flat.every((v) => typeof v === "number" && Number.isFinite(v))) return;
+        const avg = flat.reduce((sum, v) => sum + v, 0) / (flat.length || 1);
+        const safeAvg = avg > 0 ? avg : 1e-12;
+        const dBValue = 20 * Math.log10(safeAvg);
+        const fixedDBValue = Number.isFinite(dBValue) ? dBValue.toFixed(2) : "-inf";
+        try {
+          mainWindow.webContents.send("obs:audio-level", fixedDBValue);
+        } catch {
+        }
+      }
+    } catch {
+    }
+  };
+  try {
+    obs.on("InputVolumeMeters", audioLevelListener);
+  } catch {
+    audioLevelListener = null;
+    return false;
+  }
+  return true;
+}
 let cachedClient$6 = null;
 async function getClient$6() {
   if (cachedClient$6) return cachedClient$6;
@@ -18076,9 +18141,32 @@ async function getEventLogsForActiveSession() {
     };
   });
 }
+async function getEventLogsForSession(sessionId) {
+  if (!sessionId || typeof sessionId !== "string") return [];
+  const client = await getClient$1();
+  const db = client.db("capture");
+  const col = db.collection("event_logs");
+  const rows = await col.find({ sessionId: new ObjectId(String(sessionId)) }).sort({ createdAt: 1 }).toArray();
+  return rows.map((r) => {
+    var _a;
+    return {
+      ...r,
+      _id: typeof ((_a = r._id) == null ? void 0 : _a.toHexString) === "function" ? r._id.toHexString() : String(r._id)
+    };
+  });
+}
 ipcMain.handle("db:getEventLogsForActiveSession", async () => {
   try {
     const rows = await getEventLogsForActiveSession();
+    return { ok: true, data: rows };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("db:getEventLogsForSession", async (_e, sessionId) => {
+  try {
+    const rows = await getEventLogsForSession(sessionId);
     return { ok: true, data: rows };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
@@ -18250,6 +18338,15 @@ async function exportNode(node2, targetDir) {
     return;
   }
   await ensureDir(targetDir);
+  if (node2.type === "session") {
+    const sid = node2.sessionId;
+    if (sid) {
+      try {
+        await writeSessionLogsCsv(sid, targetDir);
+      } catch {
+      }
+    }
+  }
   const children = node2.children || {};
   for (const key of Object.keys(children)) {
     const child = children[key];
@@ -18304,6 +18401,36 @@ async function writeProjectLogsCsv(projectId, outRoot) {
     }
     if (page.length < limit) break;
     offset += page.length;
+  }
+  const csv = rows.join("\r\n") + "\r\n";
+  await fs$k.writeFile(outPath, csv, "utf8");
+}
+async function writeSessionLogsCsv(sessionId, outDir) {
+  const outPath = path$m.join(outDir, "event_logs.csv");
+  try {
+    await fs$k.access(outPath);
+    return;
+  } catch {
+  }
+  const rows = [];
+  rows.push([
+    "eventName",
+    "eventCode",
+    "startTime",
+    "endTime",
+    "createdAt",
+    "updatedAt"
+  ].join(","));
+  const logs = await getEventLogsForSession(sessionId);
+  for (const it of logs) {
+    rows.push([
+      csvQuote(it.eventName ?? ""),
+      csvQuote(it.eventCode ?? ""),
+      csvQuote(it.startTime ?? ""),
+      csvQuote(it.endTime ?? ""),
+      csvQuote(it.createdAt),
+      csvQuote(it.updatedAt)
+    ].join(","));
   }
   const csv = rows.join("\r\n") + "\r\n";
   await fs$k.writeFile(outPath, csv, "utf8");
@@ -18480,6 +18607,10 @@ async function createWindow() {
   if (splashWin && !splashWin.isDestroyed()) splashWin.close();
   splashWin = null;
   win == null ? void 0 : win.show();
+  try {
+    if (win) sendAudioLevel(win);
+  } catch {
+  }
   try {
     const online = await new Promise((resolve) => {
       try {
