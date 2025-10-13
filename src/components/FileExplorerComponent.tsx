@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react"
+import { useMemo, useRef, useState, type ReactNode } from "react"
 import { VscChevronLeft } from "react-icons/vsc"
 import { AiFillFolder, AiOutlineFile } from "react-icons/ai"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -15,12 +15,22 @@ type Props = {
     hierarchy?: Record<string, any>
     onOpenPath?: (path: string[]) => void
     rightActions?: ReactNode
+    /**
+     * Called when user selects "Save to local" from context menu for an entry.
+     * For hierarchy mode, name is the entry key in the current path.
+     * currentPath represents the folder path segments at the time of the click.
+     */
+    onSaveToLocal?: (name: string, isFolder: boolean, currentPath: string[]) => void
 }
 
-export default function FileExplorerComponent({ items, onSelect, hierarchy, onOpenPath, rightActions }: Props) {
+export default function FileExplorerComponent({ items, onSelect, hierarchy, onOpenPath, rightActions, onSaveToLocal }: Props) {
     const [selectedId, setSelectedId] = useState<string | null>(null)
     const [view, setView] = useState<"details" | "large">("details")
     const [path, setPath] = useState<string[]>([])
+    const [ctxOpen, setCtxOpen] = useState<boolean>(false)
+    const [ctxPos, setCtxPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+    const [ctxItem, setCtxItem] = useState<{ name: string; isFolder: boolean } | null>(null)
+    const rootRef = useRef<HTMLDivElement>(null)
 
     const currentEntries = useMemo(() => {
         if (!hierarchy) return null as null | Array<{ key: string; isFolder: boolean; type?: string }>
@@ -62,7 +72,7 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
     // Icons are uniform folder icons per request
 
     return (
-        <div className="flex-1 flex flex-col min-h-0">
+        <div ref={rootRef} className="flex-1 flex flex-col min-h-0 relative" onClick={() => { if (ctxOpen) setCtxOpen(false) }}>
             <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between bg-[#1F252E] gap-3">
                 <div className="flex items-center gap-2 text-sm">
                     <button
@@ -120,6 +130,16 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                     key={it.key}
                                     className={`px-4 py-2 cursor-default flex items-center ${selectedId === it.key ? 'bg-white/10' : 'hover:bg-white/5'}`}
                                     onClick={() => { setSelectedId(it.key) }}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault()
+                                        setSelectedId(it.key)
+                                        setCtxItem({ name: it.key, isFolder: it.isFolder })
+                                        const rect = rootRef.current?.getBoundingClientRect()
+                                        const x = e.clientX - (rect?.left ?? 0)
+                                        const y = e.clientY - (rect?.top ?? 0)
+                                        setCtxPos({ x, y })
+                                        setCtxOpen(true)
+                                    }}
                                     onDoubleClick={() => openEntry(it.key, it.isFolder)}
                                     aria-selected={selectedId === it.key}
                                 >
@@ -145,6 +165,16 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                     key={it.key}
                                     className={`group rounded cursor-default p-3 flex flex-col items-center gap-2 ${selectedId === it.key ? 'bg-white/10 ring-1 ring-white/20' : 'hover:bg-white/5'}`}
                                     onClick={() => { setSelectedId(it.key) }}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault()
+                                        setSelectedId(it.key)
+                                        setCtxItem({ name: it.key, isFolder: it.isFolder })
+                                        const rect = rootRef.current?.getBoundingClientRect()
+                                        const x = e.clientX - (rect?.left ?? 0)
+                                        const y = e.clientY - (rect?.top ?? 0)
+                                        setCtxPos({ x, y })
+                                        setCtxOpen(true)
+                                    }}
                                     onDoubleClick={() => openEntry(it.key, it.isFolder)}
                                     aria-selected={selectedId === it.key}
                                 >
@@ -169,6 +199,16 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                 key={it.id}
                                 className={`px-4 py-2 cursor-default flex items-center ${selectedId === it.id ? 'bg-white/10' : 'hover:bg-white/5'}`}
                                 onClick={() => { setSelectedId(it.id); try { onSelect?.(it.id) } catch {} }}
+                                onContextMenu={(e) => {
+                                    e.preventDefault()
+                                    setSelectedId(it.id)
+                                    setCtxItem({ name: it.name, isFolder: true })
+                                    const rect = rootRef.current?.getBoundingClientRect()
+                                    const x = e.clientX - (rect?.left ?? 0)
+                                    const y = e.clientY - (rect?.top ?? 0)
+                                    setCtxPos({ x, y })
+                                    setCtxOpen(true)
+                                }}
                                 onDoubleClick={() => openEntry(it.name, true)}
                                 aria-selected={selectedId === it.id}
                             >
@@ -187,6 +227,16 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                 key={it.id}
                                 className={`group rounded cursor-default p-3 flex flex-col items-center gap-2 ${selectedId === it.id ? 'bg-white/10' : 'hover:bg-white/5'}`}
                                 onClick={() => { setSelectedId(it.id); try { onSelect?.(it.id) } catch {} }}
+                                onContextMenu={(e) => {
+                                    e.preventDefault()
+                                    setSelectedId(it.id)
+                                    setCtxItem({ name: it.name, isFolder: true })
+                                    const rect = rootRef.current?.getBoundingClientRect()
+                                    const x = e.clientX - (rect?.left ?? 0)
+                                    const y = e.clientY - (rect?.top ?? 0)
+                                    setCtxPos({ x, y })
+                                    setCtxOpen(true)
+                                }}
                                 onDoubleClick={() => openEntry(it.name, true)}
                                 aria-selected={selectedId === it.id}
                             >
@@ -197,6 +247,25 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                     </div>
                 )}
             </div>
+
+            {ctxOpen && ctxItem ? (
+                <div
+                    className="absolute z-[5000] min-w-[180px] rounded border border-white/10 bg-[#1E1E1E] shadow-xl"
+                    style={{ left: Math.min(ctxPos.x, (rootRef.current?.clientWidth ?? window.innerWidth) - 190), top: Math.min(ctxPos.y, (rootRef.current?.clientHeight ?? window.innerHeight) - 60) }}
+                    onClick={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => e.preventDefault()}
+                >
+                    <button
+                        className="w-full text-left px-3 py-2 text-white/90 hover:bg-white/10"
+                        onClick={() => {
+                            try { onSaveToLocal?.(ctxItem.name, ctxItem.isFolder, path) } catch {}
+                            setCtxOpen(false)
+                        }}
+                    >
+                        Save to local
+                    </button>
+                </div>
+            ) : null}
         </div>
     )
 }

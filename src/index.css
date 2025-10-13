@@ -115,7 +115,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-[#B2B5BA] text-sm;
+    @apply bg-background text-[#B2B5BA] text-sm select-none;
   }
 }
 

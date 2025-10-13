@@ -17,6 +17,11 @@ async function copyFileSafe(src: string, dest: string): Promise<boolean> {
     if (!src || typeof src !== 'string') return false
     await fs.access(src).catch(() => { throw new Error('missing') })
     await ensureDir(path.dirname(dest))
+    // Skip if destination already exists to avoid overwriting
+    try {
+      await fs.access(dest)
+      return true
+    } catch {}
     try {
       await fs.copyFile(src, dest)
       return true
@@ -85,6 +90,9 @@ function csvQuote(value: unknown): string {
 }
 
 async function writeProjectLogsCsv(projectId: string, outRoot: string) {
+  const outPath = path.join(outRoot, 'project_logs.csv')
+  // Do not overwrite if already exists
+  try { await fs.access(outPath); return } catch {}
   const rows: string[] = []
   // header
   rows.push([
@@ -116,7 +124,7 @@ async function writeProjectLogsCsv(projectId: string, outRoot: string) {
   }
 
   const csv = rows.join('\r\n') + '\r\n'
-  await fs.writeFile(path.join(outRoot, 'project_logs.csv'), csv, 'utf8')
+  await fs.writeFile(outPath, csv, 'utf8')
 }
 
 ipcMain.handle('project:export-entire', async (_e, projectId: string, destinationDir: string) => {
@@ -134,6 +142,57 @@ ipcMain.handle('project:export-entire', async (_e, projectId: string, destinatio
     await walkAndExport(hierarchy || {}, rootOut)
     try { await writeProjectLogsCsv(projectId, rootOut) } catch {}
     return { ok: true, data: rootOut }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, error: message }
+  }
+})
+
+// Export a specific entry (folder/file) from the hierarchy into a chosen destination
+// pathSegments: the folder path inside the hierarchy to reach the parent of the entry
+// entryKey: the key/name of the entry under that parent to export
+ipcMain.handle('project:export-entry', async (_e, projectId: string, pathSegments: string[], entryKey: string, destinationDir: string) => {
+  try {
+    if (typeof destinationDir !== 'string' || !destinationDir.trim()) return { ok: false, error: 'invalid destinationDir' }
+    if (typeof projectId !== 'string' || !projectId.trim()) return { ok: false, error: 'invalid projectId' }
+    if (!Array.isArray(pathSegments)) pathSegments = []
+    if (typeof entryKey !== 'string' || !entryKey.trim()) return { ok: false, error: 'invalid entryKey' }
+
+    const hierarchy = await getExportedProjectHierarchy(projectId)
+    let cursor: any = hierarchy || {}
+    for (const seg of pathSegments) {
+      if (!cursor || typeof cursor !== 'object') { cursor = {}; break }
+      if (cursor.children && seg in cursor.children) {
+        cursor = cursor.children[seg]
+      } else if (seg in cursor) {
+        cursor = cursor[seg]
+      } else {
+        cursor = {}
+        break
+      }
+    }
+    const nodeChildren = (cursor && cursor.children) ? cursor.children : cursor
+    const entry = nodeChildren?.[entryKey]
+    if (!entry) return { ok: false, error: 'entry not found' }
+
+    // If the entry is a leaf (video/image), export as a single file and ensure extension
+    if (entry.type === 'video' || entry.type === 'image') {
+      let baseName = sanitizeSegment(entryKey)
+      if (entry.type === 'video') {
+        if (!/\.mkv$/i.test(baseName)) baseName = `${baseName}.mkv`
+      } else if (entry.type === 'image') {
+        if (!/\.png$/i.test(baseName)) baseName = `${baseName}.png`
+      }
+      const outTarget = path.join(destinationDir.trim(), baseName)
+      await exportNode(entry as HierNode, outTarget)
+      return { ok: true, data: outTarget }
+    }
+
+    // Folder-like entries
+    const outDir = path.join(destinationDir.trim(), sanitizeSegment(entryKey))
+    await ensureDir(outDir)
+    await exportNode(entry as HierNode, outDir)
+    return { ok: true, data: outDir }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'
     return { ok: false, error: message }

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import FileExplorerComponent from "@/components/FileExplorerComponent"
+import { DraggableDialog } from "@/components/ui/draggable-dialog"
 
 type Dive = {
     _id: string
@@ -13,6 +14,8 @@ export default function DivesExplorer() {
     const [selectedId, setSelectedId] = useState<string | null>(null)
     const [hierarchy, setHierarchy] = useState<Record<string, any> | null>(null)
     const [currentPath, setCurrentPath] = useState<string[]>([])
+    const [exporting, setExporting] = useState<boolean>(false)
+    const [exportMessage, setExportMessage] = useState<string>('Exporting… Please wait.')
 
     useEffect(() => {
         let done = false
@@ -69,9 +72,32 @@ export default function DivesExplorer() {
                     hierarchy={hierarchy as any}
                     items={[]}
                     onOpenPath={(p) => setCurrentPath(p)}
+                    onSaveToLocal={async (name, _isFolder, pathSegs) => {
+                        try {
+                            const proj = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+                            const projectId: string | null = proj?.ok ? (proj.data ?? null) : null
+                            if (!projectId) return
+                            const pick = await window.ipcRenderer.invoke('dialog:selectDirectory')
+                            if (!pick?.ok || !pick.data) return
+                            const dest: string = pick.data
+                            setExportMessage('Exporting… Please wait.')
+                            setExporting(true)
+                            try {
+                                const res = await window.ipcRenderer.invoke('project:export-entry', projectId, pathSegs, name, dest)
+                                if (res?.ok) {
+                                    try { await window.ipcRenderer.invoke('system:notify', 'Export complete', `Saved "${name}"`) } catch {}
+                                }
+                            } finally {
+                                setExporting(false)
+                            }
+                        } catch {
+                            setExporting(false)
+                        }
+                    }}
                     rightActions={(
                         <button
-                            className="h-8 px-3 rounded bg-[#2D3743] text-white/90 hover:bg-[#3A4654]"
+                            className="h-8 px-3 rounded bg-[#2D3743] text-white/90 hover:bg-[#3A4654] disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={exporting}
                             onClick={async () => {
                                 try {
                                     const proj = await window.ipcRenderer.invoke('app:getSelectedProjectId')
@@ -80,11 +106,21 @@ export default function DivesExplorer() {
                                     const pick = await window.ipcRenderer.invoke('dialog:selectDirectory')
                                     if (!pick?.ok || !pick.data) return
                                     const dest: string = pick.data
-                                    const exp = await window.ipcRenderer.invoke('project:export-entire', projectId, dest)
-                                    if (!exp?.ok) {
-                                        // optional: surface error
+                                    setExportMessage('Exporting… Please wait.')
+                                    setExporting(true)
+                                    try {
+                                        const exp = await window.ipcRenderer.invoke('project:export-entire', projectId, dest)
+                                        if (exp?.ok) {
+                                            try { await window.ipcRenderer.invoke('system:notify', 'Project exported', 'Your project has been exported successfully.') } catch {}
+                                        } else {
+                                            // optional: surface error
+                                        }
+                                    } finally {
+                                        setExporting(false)
                                     }
-                                } catch {}
+                                } catch {
+                                    setExporting(false)
+                                }
                             }}
                         >
                             Export Project
@@ -117,6 +153,19 @@ export default function DivesExplorer() {
                         } catch {}
                     }}
                 />}
+            {/* Blocking modal during export */}
+            <DraggableDialog
+                open={exporting}
+                onOpenChange={() => {}}
+                title="Exporting"
+                disableBackdropClose
+                useBackdrop
+            >
+                <div className="flex items-center gap-3 min-w-[260px]">
+                    <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-transparent animate-spin" aria-hidden="true" />
+                    <div className="text-white/90">{exportMessage}</div>
+                </div>
+            </DraggableDialog>
         </div>
     )
 }

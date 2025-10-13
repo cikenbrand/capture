@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Notification } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createSplashWindow } from './windows/splashscreen'
@@ -274,7 +274,15 @@ app.on('activate', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(async () => {
+  try {
+    // Ensure Windows notifications are attributed correctly
+    if (process.platform === 'win32') {
+      try { app.setAppUserModelId('com.deepstrim.capture') } catch {}
+    }
+  } catch {}
+  await createWindow()
+})
 
 // IPC: window controls
 ipcMain.on('overlay:get-port-sync', (e) => {
@@ -514,6 +522,19 @@ ipcMain.handle('window:toggle-maximize', async () => {
 ipcMain.handle('window:close', async () => {
   try {
     app.quit()
+    return true
+  } catch {
+    return false
+  }
+})
+
+// System notification helper
+ipcMain.handle('system:notify', async (_e, title: string, body?: string) => {
+  try {
+    const safeTitle = typeof title === 'string' && title.trim() ? title.trim() : 'Notification'
+    const safeBody = typeof body === 'string' ? body : ''
+    const n = new Notification({ title: safeTitle, body: safeBody, silent: false })
+    n.show()
     return true
   } catch {
     return false

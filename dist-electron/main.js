@@ -1,7 +1,7 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-import require$$1$4, { ipcMain, BrowserWindow, screen, app, shell, dialog } from "electron";
+import require$$1$4, { ipcMain, BrowserWindow, screen, app, shell, Notification, dialog } from "electron";
 import path$m from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
@@ -17862,6 +17862,11 @@ async function copyFileSafe(src2, dest) {
     });
     await ensureDir(path$m.dirname(dest));
     try {
+      await fs$k.access(dest);
+      return true;
+    } catch {
+    }
+    try {
       await fs$k.copyFile(src2, dest);
       return true;
     } catch {
@@ -17922,9 +17927,14 @@ function csvQuote(value) {
   return `"${escaped}"`;
 }
 async function writeProjectLogsCsv(projectId, outRoot) {
+  const outPath = path$m.join(outRoot, "project_logs.csv");
+  try {
+    await fs$k.access(outPath);
+    return;
+  } catch {
+  }
   const rows = [];
   rows.push([
-    "id",
     "date",
     "time",
     "event",
@@ -17934,8 +17944,7 @@ async function writeProjectLogsCsv(projectId, outRoot) {
     "fileName",
     "anomaly",
     "data",
-    "createdAt",
-    "updatedAt"
+    "last edited"
   ].join(","));
   const limit = 1e3;
   let offset = 0;
@@ -17944,7 +17953,6 @@ async function writeProjectLogsCsv(projectId, outRoot) {
     if (!Array.isArray(page) || page.length === 0) break;
     for (const it of page) {
       rows.push([
-        csvQuote(it._id),
         csvQuote(it.date),
         csvQuote(it.time),
         csvQuote(it.event),
@@ -17954,7 +17962,6 @@ async function writeProjectLogsCsv(projectId, outRoot) {
         csvQuote(it.fileName ?? ""),
         csvQuote(it.anomaly ?? ""),
         csvQuote(it.data ?? ""),
-        csvQuote(it.createdAt),
         csvQuote(it.updatedAt)
       ].join(","));
     }
@@ -17962,7 +17969,7 @@ async function writeProjectLogsCsv(projectId, outRoot) {
     offset += page.length;
   }
   const csv = rows.join("\r\n") + "\r\n";
-  await fs$k.writeFile(path$m.join(outRoot, "project_logs.csv"), csv, "utf8");
+  await fs$k.writeFile(outPath, csv, "utf8");
 }
 ipcMain.handle("project:export-entire", async (_e, projectId, destinationDir) => {
   try {
@@ -17979,6 +17986,51 @@ ipcMain.handle("project:export-entire", async (_e, projectId, destinationDir) =>
     } catch {
     }
     return { ok: true, data: rootOut };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+ipcMain.handle("project:export-entry", async (_e, projectId, pathSegments, entryKey, destinationDir) => {
+  try {
+    if (typeof destinationDir !== "string" || !destinationDir.trim()) return { ok: false, error: "invalid destinationDir" };
+    if (typeof projectId !== "string" || !projectId.trim()) return { ok: false, error: "invalid projectId" };
+    if (!Array.isArray(pathSegments)) pathSegments = [];
+    if (typeof entryKey !== "string" || !entryKey.trim()) return { ok: false, error: "invalid entryKey" };
+    const hierarchy = await getExportedProjectHierarchy(projectId);
+    let cursor = hierarchy || {};
+    for (const seg of pathSegments) {
+      if (!cursor || typeof cursor !== "object") {
+        cursor = {};
+        break;
+      }
+      if (cursor.children && seg in cursor.children) {
+        cursor = cursor.children[seg];
+      } else if (seg in cursor) {
+        cursor = cursor[seg];
+      } else {
+        cursor = {};
+        break;
+      }
+    }
+    const nodeChildren = cursor && cursor.children ? cursor.children : cursor;
+    const entry = nodeChildren == null ? void 0 : nodeChildren[entryKey];
+    if (!entry) return { ok: false, error: "entry not found" };
+    if (entry.type === "video" || entry.type === "image") {
+      let baseName = sanitizeSegment(entryKey);
+      if (entry.type === "video") {
+        if (!/\.mkv$/i.test(baseName)) baseName = `${baseName}.mkv`;
+      } else if (entry.type === "image") {
+        if (!/\.png$/i.test(baseName)) baseName = `${baseName}.png`;
+      }
+      const outTarget = path$m.join(destinationDir.trim(), baseName);
+      await exportNode(entry, outTarget);
+      return { ok: true, data: outTarget };
+    }
+    const outDir = path$m.join(destinationDir.trim(), sanitizeSegment(entryKey));
+    await ensureDir(outDir);
+    await exportNode(entry, outDir);
+    return { ok: true, data: outDir };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };
@@ -18172,7 +18224,18 @@ app.on("activate", () => {
     createWindow();
   }
 });
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  try {
+    if (process.platform === "win32") {
+      try {
+        app.setAppUserModelId("com.deepstrim.capture");
+      } catch {
+      }
+    }
+  } catch {
+  }
+  await createWindow();
+});
 ipcMain.on("overlay:get-port-sync", (e) => {
   try {
     e.returnValue = OVERLAY_WS_PORT;
@@ -18417,6 +18480,17 @@ ipcMain.handle("window:toggle-maximize", async () => {
 ipcMain.handle("window:close", async () => {
   try {
     app.quit();
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("system:notify", async (_e, title, body) => {
+  try {
+    const safeTitle = typeof title === "string" && title.trim() ? title.trim() : "Notification";
+    const safeBody = typeof body === "string" ? body : "";
+    const n = new Notification({ title: safeTitle, body: safeBody, silent: false });
+    n.show();
     return true;
   } catch {
     return false;
