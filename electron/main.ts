@@ -89,6 +89,8 @@ import { getExternalMonitorList } from './other_functions/getExternalMonitorList
 import './other_functions/getExternalMonitorList'
 import './other_functions/openFile'
 import './other_functions/exportEntireProject'
+import './other_functions/exportProjectFileToJson'
+import './other_functions/importProjectFileJson'
 import './getter-setter/audioLevel'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))

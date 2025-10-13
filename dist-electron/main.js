@@ -18276,7 +18276,7 @@ ipcMain.handle("system:openFile", async (_e, filePath) => {
     return { ok: false, error: message };
   }
 });
-async function ensureDir(dir) {
+async function ensureDir$1(dir) {
   await fs$k.mkdir(dir, { recursive: true });
 }
 async function copyFileSafe(src2, dest) {
@@ -18285,7 +18285,7 @@ async function copyFileSafe(src2, dest) {
     await fs$k.access(src2).catch(() => {
       throw new Error("missing");
     });
-    await ensureDir(path$m.dirname(dest));
+    await ensureDir$1(path$m.dirname(dest));
     try {
       await fs$k.access(dest);
       return true;
@@ -18309,25 +18309,25 @@ async function copyFileSafe(src2, dest) {
     return false;
   }
 }
-function sanitizeSegment(seg) {
+function sanitizeSegment$1(seg) {
   const s = seg.replace(/[\\/:*?"<>|]/g, "_").trim();
   return s || "untitled";
 }
 async function walkAndExport(root2, outRoot) {
   for (const diveName of Object.keys(root2)) {
     const diveNode = root2[diveName];
-    const diveDir = path$m.join(outRoot, sanitizeSegment(diveName));
-    await ensureDir(diveDir);
+    const diveDir = path$m.join(outRoot, sanitizeSegment$1(diveName));
+    await ensureDir$1(diveDir);
     const diveChildren = diveNode.children || {};
     for (const key of Object.keys(diveChildren)) {
       const node2 = diveChildren[key];
-      await exportNode(node2, path$m.join(diveDir, sanitizeSegment(key)));
+      await exportNode(node2, path$m.join(diveDir, sanitizeSegment$1(key)));
     }
   }
 }
 async function exportNode(node2, targetDir) {
   if (node2.type === "video" || node2.type === "image") {
-    await ensureDir(path$m.dirname(targetDir));
+    await ensureDir$1(path$m.dirname(targetDir));
     let src2 = node2.path || "";
     if (src2 && !/\.[a-z0-9]{2,5}$/i.test(src2)) src2 = `${src2}.mkv`;
     const base = path$m.basename(targetDir);
@@ -18337,7 +18337,7 @@ async function exportNode(node2, targetDir) {
     }
     return;
   }
-  await ensureDir(targetDir);
+  await ensureDir$1(targetDir);
   if (node2.type === "session") {
     const sid = node2.sessionId;
     if (sid) {
@@ -18350,7 +18350,7 @@ async function exportNode(node2, targetDir) {
   const children = node2.children || {};
   for (const key of Object.keys(children)) {
     const child = children[key];
-    const childDir = path$m.join(targetDir, sanitizeSegment(key));
+    const childDir = path$m.join(targetDir, sanitizeSegment$1(key));
     await exportNode(child, childDir);
   }
 }
@@ -18442,8 +18442,8 @@ ipcMain.handle("project:export-entire", async (_e, projectId, destinationDir) =>
     const det = await getSelectedProjectDetails(projectId);
     const projectName = (det == null ? void 0 : det.name) || "Project";
     const hierarchy = await getExportedProjectHierarchy(projectId);
-    const rootOut = path$m.join(destinationDir.trim(), sanitizeSegment(projectName || "Project"));
-    await ensureDir(rootOut);
+    const rootOut = path$m.join(destinationDir.trim(), sanitizeSegment$1(projectName || "Project"));
+    await ensureDir$1(rootOut);
     await walkAndExport(hierarchy || {}, rootOut);
     try {
       await writeProjectLogsCsv(projectId, rootOut);
@@ -18481,7 +18481,7 @@ ipcMain.handle("project:export-entry", async (_e, projectId, pathSegments, entry
     const entry = nodeChildren == null ? void 0 : nodeChildren[entryKey];
     if (!entry) return { ok: false, error: "entry not found" };
     if (entry.type === "video" || entry.type === "image") {
-      let baseName = sanitizeSegment(entryKey);
+      let baseName = sanitizeSegment$1(entryKey);
       if (entry.type === "video") {
         if (!/\.mkv$/i.test(baseName)) baseName = `${baseName}.mkv`;
       } else if (entry.type === "image") {
@@ -18491,10 +18491,202 @@ ipcMain.handle("project:export-entry", async (_e, projectId, pathSegments, entry
       await exportNode(entry, outTarget);
       return { ok: true, data: outTarget };
     }
-    const outDir = path$m.join(destinationDir.trim(), sanitizeSegment(entryKey));
-    await ensureDir(outDir);
+    const outDir = path$m.join(destinationDir.trim(), sanitizeSegment$1(entryKey));
+    await ensureDir$1(outDir);
     await exportNode(entry, outDir);
     return { ok: true, data: outDir };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+function sanitizeSegment(seg) {
+  const s = seg.replace(/[\\/:*?"<>|]/g, "_").trim();
+  return s || "untitled";
+}
+async function ensureDir(dir) {
+  await fs$k.mkdir(dir, { recursive: true });
+}
+function mapTask(doc) {
+  var _a, _b, _c, _d;
+  return {
+    _id: ((_b = (_a = doc == null ? void 0 : doc._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? String((doc == null ? void 0 : doc._id) ?? ""),
+    projectId: ((_d = (_c = doc == null ? void 0 : doc.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? String((doc == null ? void 0 : doc.projectId) ?? ""),
+    name: String((doc == null ? void 0 : doc.name) ?? ""),
+    remarks: typeof (doc == null ? void 0 : doc.remarks) === "string" ? doc.remarks : void 0,
+    createdAt: (doc == null ? void 0 : doc.createdAt) ?? null,
+    updatedAt: (doc == null ? void 0 : doc.updatedAt) ?? null
+  };
+}
+function mapDive(doc) {
+  var _a, _b, _c, _d;
+  return {
+    _id: ((_b = (_a = doc == null ? void 0 : doc._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? String((doc == null ? void 0 : doc._id) ?? ""),
+    projectId: ((_d = (_c = doc == null ? void 0 : doc.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? String((doc == null ? void 0 : doc.projectId) ?? ""),
+    name: String((doc == null ? void 0 : doc.name) ?? ""),
+    remarks: typeof (doc == null ? void 0 : doc.remarks) === "string" ? doc.remarks : void 0,
+    started: !!(doc == null ? void 0 : doc.started),
+    createdAt: (doc == null ? void 0 : doc.createdAt) ?? null,
+    updatedAt: (doc == null ? void 0 : doc.updatedAt) ?? null
+  };
+}
+function mapNodeTree(n) {
+  var _a, _b, _c, _d, _e, _f;
+  return {
+    _id: ((_b = (_a = n == null ? void 0 : n._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? String((n == null ? void 0 : n._id) ?? ""),
+    projectId: ((_d = (_c = n == null ? void 0 : n.projectId) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? String((n == null ? void 0 : n.projectId) ?? ""),
+    parentId: (n == null ? void 0 : n.parentId) ? ((_f = (_e = n.parentId) == null ? void 0 : _e.toString) == null ? void 0 : _f.call(_e)) ?? String(n.parentId) : null,
+    name: String((n == null ? void 0 : n.name) ?? ""),
+    status: (n == null ? void 0 : n.status) ?? "not-started",
+    remarks: typeof (n == null ? void 0 : n.remarks) === "string" ? n.remarks : void 0,
+    level: typeof (n == null ? void 0 : n.level) === "number" ? n.level : 0,
+    createdAt: (n == null ? void 0 : n.createdAt) ?? null,
+    updatedAt: (n == null ? void 0 : n.updatedAt) ?? null,
+    children: Array.isArray(n == null ? void 0 : n.children) ? n.children.map(mapNodeTree) : []
+  };
+}
+async function exportProjectFileToJson(destinationDir) {
+  var _a, _b;
+  if (typeof destinationDir !== "string" || !destinationDir.trim()) throw new Error("invalid destinationDir");
+  const projectId = getSelectedProjectId();
+  if (!projectId) throw new Error("no selected project");
+  const projectDoc = await getSelectedProjectDetails(projectId);
+  if (!projectDoc) throw new Error("selected project not found");
+  const tasks = await getAllTasks(projectId);
+  const dives = await getAllDives(projectId);
+  const nodeRoots = await getAllNodes(projectId);
+  const projectPlain = {
+    _id: ((_b = (_a = projectDoc._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? String(projectDoc._id),
+    name: projectDoc.name,
+    client: projectDoc.client,
+    contractor: projectDoc.contractor,
+    vessel: projectDoc.vessel,
+    location: projectDoc.location,
+    projectType: projectDoc.projectType,
+    lastSelectedDiveId: projectDoc.lastSelectedDiveId ?? null,
+    lastSelectedTaskId: projectDoc.lastSelectedTaskId ?? null,
+    lastSelectedNodeId: projectDoc.lastSelectedNodeId ?? null,
+    lastSelectedOverlayCh1Id: projectDoc.lastSelectedOverlayCh1Id ?? null,
+    lastSelectedOverlayCh2Id: projectDoc.lastSelectedOverlayCh2Id ?? null,
+    lastSelectedOverlayCh3Id: projectDoc.lastSelectedOverlayCh3Id ?? null,
+    lastSelectedOverlayCh4Id: projectDoc.lastSelectedOverlayCh4Id ?? null,
+    createdAt: projectDoc.createdAt,
+    updatedAt: projectDoc.updatedAt
+  };
+  const jsonObj = {
+    project: projectPlain,
+    tasks: Array.isArray(tasks) ? tasks.map(mapTask) : [],
+    dives: Array.isArray(dives) ? dives.map(mapDive) : [],
+    nodes: Array.isArray(nodeRoots) ? nodeRoots.map(mapNodeTree) : []
+  };
+  const safeName = sanitizeSegment(projectDoc.name || "Project");
+  const outPath = path$m.join(destinationDir.trim(), `${safeName}.json`);
+  await ensureDir(path$m.dirname(outPath));
+  const json2 = JSON.stringify(jsonObj, null, 2);
+  await fs$k.writeFile(outPath, json2, "utf8");
+  return outPath;
+}
+ipcMain.handle("project:export-project-file", async (_e, destinationDir) => {
+  try {
+    const outPath = await exportProjectFileToJson(destinationDir);
+    return { ok: true, data: outPath };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+function safeString(v, fallback = "") {
+  return typeof v === "string" ? v : fallback;
+}
+async function importProjectFileJson(jsonFilePath) {
+  var _a, _b, _c, _d;
+  if (typeof jsonFilePath !== "string" || !jsonFilePath.trim()) throw new Error("invalid file path");
+  const raw = await fs$k.readFile(jsonFilePath, "utf8");
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("invalid JSON");
+  }
+  if (!parsed || typeof parsed !== "object") throw new Error("invalid JSON structure");
+  const proj = parsed.project || {};
+  const name = safeString(proj.name).trim();
+  if (!name) throw new Error("project name is required");
+  const existing = await getAllProjects();
+  const dup = existing.find((p) => String(p.name).trim().toLowerCase() === name.toLowerCase());
+  if (dup) throw new Error("A project with the same name already exists");
+  const input = {
+    name,
+    client: safeString(proj.client),
+    contractor: safeString(proj.contractor),
+    vessel: safeString(proj.vessel),
+    location: safeString(proj.location),
+    projectType: proj.projectType === "pipeline" ? "pipeline" : "platform"
+  };
+  const createdProject = await createProject(input);
+  const projectId = ((_b = (_a = createdProject == null ? void 0 : createdProject._id) == null ? void 0 : _a.toString) == null ? void 0 : _b.call(_a)) ?? String(createdProject == null ? void 0 : createdProject._id);
+  const tasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
+  for (const t2 of tasks) {
+    const taskName = safeString(t2 == null ? void 0 : t2.name).trim();
+    if (!taskName) continue;
+    try {
+      await createTask({ projectId, name: taskName, remarks: safeString(t2 == null ? void 0 : t2.remarks, void 0) });
+    } catch {
+    }
+  }
+  const dives = Array.isArray(parsed.dives) ? parsed.dives : [];
+  for (const d of dives) {
+    const diveName = safeString(d == null ? void 0 : d.name).trim();
+    if (!diveName) continue;
+    try {
+      const created = await createDive({ projectId, name: diveName, remarks: safeString(d == null ? void 0 : d.remarks, void 0) });
+      const id = ((_d = (_c = created == null ? void 0 : created._id) == null ? void 0 : _c.toString) == null ? void 0 : _d.call(_c)) ?? String(created == null ? void 0 : created._id);
+      const started = !!(d == null ? void 0 : d.started);
+      if (started) {
+        try {
+          await editDive(id, { started: true });
+        } catch {
+        }
+      }
+    } catch {
+    }
+  }
+  async function createNodeRecursive(node2, parentId) {
+    var _a2, _b2;
+    const nodeName = safeString(node2 == null ? void 0 : node2.name).trim();
+    if (!nodeName) return null;
+    try {
+      const created = await createNodes({ projectId, names: [nodeName], parentId, remarks: safeString(node2 == null ? void 0 : node2.remarks, void 0) });
+      const first = Array.isArray(created) ? created[0] : null;
+      const nodeId = ((_b2 = (_a2 = first == null ? void 0 : first._id) == null ? void 0 : _a2.toString) == null ? void 0 : _b2.call(_a2)) ?? (first ? String(first == null ? void 0 : first._id) : null);
+      if (nodeId) {
+        const status = (node2 == null ? void 0 : node2.status) === "completed" || (node2 == null ? void 0 : node2.status) === "ongoing" || (node2 == null ? void 0 : node2.status) === "not-started" ? node2.status : void 0;
+        if (status && status !== "not-started") {
+          try {
+            await editNode(nodeId, { status });
+          } catch {
+          }
+        }
+        const children = Array.isArray(node2 == null ? void 0 : node2.children) ? node2.children : [];
+        for (const child of children) {
+          await createNodeRecursive(child, nodeId);
+        }
+      }
+      return nodeId;
+    } catch {
+      return null;
+    }
+  }
+  const rootNodes = Array.isArray(parsed.nodes) ? parsed.nodes : [];
+  for (const rn of rootNodes) {
+    await createNodeRecursive(rn);
+  }
+  return projectId;
+}
+ipcMain.handle("project:import-project-file-json", async (_e, jsonFilePath) => {
+  try {
+    const projectId = await importProjectFileJson(jsonFilePath);
+    return { ok: true, data: projectId };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     return { ok: false, error: message };

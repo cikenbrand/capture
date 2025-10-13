@@ -18,6 +18,7 @@ import OpenProject from "./OpenProject";
 import EditProjectDetailsForm from "./EditProjectDetailsForm";
 import VideoDeviceConfigurations from "./VideoDeviceConfigurations";
 import { FaRegWindowRestore } from "react-icons/fa";
+import { toast } from "sonner";
 
 export default function AppWindowBar() {
     const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
@@ -275,9 +276,51 @@ export default function AppWindowBar() {
                         </MenubarContent>
                     </MenubarMenu>
                     <MenubarMenu>
-                        <MenubarTrigger className='px-2 py-1'>Export</MenubarTrigger>
+                        <MenubarTrigger className='px-2 py-1'>Export / Import</MenubarTrigger>
                         <MenubarContent>
                             <MenubarItem disabled={!selectedProjectId} onClick={() => window.ipcRenderer.invoke('window:open-export-project')}>Export Project Settings</MenubarItem>
+                            <MenubarItem
+                                disabled={!selectedProjectId}
+                                onClick={async () => {
+                                    try {
+                                        const pick = await window.ipcRenderer.invoke('dialog:selectDirectory')
+                                        if (!pick?.ok || !pick.data) return
+                                        const exp = await window.ipcRenderer.invoke('project:export-project-file', pick.data)
+                                        if (exp?.ok) {
+                                            try { await window.ipcRenderer.invoke('system:notify', 'Export Complete', String(exp.data || 'Project file exported')) } catch { }
+                                        } else {
+                                            try { await window.ipcRenderer.invoke('system:notify', 'Export Failed', String(exp?.error || 'Unknown error')) } catch { }
+                                        }
+                                    } catch { }
+                                }}
+                            >
+                                Export Project File
+                            </MenubarItem>
+                            <MenubarItem
+                                onClick={async () => {
+                                    try {
+                                        const pick = await window.ipcRenderer.invoke('dialog:openJsonFile')
+                                        if (!pick?.ok || !pick.data) return
+                                        const res = await window.ipcRenderer.invoke('project:import-project-file-json', pick.data)
+                                        if (res?.ok) {
+                                            toast.success('Project imported successfully')
+                                            try { const ev = new CustomEvent('projectsChanged'); window.dispatchEvent(ev) } catch {}
+                                        } else {
+                                            const msg = String(res?.error || '')
+                                            if (msg.toLowerCase().includes('same name')) {
+                                                toast.error('A project with the same name already exists')
+                                            } else {
+                                                toast.error(`Import failed: ${msg || 'Unknown error'}`)
+                                            }
+                                        }
+                                    } catch (err: any) {
+                                        const msg = String(err?.message || err || 'Unknown error')
+                                        toast.error(`Import failed: ${msg}`)
+                                    }
+                                }}
+                            >
+                                Import Project File
+                            </MenubarItem>
                         </MenubarContent>
                     </MenubarMenu>
                 </Menubar>
