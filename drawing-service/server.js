@@ -132,6 +132,63 @@ server.on('request', (req, res) => {
       res.end(html)
       return
     }
+
+    // Static: serve arbitrary local files via query param (used for thumbnails)
+    if (url.pathname === '/fs') {
+      try {
+        const fullPath = url.searchParams.get('path') || ''
+        if (!fullPath) throw new Error('path missing')
+        const p = path.normalize(fullPath)
+        const stat = fs.statSync(p)
+        if (!stat.isFile()) { res.statusCode = 404; res.end('Not Found'); return }
+        const ext = path.extname(p).toLowerCase()
+        const type = ext === '.png' ? 'image/png'
+          : (ext === '.jpg' || ext === '.jpeg') ? 'image/jpeg'
+          : ext === '.webp' ? 'image/webp'
+          : ext === '.bmp' ? 'image/bmp'
+          : ext === '.gif' ? 'image/gif'
+          : ext === '.mp4' ? 'video/mp4'
+          : ext === '.mkv' ? 'video/x-matroska'
+          : ext === '.mov' ? 'video/quicktime'
+          : 'application/octet-stream'
+
+        // Range support (video scrubbing / partial loads)
+        const range = req.headers.range
+        if (range) {
+          const match = /bytes=(\d+)-(\d+)?/.exec(range)
+          const total = stat.size
+          const start = match ? parseInt(match[1], 10) : 0
+          const end = match && match[2] ? Math.min(parseInt(match[2], 10), total - 1) : total - 1
+          if (start >= total || end >= total) {
+            res.writeHead(416, { 'Content-Range': `bytes */${total}` })
+            res.end()
+            return
+          }
+          res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${end}/${total}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': (end - start + 1),
+            'Content-Type': type,
+            'Cache-Control': 'public, max-age=60'
+          })
+          fs.createReadStream(p, { start, end }).pipe(res)
+          return
+        }
+
+        res.writeHead(200, {
+          'Content-Type': type,
+          'Content-Length': stat.size,
+          'Accept-Ranges': 'bytes',
+          'Cache-Control': 'public, max-age=60'
+        })
+        fs.createReadStream(p).pipe(res)
+        return
+      } catch {
+        res.statusCode = 404
+        res.end('Not Found')
+        return
+      }
+    }
     if (url.pathname === '/overlay') {
       let html = ''
       try { html = fs.readFileSync(overlayHtmlPath, 'utf8') } catch { html = '<!doctype html><meta charset="utf-8"><title>Overlay</title><h1>Overlay</h1>' }

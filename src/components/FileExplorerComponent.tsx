@@ -32,6 +32,25 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
     const [ctxItem, setCtxItem] = useState<{ name: string; isFolder: boolean } | null>(null)
     const rootRef = useRef<HTMLDivElement>(null)
 
+    function resolveFileUrl(name: string): string {
+        try {
+            if (!hierarchy) return ''
+            const port = (window as any)?.overlay?.wsPort ?? 3620
+            const base = `http://127.0.0.1:${port}/fs?path=`
+            let cursor: any = hierarchy
+            for (const seg of path) {
+                if (!cursor || typeof cursor !== 'object') { cursor = {}; break }
+                if (cursor.children && seg in cursor.children) cursor = cursor.children[seg]
+                else if (seg in cursor) cursor = cursor[seg]
+                else { cursor = {}; break }
+            }
+            const nodeChildren = (cursor && cursor.children) ? cursor.children : cursor
+            const entry = nodeChildren?.[name]
+            const fp = entry?.path
+            return typeof fp === 'string' ? `${base}${encodeURIComponent(fp)}` : ''
+        } catch { return '' }
+    }
+
     const currentEntries = useMemo(() => {
         if (!hierarchy) return null as null | Array<{ key: string; isFolder: boolean; type?: string }>
         let cursor: any = hierarchy
@@ -143,14 +162,14 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                     onDoubleClick={() => openEntry(it.key, it.isFolder)}
                                     aria-selected={selectedId === it.key}
                                 >
-                                    <div className="flex-1 flex items-center gap-2 min-w-0">
-                                        {it.type === 'video' ? (
-                                            <AiOutlineFile className="text-white/70" size={16} />
-                                        ) : it.type === 'image' ? (
-                                            <AiOutlineFile className="text-white/70" size={16} />
-                                        ) : (
-                                            <AiFillFolder className="text-yellow-400" size={16} />
-                                        )}
+                            <div className="flex-1 flex items-center gap-2 min-w-0">
+                                {it.type === 'video' ? (
+                                    <video className="w-8 h-6 rounded object-cover bg-black/50" src={resolveFileUrl(it.key)} muted preload="metadata" />
+                                ) : it.type === 'image' ? (
+                                    <img className="w-8 h-6 rounded object-cover bg-black/20" src={resolveFileUrl(it.key)} alt={it.key} />
+                                ) : (
+                                    <AiFillFolder className="text-yellow-400" size={16} />
+                                )}
                                         <span className="text-white text-sm truncate">{it.key}</span>
                                     </div>
                                     <span className="w-36 text-right text-white/60 capitalize">{it.type || ''}</span>
@@ -159,11 +178,11 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                             ))}
                         </ul>
                     ) : (
-                        <div className="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                        <div className="p-3 flex flex-wrap gap-2">
                             {currentEntries.map((it) => (
                                 <div
                                     key={it.key}
-                                    className={`group rounded cursor-default p-3 flex flex-col items-center gap-2 ${selectedId === it.key ? 'bg-white/10 ring-1 ring-white/20' : 'hover:bg-white/5'}`}
+                                    className={`group rounded cursor-default p-3 w-[140px] flex flex-col items-center gap-2 ${selectedId === it.key ? 'bg-white/10 ring-1 ring-white/20' : 'hover:bg-white/5'}`}
                                     onClick={() => { setSelectedId(it.key) }}
                                     onContextMenu={(e) => {
                                         e.preventDefault()
@@ -179,9 +198,49 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                     aria-selected={selectedId === it.key}
                                 >
                                     {it.type === 'video' ? (
-                                        <AiOutlineFile className="text-white/70" size={48} />
+                                        <video
+                                            className="rounded w-[72px] h-[54px] object-cover bg-black/50"
+                                            src={(() => {
+                                                try {
+                                                    const base = `http://127.0.0.1:3620/fs?path=`
+                                                    // Attempt to resolve file path for thumbnail from hierarchy
+                                                    let cursor: any = hierarchy
+                                                    for (const seg of path) {
+                                                        if (!cursor || typeof cursor !== 'object') { cursor = {}; break }
+                                                        if (cursor.children && seg in cursor.children) cursor = cursor.children[seg]
+                                                        else if (seg in cursor) cursor = cursor[seg]
+                                                        else { cursor = {}; break }
+                                                    }
+                                                    const nodeChildren = (cursor && cursor.children) ? cursor.children : cursor
+                                                    const entry = nodeChildren?.[it.key]
+                                                    const fp = entry?.path
+                                                    return typeof fp === 'string' ? `${base}${encodeURIComponent(fp)}` : ''
+                                                } catch { return '' }
+                                            })()}
+                                            muted
+                                            preload="metadata"
+                                        />
                                     ) : it.type === 'image' ? (
-                                        <AiOutlineFile className="text-white/70" size={48} />
+                                        <img
+                                            className="rounded w-[72px] h-[54px] object-cover bg-black/20"
+                                            src={(() => {
+                                                try {
+                                                    const base = `http://127.0.0.1:3620/fs?path=`
+                                                    let cursor: any = hierarchy
+                                                    for (const seg of path) {
+                                                        if (!cursor || typeof cursor !== 'object') { cursor = {}; break }
+                                                        if (cursor.children && seg in cursor.children) cursor = cursor.children[seg]
+                                                        else if (seg in cursor) cursor = cursor[seg]
+                                                        else { cursor = {}; break }
+                                                    }
+                                                    const nodeChildren = (cursor && cursor.children) ? cursor.children : cursor
+                                                    const entry = nodeChildren?.[it.key]
+                                                    const fp = entry?.path
+                                                    return typeof fp === 'string' ? `${base}${encodeURIComponent(fp)}` : ''
+                                                } catch { return '' }
+                                            })()}
+                                            alt={it.key}
+                                        />
                                     ) : (
                                         <AiFillFolder className={`text-yellow-400 ${selectedId === it.key ? 'drop-shadow-[0_0_6px_rgba(255,255,0,0.3)]' : ''}`} size={48} />
                                     )}
@@ -221,11 +280,11 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                         ))}
                     </ul>
                 ) : (
-                    <div className="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+                        <div className="p-3 flex flex-wrap gap-2">
                         {items.map((it) => (
                             <div
                                 key={it.id}
-                                className={`group rounded cursor-default p-3 flex flex-col items-center gap-2 ${selectedId === it.id ? 'bg-white/10' : 'hover:bg-white/5'}`}
+                                className={`group rounded cursor-default p-3 w-[140px] flex flex-col items-center gap-2 ${selectedId === it.id ? 'bg-white/10' : 'hover:bg-white/5'}`}
                                 onClick={() => { setSelectedId(it.id); try { onSelect?.(it.id) } catch {} }}
                                 onContextMenu={(e) => {
                                     e.preventDefault()

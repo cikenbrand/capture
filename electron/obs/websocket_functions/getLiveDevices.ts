@@ -88,4 +88,34 @@ ipcMain.handle('obs:get-live-devices', async () => {
   }
 })
 
+// Simplified API as requested: read from a known input's property list directly
+async function getVideoInputs(): Promise<LiveDeviceInfo[]> {
+  const obs = getObsClient() as any
+  if (!obs) return []
+  try {
+    const res = await obs.call('GetInputPropertiesListPropertyItems', {
+      inputName: 'video capture device 1',
+      propertyName: 'video_device_id',
+    })
+    const items: any[] = Array.isArray(res?.propertyItems) ? res.propertyItems : []
+    const mapped = items.map((videoInput: any) => ({
+      id: String(videoInput?.itemValue ?? videoInput?.value ?? ''),
+      name: String(videoInput?.itemName ?? videoInput?.name ?? ''),
+    }))
+    // Exclude OBS virtual/related cameras
+    return mapped.filter((vi) => vi.id && vi.name && !/obs/i.test(vi.name))
+  } catch {
+    return []
+  }
+}
+
+ipcMain.handle('obs:video-inputs', async () => {
+  try {
+    const videoInputs = await getVideoInputs()
+    return { success: true, videoInputs }
+  } catch (error) {
+    return { success: false, error }
+  }
+})
+
 

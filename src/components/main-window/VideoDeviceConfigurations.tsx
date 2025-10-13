@@ -9,6 +9,7 @@ type InputType = "live-device" | "rtmp" | "webrtc"
 type ChannelConfig = {
     inputType: InputType
     deviceLabel?: string
+    deviceId?: string
     rtmpUrl?: string
     webrtcUrl?: string
 }
@@ -26,10 +27,10 @@ export default function VideoDeviceConfigurations() {
     }), [])
 
     const initialConfigs: Record<ChannelKey, ChannelConfig> = useMemo(() => ({
-        "channel-1": { inputType: "live-device", deviceLabel: "OBS-Camera" },
-        "channel-2": { inputType: "live-device", deviceLabel: "OBS-Camera2" },
-        "channel-3": { inputType: "live-device", deviceLabel: "OBS-Camera3" },
-        "channel-4": { inputType: "live-device", deviceLabel: "OBS-Camera4" },
+        "channel-1": { inputType: "live-device", deviceLabel: "OBS-Camera", deviceId: "" },
+        "channel-2": { inputType: "live-device", deviceLabel: "OBS-Camera2", deviceId: "" },
+        "channel-3": { inputType: "live-device", deviceLabel: "OBS-Camera3", deviceId: "" },
+        "channel-4": { inputType: "live-device", deviceLabel: "OBS-Camera4", deviceId: "" },
     }), [])
 
     const [channelConfigs, setChannelConfigs] = useState<Record<ChannelKey, ChannelConfig>>(initialConfigs)
@@ -80,7 +81,7 @@ export default function VideoDeviceConfigurations() {
                 if (!disposed && Array.isArray(list)) {
                     const sanitized = list
                         .map((d: any) => ({ id: String(d?.id ?? ''), name: String(d?.name ?? '') }))
-                        .filter(d => d.id && d.name)
+                        .filter(d => d.id && d.name && !/obs/i.test(d.name))
                     setObsDevices(sanitized)
                 }
             } catch {}
@@ -89,14 +90,74 @@ export default function VideoDeviceConfigurations() {
         return () => { disposed = true }
     }, [])
 
+    // Apply active video scene items (rtmp/webrtc/live-device) to set input type for each channel
+    useEffect(() => {
+        let cancelled = false
+        async function loadActiveTypes() {
+            try {
+                const sceneRes = await (window as any)?.ipcRenderer?.invoke?.('obs:get-current-scene')
+                const sceneName: string = sceneRes || 'channel 1'
+                const res = await (window as any)?.ipcRenderer?.invoke?.('obs:get-active-video-items-for-scene', sceneName)
+                const data = res?.ok ? res.data : res
+                if (cancelled || !data || typeof data !== 'object') return
+                setChannelConfigs(prev => {
+                    const pickType = (st: any, fallback: InputType): InputType => {
+                        try {
+                            if (st?.rtmp) return 'rtmp'
+                            if (st?.webrtc) return 'webrtc'
+                            if (st?.videoCaptureDevice) return 'live-device'
+                        } catch {}
+                        return fallback
+                    }
+                    const next: Record<ChannelKey, ChannelConfig> = { ...prev }
+                    next['channel-1'] = { ...prev['channel-1'], inputType: pickType(data[1], prev['channel-1']?.inputType || 'live-device') }
+                    next['channel-2'] = { ...prev['channel-2'], inputType: pickType(data[2], prev['channel-2']?.inputType || 'live-device') }
+                    next['channel-3'] = { ...prev['channel-3'], inputType: pickType(data[3], prev['channel-3']?.inputType || 'live-device') }
+                    next['channel-4'] = { ...prev['channel-4'], inputType: pickType(data[4], prev['channel-4']?.inputType || 'live-device') }
+                    return next
+                })
+
+                // Fetch active capture device id/name for each channel and apply to config
+                try {
+                    const cap = await (window as any)?.ipcRenderer?.invoke?.('obs:get-active-capture-inputs', sceneName)
+                    const capData = cap?.ok ? cap.data : cap
+                    if (!cancelled && capData && typeof capData === 'object') {
+                        setChannelConfigs(prev => {
+                            const next: Record<ChannelKey, ChannelConfig> = { ...prev }
+                            const apply = (idx: number, key: ChannelKey) => {
+                                const info = capData[idx]
+                                if (info?.enabled) {
+                                    if (info?.deviceId) next[key] = { ...next[key], deviceId: info.deviceId }
+                                    if (info?.deviceName) next[key] = { ...next[key], deviceLabel: info.deviceName }
+                                }
+                            }
+                            apply(1, 'channel-1')
+                            apply(2, 'channel-2')
+                            apply(3, 'channel-3')
+                            apply(4, 'channel-4')
+                            return next
+                        })
+                    }
+                } catch {}
+            } catch {}
+        }
+        loadActiveTypes()
+        return () => { cancelled = true }
+    }, [])
+
+    // Removed default selection and OBS-side syncing; keep UI read-only list of live devices
+
+    // Removed debug logs that fetched active inputs
+
     function renderPreviewForChannel(channelKey: ChannelKey) {
-        const config = channelConfigs[channelKey]
-        const selectedLabel = config?.deviceLabel || CHANNEL_TO_LABEL[channelKey]
-        const deviceId = labelToDeviceId[selectedLabel]
+        // Decouple preview from the selected OBS device name. Always preview a stable browser device.
+        // Prefer the default channel label mapping; if not found, fall back to the first available camera.
+        const previewLabel = CHANNEL_TO_LABEL[channelKey]
+        const deviceId = labelToDeviceId[previewLabel] || Object.values(labelToDeviceId)[0]
         if (!deviceId) {
             return (
                 <div className="text-white/70 text-sm">
-                    Device "{selectedLabel}" not found.
+                    Preview not available.
                 </div>
             )
         }
@@ -134,7 +195,10 @@ export default function VideoDeviceConfigurations() {
 
                 <div className="flex flex-col gap-1">
                     <span>Input Type</span>
-                    <Select value={config.inputType} onValueChange={(v) => updateChannelConfig(channelKey, p => ({ ...p, inputType: v as InputType }))}>
+                        <Select value={config.inputType} onValueChange={async (v) => {
+                        const nextType = v as InputType
+                        updateChannelConfig(channelKey, p => ({ ...p, inputType: nextType }))
+                    }}>
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Source Type" />
                         </SelectTrigger>
@@ -149,13 +213,21 @@ export default function VideoDeviceConfigurations() {
                 {showDeviceSelect ? (
                     <div className="flex flex-col gap-1">
                         <span>Device Name</span>
-                        <Select value={config.deviceLabel ?? ""} onValueChange={(v) => updateChannelConfig(channelKey, p => ({ ...p, deviceLabel: v }))}>
+                        <Select value={config.deviceId ?? ""} onValueChange={async (v) => {
+                            updateChannelConfig(channelKey, p => ({ ...p, deviceId: v, deviceLabel: (obsDevices.find(d => d.id === v)?.name || p.deviceLabel) }))
+                            try {
+                                const sceneRes = await (window as any)?.ipcRenderer?.invoke?.('obs:get-current-scene')
+                                const sceneName: string = sceneRes || 'channel 1'
+                                const idx = channelKey === 'channel-1' ? 1 : channelKey === 'channel-2' ? 2 : channelKey === 'channel-3' ? 3 : 4
+                                await (window as any)?.ipcRenderer?.invoke?.('obs:set-capture-device-input', sceneName, idx, v)
+                            } catch {}
+                        }}>
                             <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Select device" />
                             </SelectTrigger>
                             <SelectContent>
                                 {obsDevices.map(d => (
-                                    <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
