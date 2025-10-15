@@ -490,6 +490,8 @@ function TextOverlayContent({ component }: { component: any }) {
     // Helper: live serial data polling for data components
     const [serialOpen, setSerialOpen] = useState(false)
     const [serialValue, setSerialValue] = useState<string>("")
+	// Helper: selected node preview for node components
+	const [selectedNodePreview, setSelectedNodePreview] = useState<{ name: string; level?: number } | null>(null)
     useEffect(() => {
         if (component.type !== 'data') return
         let cancelled = false
@@ -511,6 +513,75 @@ function TextOverlayContent({ component }: { component: any }) {
         return () => { cancelled = true; clearInterval(id) }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [component?.type, component?.dataKey])
+
+	// Keep node preview in sync with global selected node
+	useEffect(() => {
+		// Only relevant for node components
+		let cancelled = false
+		if (component.type !== 'node') { setSelectedNodePreview(null); return }
+
+		const resolvePreviewFrom = async (nodeId: string | null) => {
+			if (!nodeId) { if (!cancelled) setSelectedNodePreview(null); return }
+			try {
+				// Build full path from root -> selected by following parentId chain
+				const path: { name?: string; level?: number; parentId?: string }[] = []
+				let guard = 0
+				let curId: string | undefined | null = nodeId
+				while (curId && guard++ < 100) {
+					const res = await window.ipcRenderer.invoke('db:getSelectedNodeDetails', curId)
+					if (!res?.ok || !res.data) break
+					path.push({ name: res.data.name, level: res.data.level, parentId: res.data.parentId })
+					curId = res.data.parentId
+				}
+				if (!path.length) { if (!cancelled) setSelectedNodePreview(null); return }
+				path.reverse() // now index 0 = topmost under project
+				const desiredLevel = typeof component.nodeLevel === 'number' ? component.nodeLevel : undefined
+				let chosenName: string | undefined
+				let chosenLevel: number | undefined
+				if (typeof desiredLevel === 'number' && desiredLevel >= 1) {
+					const index = desiredLevel - 1
+					if (index <= path.length - 1) {
+						const node = path[index]
+						chosenName = node?.name
+						chosenLevel = node?.level
+					} else {
+						// Missing deeper levels → fall back to overlay component name by clearing preview
+						if (!cancelled) { setSelectedNodePreview(null) }
+						return
+					}
+				} else {
+					const node = path[path.length - 1]
+					chosenName = node?.name
+					chosenLevel = node?.level
+				}
+				if (!cancelled) setSelectedNodePreview(chosenName ? { name: chosenName, level: chosenLevel } : null)
+			} catch {
+				if (!cancelled) setSelectedNodePreview(null)
+			}
+		}
+
+		;(async () => {
+			try {
+				const sel = await window.ipcRenderer.invoke('app:getSelectedNodeId')
+				await resolvePreviewFrom(sel?.ok ? (sel.data ?? null) : null)
+			} catch { if (!cancelled) setSelectedNodePreview(null) }
+		})()
+
+		const onSel = (e: any, arg?: any) => {
+			try {
+				const id = (typeof arg === 'string') ? arg : (typeof e?.detail === 'string' ? e.detail : null)
+				resolvePreviewFrom(id)
+			} catch { setSelectedNodePreview(null) }
+		}
+		window.addEventListener('selectedNodeChanged', onSel as any)
+		try { window.ipcRenderer.on('app:selectedNodeChanged', onSel as any) } catch {}
+		return () => {
+			cancelled = true
+			window.removeEventListener('selectedNodeChanged', onSel as any)
+			try { window.ipcRenderer.off('app:selectedNodeChanged', onSel as any) } catch {}
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [component?.type, component?.nodeLevel])
     if (component.type === 'time') {
         const value = useTime({ twentyFourHour: component.twentyFourHour ?? true, useUTC: component.useUTC ?? false })
         return (
@@ -532,13 +603,13 @@ function TextOverlayContent({ component }: { component: any }) {
         return <span style={style}>{component.customText || component.name}</span>
     }
     if (component.type === 'node') {
-        const level = typeof component.nodeLevel === 'number' ? component.nodeLevel : undefined
-        return (
-            <span style={style} className="inline-flex items-center gap-1">
-                {component.customText || component.name}
-                {level ? ` (L${level})` : ''}
-            </span>
-        )
+		const fallbackName = component.customText || component.name
+		const text = selectedNodePreview?.name || fallbackName
+		return (
+			<span style={style} className="inline-flex items-center gap-1">
+				{text}
+			</span>
+		)
     }
     if (component.type === 'task') {
         return <span style={style}>{component.customText || component.name}</span>

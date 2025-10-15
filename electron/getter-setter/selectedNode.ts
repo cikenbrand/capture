@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, BrowserWindow } from 'electron'
 
 let selectedNodeId: string | null = null
 
@@ -13,6 +13,12 @@ export function getSelectedNodeId(): string | null {
 ipcMain.handle('app:setSelectedNodeId', async (_event, id: string | null) => {
   try {
     setSelectedNodeId(id)
+    try {
+      const payload = id ?? null
+      for (const w of BrowserWindow.getAllWindows()) {
+        try { if (!w.isDestroyed()) w.webContents.send('app:selectedNodeChanged', payload) } catch {}
+      }
+    } catch {}
     return { ok: true }
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error'

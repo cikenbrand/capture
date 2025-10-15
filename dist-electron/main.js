@@ -15279,6 +15279,16 @@ function getSelectedNodeId() {
 ipcMain.handle("app:setSelectedNodeId", async (_event, id) => {
   try {
     setSelectedNodeId(id);
+    try {
+      const payload = id ?? null;
+      for (const w of BrowserWindow.getAllWindows()) {
+        try {
+          if (!w.isDestroyed()) w.webContents.send("app:selectedNodeChanged", payload);
+        } catch {
+        }
+      }
+    } catch {
+    }
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
