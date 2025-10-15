@@ -32,7 +32,19 @@ export default function DataMapperTable () {
                 }
             } catch {}
         })()
-        return () => { cancelled = true }
+        const onCreated = (e: Event) => {
+            try {
+                const detail = (e as CustomEvent).detail as { _id: string; name: string }
+                if (!detail || !detail._id || !detail.name) return
+                setKeys(prev => {
+                    const exists = prev.some(k => k._id === detail._id || k.name === detail.name)
+                    if (exists) return prev
+                    return [...prev, { _id: String(detail._id), name: String(detail.name) }]
+                })
+            } catch {}
+        }
+        window.addEventListener('data-key-created', onCreated as EventListener)
+        return () => { cancelled = true; window.removeEventListener('data-key-created', onCreated as EventListener) }
     }, [])
     return (
         <Table className="table-fixed">

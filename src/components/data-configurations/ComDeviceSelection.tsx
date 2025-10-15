@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 
 type Props = {
     value?: string
-    onChange?: (next: string) => void
+    onChange?: (next: string | undefined) => void
 }
 
 export default function ComDeviceSelection({ value, onChange }: Props) {
@@ -24,8 +24,18 @@ export default function ComDeviceSelection({ value, onChange }: Props) {
             }
         }
         load()
-        return () => { cancelled = true }
-    }, [])
+        const handler = (_e: unknown, payload: any) => {
+            try {
+                const all = Array.isArray(payload?.all) ? payload.all as string[] : []
+                setPorts(all)
+                if (value && !all.includes(value)) {
+                    onChange?.(undefined)
+                }
+            } catch {}
+        }
+        try { window.ipcRenderer.on('serial:ports-changed', handler as any) } catch {}
+        return () => { cancelled = true; try { window.ipcRenderer.off('serial:ports-changed', handler as any) } catch {} }
+    }, [value, onChange])
 
     const placeholder = loading ? 'Loading ports…' : (ports.length ? 'Select port' : 'No ports')
 

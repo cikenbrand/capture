@@ -87,6 +87,7 @@ import './db/getEventLogs'
 import './db/editEventLog'
 import { getExternalMonitorList } from './other_functions/getExternalMonitorList'
 import './other_functions/getExternalMonitorList'
+import { startComDeviceWatcher } from './other_functions/detectComDevice'
 import './other_functions/openFile'
 import './other_functions/exportEntireProject'
 import './other_functions/exportProjectFileToJson'
@@ -110,6 +111,7 @@ let overlayEditorWin: BrowserWindow | null = null
 let pipWin: BrowserWindow | null = null
 let eventingWin: BrowserWindow | null = null
 let dataConfigWin: BrowserWindow | null = null
+let stopComWatcher: (() => void) | null = null
 
 // ——— helpers ———
 function delay(ms: number) {
@@ -221,6 +223,11 @@ async function createWindow() {
   // Start forwarding OBS audio level events to renderer
   try { if (win) sendAudioLevel(win) } catch {}
 
+  // Start COM device watcher and tie to main window
+  try {
+    stopComWatcher = startComDeviceWatcher(() => win)
+  } catch {}
+
   // 5) Check for updates (GitHub) when online
   try {
     const online = await new Promise<boolean>((resolve) => {
@@ -275,6 +282,7 @@ app.on('before-quit', async (e) => {
     await exitOBS()
   } catch {}
   try { await stopBrowserSourceService() } catch {}
+  try { stopComWatcher?.() } catch {}
   app.quit()
 })
 app.on('activate', () => {

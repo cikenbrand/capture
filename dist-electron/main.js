@@ -1,7 +1,7 @@
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-import require$$1$4, { ipcMain, BrowserWindow, screen, app, shell, Notification, dialog } from "electron";
+import require$$1$4, { ipcMain, BrowserWindow, screen, app, Notification, shell, dialog } from "electron";
 import path$m from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
 import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
@@ -18237,6 +18237,64 @@ async function getExternalMonitorList() {
     return [];
   }
 }
+function startComDeviceWatcher(getWindow, intervalMs = 1500) {
+  let disposed = false;
+  let last = /* @__PURE__ */ new Set();
+  let timer = null;
+  const notify = (title, body) => {
+    try {
+      const n = new Notification({ title, body, silent: false });
+      n.show();
+    } catch {
+    }
+  };
+  const tick = async () => {
+    if (disposed) return;
+    try {
+      const list = await getCOMPorts();
+      const current = new Set(list);
+      const added = [];
+      const removed = [];
+      for (const p of current) if (!last.has(p)) added.push(p);
+      for (const p of last) if (!current.has(p)) removed.push(p);
+      if (added.length || removed.length) {
+        for (const p of added) notify("Serial device connected", p);
+        for (const p of removed) notify("Serial device disconnected", p);
+        try {
+          const payload = { added, removed, all: Array.from(current) };
+          const primary = getWindow();
+          if (primary && !primary.isDestroyed()) {
+            primary.webContents.send("serial:ports-changed", payload);
+          }
+          for (const w of BrowserWindow.getAllWindows()) {
+            try {
+              if (!w.isDestroyed()) w.webContents.send("serial:ports-changed", payload);
+            } catch {
+            }
+          }
+        } catch {
+        }
+      }
+      last = current;
+    } catch {
+    } finally {
+      if (!disposed) timer = setTimeout(tick, intervalMs);
+    }
+  };
+  (async () => {
+    try {
+      const initial = await getCOMPorts();
+      last = new Set(initial);
+    } catch {
+      last = /* @__PURE__ */ new Set();
+    }
+    tick();
+  })();
+  return () => {
+    disposed = true;
+    if (timer) clearTimeout(timer);
+  };
+}
 ipcMain.handle("system:openFile", async (_e, filePath) => {
   try {
     if (!filePath || typeof filePath !== "string") {
@@ -18704,6 +18762,7 @@ let overlayEditorWin = null;
 let pipWin = null;
 let eventingWin = null;
 let dataConfigWin = null;
+let stopComWatcher = null;
 function delay(ms2) {
   return new Promise((r) => setTimeout(r, ms2));
 }
@@ -18804,6 +18863,10 @@ async function createWindow() {
   } catch {
   }
   try {
+    stopComWatcher = startComDeviceWatcher(() => win);
+  } catch {
+  }
+  try {
     const online = await new Promise((resolve) => {
       try {
         const req = require("node:https").request({ method: "HEAD", host: "api.github.com", path: "/", headers: { "User-Agent": "deepstrim-capture" }, timeout: 3e3 }, (res) => {
@@ -18875,6 +18938,10 @@ app.on("before-quit", async (e) => {
   }
   try {
     await stopBrowserSourceService();
+  } catch {
+  }
+  try {
+    stopComWatcher == null ? void 0 : stopComWatcher();
   } catch {
   }
   app.quit();

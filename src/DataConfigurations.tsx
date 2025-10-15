@@ -148,12 +148,6 @@ export default function DataConfigurations() {
                                         <BiPlus className="h-5 w-5" />
                                         <span className="font-medium">Create Data Name</span>
                                     </button>
-                                    <button
-                                        title="Edit Data Name"
-                                        className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                                        <BiPlus className="h-5 w-5" />
-                                        <span className="font-medium">Edit Data Name</span>
-                                    </button>
                                 </div>
                                 <DataMapperTable />
                             </TabsContent>

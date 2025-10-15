@@ -22,6 +22,11 @@ export default function CreateDataKeyForm({ onClose }: Props) {
             setSubmitting(true)
             const res = await window.ipcRenderer.invoke('db:createDataKey', trimmed)
             if (res?.ok) {
+                try {
+                    const id = String(res.data)
+                    const event = new CustomEvent('data-key-created', { detail: { _id: id, name: trimmed } })
+                    window.dispatchEvent(event)
+                } catch {}
                 onClose()
             } else {
                 setError(res?.error || 'Failed to create data key')
