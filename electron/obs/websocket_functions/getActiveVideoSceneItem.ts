@@ -32,39 +32,63 @@ export async function getActiveVideoSceneItems(): Promise<ActiveVideoSceneItems>
 
   const result = createDefaultState()
 
-  for (let index = 1; index <= 4; index++) {
-    const groupName = `source ${index}`
+  // Helper: read enabled states from a given container (scene or group)
+  const resolveStatesFromContainer = async (containerName: string, listGetter: 'GetSceneItemList' | 'GetGroupSceneItemList') => {
     try {
-      const list = await obs.call('GetGroupSceneItemList', { sceneName: groupName })
+      const list = await obs.call(listGetter, { sceneName: containerName })
       const items: any[] = Array.isArray(list?.sceneItems) ? list.sceneItems : []
 
-      // Helper to resolve enabled state for an item by rough name match
-      const setStateFor = async (label: 'videoCaptureDevice' | 'rtmp' | 'webrtc', match: (name: string) => boolean) => {
-        const entry = items.find((it: any) => match(String(it?.sourceName ?? '')))
-        if (!entry) return
-        let enabled: boolean | null = null
-        // Prefer embedded state if present on list response
-        if (typeof entry?.sceneItemEnabled === 'boolean') {
-          enabled = !!entry.sceneItemEnabled
-        } else {
-          try {
-            const enabledRes = await obs.call('GetSceneItemEnabled', { sceneName: groupName, sceneItemId: Number(entry.sceneItemId) })
-            enabled = !!enabledRes?.sceneItemEnabled
-          } catch {
-            enabled = null
-          }
-        }
-        if (enabled != null) {
-          result[index][label] = enabled
+      const enabledOf = async (sceneItem: any): Promise<boolean | null> => {
+        if (typeof sceneItem?.sceneItemEnabled === 'boolean') return !!sceneItem.sceneItemEnabled
+        try {
+          const en = await obs.call('GetSceneItemEnabled', { sceneName: containerName, sceneItemId: Number(sceneItem?.sceneItemId) })
+          return !!en?.sceneItemEnabled
+        } catch {
+          return null
         }
       }
 
-      const lcIndex = String(index).toLowerCase()
-      await setStateFor('videoCaptureDevice', (name) => name.toLowerCase().startsWith('video capture device') && name.toLowerCase().includes(lcIndex))
-      await setStateFor('rtmp', (name) => name.toLowerCase().startsWith('rtmp') && name.toLowerCase().includes(lcIndex))
-      await setStateFor('webrtc', (name) => name.toLowerCase().startsWith('webrtc') && name.toLowerCase().includes(lcIndex))
+      for (const index of [1, 2, 3, 4]) {
+        const lcIndex = String(index)
+        const matchAndSet = async (label: 'videoCaptureDevice' | 'rtmp' | 'webrtc', prefix: string) => {
+          const entry = items.find((it: any) => String(it?.sourceName ?? '').toLowerCase().startsWith(prefix) && String(it?.sourceName ?? '').toLowerCase().includes(lcIndex))
+          if (!entry) return
+          const on = await enabledOf(entry)
+          if (on != null) result[index][label] = on
+        }
+        await matchAndSet('videoCaptureDevice', 'video capture device')
+        await matchAndSet('rtmp', 'rtmp')
+        await matchAndSet('webrtc', 'webrtc')
+      }
     } catch {
-      // keep defaults for this group on error
+      // ignore container fetch errors
+    }
+  }
+
+  // First try: if groups like "source 1".."source 4" exist, read states from groups
+  let hasAtLeastOneGroup = false
+  try {
+    const groups = await obs.call('GetGroupList')
+    const names: string[] = Array.isArray(groups?.groups) ? groups.groups : []
+    for (let index = 1; index <= 4; index++) {
+      const groupName = names.find((n) => String(n).toLowerCase() === `source ${index}`)
+      if (groupName) {
+        hasAtLeastOneGroup = true
+        await resolveStatesFromContainer(String(groupName), 'GetGroupSceneItemList')
+      }
+    }
+  } catch {}
+
+  // Fallback: flat scene layout like in the screenshot
+  if (!hasAtLeastOneGroup) {
+    try {
+      const currentScene = await obs.call('GetCurrentProgramScene')
+      const sceneName = String(currentScene?.currentProgramSceneName ?? currentScene?.sceneName ?? '')
+      if (sceneName) {
+        await resolveStatesFromContainer(sceneName, 'GetSceneItemList')
+      }
+    } catch {
+      // ignore
     }
   }
 
@@ -128,40 +152,63 @@ export async function getActiveInputsForScene(sceneName: string): Promise<Active
   const result = createDefaultState()
   if (!obs) return result
 
-  // Resolve actual group names present
-  const groups = await getGroupSceneItemListForScene(sceneName)
-
-  for (let index = 1; index <= 4; index++) {
-    const groupName = `source ${index}`
+  // Helper to read enabled state for an item inside a container (scene/group)
+  const enabledOf = async (containerName: string, it: any): Promise<boolean> => {
+    if (typeof it?.sceneItemEnabled === 'boolean') return !!it.sceneItemEnabled
     try {
-      const list = await obs.call('GetGroupSceneItemList', { sceneName: groupName })
-      const items: any[] = Array.isArray(list?.sceneItems) ? list.sceneItems : []
+      const en = await obs.call('GetSceneItemEnabled', { sceneName: containerName, sceneItemId: Number(it?.sceneItemId) })
+      return !!en?.sceneItemEnabled
+    } catch { return false }
+  }
 
-      const enabledOf = async (sceneItem: any): Promise<boolean> => {
-        if (typeof sceneItem?.sceneItemEnabled === 'boolean') return !!sceneItem.sceneItemEnabled
-        try {
-          const en = await obs.call('GetSceneItemEnabled', { sceneName: groupName, sceneItemId: Number(sceneItem?.sceneItemId) })
-          return !!en?.sceneItemEnabled
-        } catch { return false }
+  try {
+    const top = await obs.call('GetSceneItemList', { sceneName })
+    const topItems: any[] = Array.isArray(top?.sceneItems) ? top.sceneItems : []
+
+    // Check for groups named "source <n>" first; if present, inspect their children
+    const groupNameByIndex: Record<number, string> = {}
+    for (const it of topItems) {
+      const n = String(it?.sourceName ?? '')
+      const m = /^source\s*(\d+)$/i.exec(n.trim())
+      if (m) {
+        const idx = Number(m[1])
+        if (idx >= 1 && idx <= 4) groupNameByIndex[idx] = n
       }
+    }
 
+    const inspectContainer = async (containerName: string, getter: 'GetSceneItemList' | 'GetGroupSceneItemList') => {
+      const list = await obs.call(getter, { sceneName: containerName })
+      const items: any[] = Array.isArray(list?.sceneItems) ? list.sceneItems : []
       for (const it of items) {
         const name = String(it?.sourceName ?? '').toLowerCase()
         if (!name) continue
-        const on = await enabledOf(it)
+        const on = await enabledOf(containerName, it)
         if (!on) continue
-        if (name.startsWith('video capture device') && name.includes(String(index))) {
-          result[index].videoCaptureDevice = true
-        } else if (name.startsWith('rtmp') && name.includes(String(index))) {
-          result[index].rtmp = true
-        } else if (name.startsWith('webrtc') && name.includes(String(index))) {
-          result[index].webrtc = true
+        for (let index = 1; index <= 4; index++) {
+          const idxStr = String(index)
+          if (name.startsWith('video capture device') && name.includes(idxStr)) result[index].videoCaptureDevice = true
+          else if (name.startsWith('rtmp') && name.includes(idxStr)) result[index].rtmp = true
+          else if (name.startsWith('webrtc') && name.includes(idxStr)) result[index].webrtc = true
         }
       }
-    } catch {
-      // ignore
     }
+
+    let inspectedAnyGroup = false
+    for (let i = 1; i <= 4; i++) {
+      if (groupNameByIndex[i]) {
+        inspectedAnyGroup = true
+        await inspectContainer(groupNameByIndex[i], 'GetGroupSceneItemList')
+      }
+    }
+
+    // If no groups exist (flat layout), inspect the scene root items directly
+    if (!inspectedAnyGroup) {
+      await inspectContainer(sceneName, 'GetSceneItemList')
+    }
+  } catch {
+    // ignore errors and return defaults
   }
+
   return result
 }
 

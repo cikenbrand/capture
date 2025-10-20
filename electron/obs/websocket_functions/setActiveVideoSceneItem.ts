@@ -3,11 +3,11 @@ import { getObsClient } from './connectToOBSWebsocket'
 
 export type ObsInputType = 'live-device' | 'rtmp' | 'webrtc' | 'none'
 
-async function listGroupChildren(groupName: string): Promise<any[]> {
+async function listSceneChildren(sceneName: string): Promise<any[]> {
   try {
     const obs = getObsClient() as any
     if (!obs) return []
-    const res = await obs.call('GetGroupSceneItemList', { sceneName: groupName })
+    const res = await obs.call('GetSceneItemList', { sceneName })
     return Array.isArray(res?.sceneItems) ? res.sceneItems : []
   } catch {
     return []
@@ -27,8 +27,9 @@ export async function setActiveInputForScene(sceneName: string, sourceIndex: num
   const obs = getObsClient() as any
   if (!obs) return false
 
-  const groupName = `source ${sourceIndex}`
-  const items = await listGroupChildren(groupName)
+  // Flat scene layout: operate on the scene root
+  const items = await listSceneChildren(sceneName)
+  const containerName = sceneName
 
   // Resolve ids for VCD/RTMP/WebRTC
   const findId = (t: ObsInputType): number | null => {
@@ -41,7 +42,7 @@ export async function setActiveInputForScene(sceneName: string, sourceIndex: num
 
   const enableId = async (id: number | null, on: boolean) => {
     if (id == null) return
-    try { await obs.call('SetSceneItemEnabled', { sceneName: groupName, sceneItemId: id, sceneItemEnabled: on }) } catch {}
+    try { await obs.call('SetSceneItemEnabled', { sceneName: containerName, sceneItemId: id, sceneItemEnabled: on }) } catch {}
   }
 
   // Enable selected, disable others

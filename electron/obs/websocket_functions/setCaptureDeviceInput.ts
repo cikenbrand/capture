@@ -1,17 +1,6 @@
 import { ipcMain } from 'electron'
 import { getObsClient } from './connectToOBSWebsocket'
 
-async function getGroupChildren(groupName: string): Promise<any[]> {
-  try {
-    const obs = getObsClient() as any
-    if (!obs) return []
-    const res = await obs.call('GetGroupSceneItemList', { sceneName: groupName })
-    return Array.isArray(res?.sceneItems) ? res.sceneItems : []
-  } catch {
-    return []
-  }
-}
-
 function isVcdName(name: string, index: number): boolean {
   const n = String(name || '').toLowerCase().trim()
   return n.startsWith('video capture device') && n.includes(String(index))
@@ -21,9 +10,15 @@ export async function setCaptureDeviceInput(sceneName: string, sourceIndex: numb
   const obs = getObsClient() as any
   if (!obs || !deviceId) return false
 
-  const groupName = `source ${sourceIndex}`
-  const children = await getGroupChildren(groupName)
-  const vcd = children.find((it: any) => isVcdName(String(it?.sourceName ?? ''), sourceIndex))
+  // Flat scene layout: search directly in the scene root
+  let vcd: any | undefined
+  try {
+    const res = await obs.call('GetSceneItemList', { sceneName })
+    const children: any[] = Array.isArray(res?.sceneItems) ? res.sceneItems : []
+    vcd = children.find((it: any) => isVcdName(String(it?.sourceName ?? ''), sourceIndex))
+  } catch {
+    vcd = undefined
+  }
   if (!vcd) return false
 
   const inputName = String(vcd?.sourceName ?? '')

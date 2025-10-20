@@ -17071,11 +17071,11 @@ ipcMain.handle("obs:take-snapshot", async (_e, payload) => {
     return { ok: false, error: message };
   }
 });
-async function listGroupChildren(groupName) {
+async function listSceneChildren(sceneName) {
   try {
     const obs = getObsClient();
     if (!obs) return [];
-    const res = await obs.call("GetGroupSceneItemList", { sceneName: groupName });
+    const res = await obs.call("GetSceneItemList", { sceneName });
     return Array.isArray(res == null ? void 0 : res.sceneItems) ? res.sceneItems : [];
   } catch {
     return [];
@@ -17092,8 +17092,8 @@ function matches(name, type2, index) {
 async function setActiveInputForScene(sceneName, sourceIndex, inputType) {
   const obs = getObsClient();
   if (!obs) return false;
-  const groupName = `source ${sourceIndex}`;
-  const items = await listGroupChildren(groupName);
+  const items = await listSceneChildren(sceneName);
+  const containerName = sceneName;
   const findId = (t2) => {
     const it = items.find((x) => matches(String((x == null ? void 0 : x.sourceName) ?? ""), t2, sourceIndex));
     return it ? Number(it.sceneItemId) : null;
@@ -17104,7 +17104,7 @@ async function setActiveInputForScene(sceneName, sourceIndex, inputType) {
   const enableId = async (id, on) => {
     if (id == null) return;
     try {
-      await obs.call("SetSceneItemEnabled", { sceneName: groupName, sceneItemId: id, sceneItemEnabled: on });
+      await obs.call("SetSceneItemEnabled", { sceneName: containerName, sceneItemId: id, sceneItemEnabled: on });
     } catch {
     }
   };
@@ -17152,18 +17152,69 @@ async function getActiveCaptureDeviceInputForScene(sceneName) {
   const obs = getObsClient();
   const result = { 1: null, 2: null, 3: null, 4: null };
   if (!obs) return result;
-  for (let index = 1; index <= 4; index++) {
-    const groupName = `source ${index}`;
-    try {
-      const list = await obs.call("GetGroupSceneItemList", { sceneName: groupName });
-      const items = Array.isArray(list == null ? void 0 : list.sceneItems) ? list.sceneItems : [];
-      const vcd = items.find((it) => isVcdName$1(String((it == null ? void 0 : it.sourceName) ?? ""), index));
+  try {
+    const top = await obs.call("GetSceneItemList", { sceneName });
+    const topItems = Array.isArray(top == null ? void 0 : top.sceneItems) ? top.sceneItems : [];
+    const groupNameByIndex = {};
+    for (const it of topItems) {
+      const n = String((it == null ? void 0 : it.sourceName) ?? "");
+      const m = /^source\s*(\d+)$/i.exec(n.trim());
+      if (m) {
+        const idx = Number(m[1]);
+        if (idx >= 1 && idx <= 4) groupNameByIndex[idx] = n;
+      }
+    }
+    for (let index = 1; index <= 4; index++) {
+      const groupName = groupNameByIndex[index];
+      if (groupName) {
+        try {
+          const list = await obs.call("GetGroupSceneItemList", { sceneName: groupName });
+          const items = Array.isArray(list == null ? void 0 : list.sceneItems) ? list.sceneItems : [];
+          const vcd2 = items.find((it) => isVcdName$1(String((it == null ? void 0 : it.sourceName) ?? ""), index));
+          if (!vcd2) {
+            result[index] = null;
+            continue;
+          }
+          const inputName2 = String((vcd2 == null ? void 0 : vcd2.sourceName) ?? "");
+          const enabled2 = await resolveEnabled(obs, groupName, vcd2);
+          let deviceId2;
+          let deviceName2;
+          try {
+            const settings = await obs.call("GetInputSettings", { inputName: inputName2 });
+            const s = (settings == null ? void 0 : settings.inputSettings) || {};
+            deviceId2 = String((s == null ? void 0 : s.video_device_id) ?? (s == null ? void 0 : s.device_id) ?? (s == null ? void 0 : s.deviceId) ?? "") || void 0;
+          } catch {
+          }
+          if (deviceId2) {
+            try {
+              const prop = await obs.call("GetInputPropertiesListPropertyItems", { inputName: inputName2, propertyName: "video_device_id" });
+              const items2 = Array.isArray(prop == null ? void 0 : prop.propertyItems) ? prop.propertyItems : [];
+              const match = items2.find((it) => String((it == null ? void 0 : it.itemValue) ?? (it == null ? void 0 : it.value) ?? "") === deviceId2);
+              deviceName2 = String((match == null ? void 0 : match.itemName) ?? (match == null ? void 0 : match.name) ?? "") || void 0;
+            } catch {
+            }
+            if (!deviceName2) {
+              try {
+                const props = await obs.call("GetInputPropertiesListPropertyItems", { inputName: inputName2, propertyName: "device" });
+                const arr = Array.isArray(props == null ? void 0 : props.propertyItems) ? props.propertyItems : [];
+                const m = arr.find((it) => String((it == null ? void 0 : it.itemValue) ?? (it == null ? void 0 : it.value) ?? "") === deviceId2);
+                deviceName2 = String((m == null ? void 0 : m.itemName) ?? (m == null ? void 0 : m.name) ?? "") || void 0;
+              } catch {
+              }
+            }
+          }
+          result[index] = { enabled: enabled2, deviceId: deviceId2, deviceName: deviceName2, inputName: inputName2 };
+          continue;
+        } catch {
+        }
+      }
+      const vcd = topItems.find((it) => isVcdName$1(String((it == null ? void 0 : it.sourceName) ?? ""), index));
       if (!vcd) {
         result[index] = null;
         continue;
       }
       const inputName = String((vcd == null ? void 0 : vcd.sourceName) ?? "");
-      const enabled = await resolveEnabled(obs, groupName, vcd);
+      const enabled = await resolveEnabled(obs, sceneName, vcd);
       let deviceId;
       let deviceName;
       try {
@@ -17175,8 +17226,8 @@ async function getActiveCaptureDeviceInputForScene(sceneName) {
       if (deviceId) {
         try {
           const prop = await obs.call("GetInputPropertiesListPropertyItems", { inputName, propertyName: "video_device_id" });
-          const items2 = Array.isArray(prop == null ? void 0 : prop.propertyItems) ? prop.propertyItems : [];
-          const match = items2.find((it) => String((it == null ? void 0 : it.itemValue) ?? (it == null ? void 0 : it.value) ?? "") === deviceId);
+          const items = Array.isArray(prop == null ? void 0 : prop.propertyItems) ? prop.propertyItems : [];
+          const match = items.find((it) => String((it == null ? void 0 : it.itemValue) ?? (it == null ? void 0 : it.value) ?? "") === deviceId);
           deviceName = String((match == null ? void 0 : match.itemName) ?? (match == null ? void 0 : match.name) ?? "") || void 0;
         } catch {
         }
@@ -17191,9 +17242,8 @@ async function getActiveCaptureDeviceInputForScene(sceneName) {
         }
       }
       result[index] = { enabled, deviceId, deviceName, inputName };
-    } catch {
-      result[index] = null;
     }
+  } catch {
   }
   return result;
 }
@@ -17206,16 +17256,6 @@ ipcMain.handle("obs:get-active-capture-inputs", async (_e, sceneName) => {
     return { ok: false, error: message };
   }
 });
-async function getGroupChildren(groupName) {
-  try {
-    const obs = getObsClient();
-    if (!obs) return [];
-    const res = await obs.call("GetGroupSceneItemList", { sceneName: groupName });
-    return Array.isArray(res == null ? void 0 : res.sceneItems) ? res.sceneItems : [];
-  } catch {
-    return [];
-  }
-}
 function isVcdName(name, index) {
   const n = String(name || "").toLowerCase().trim();
   return n.startsWith("video capture device") && n.includes(String(index));
@@ -17223,9 +17263,14 @@ function isVcdName(name, index) {
 async function setCaptureDeviceInput(sceneName, sourceIndex, deviceId) {
   const obs = getObsClient();
   if (!obs || !deviceId) return false;
-  const groupName = `source ${sourceIndex}`;
-  const children = await getGroupChildren(groupName);
-  const vcd = children.find((it) => isVcdName(String((it == null ? void 0 : it.sourceName) ?? ""), sourceIndex));
+  let vcd;
+  try {
+    const res = await obs.call("GetSceneItemList", { sceneName });
+    const children = Array.isArray(res == null ? void 0 : res.sceneItems) ? res.sceneItems : [];
+    vcd = children.find((it) => isVcdName(String((it == null ? void 0 : it.sourceName) ?? ""), sourceIndex));
+  } catch {
+    vcd = void 0;
+  }
   if (!vcd) return false;
   const inputName = String((vcd == null ? void 0 : vcd.sourceName) ?? "");
   try {
@@ -17258,76 +17303,56 @@ async function getActiveVideoSceneItems() {
   const obs = getObsClient();
   if (!obs) return createDefaultState();
   const result = createDefaultState();
-  for (let index = 1; index <= 4; index++) {
-    const groupName = `source ${index}`;
+  const resolveStatesFromContainer = async (containerName, listGetter) => {
     try {
-      const list = await obs.call("GetGroupSceneItemList", { sceneName: groupName });
+      const list = await obs.call(listGetter, { sceneName: containerName });
       const items = Array.isArray(list == null ? void 0 : list.sceneItems) ? list.sceneItems : [];
-      const setStateFor = async (label, match) => {
-        const entry = items.find((it) => match(String((it == null ? void 0 : it.sourceName) ?? "")));
-        if (!entry) return;
-        let enabled = null;
-        if (typeof (entry == null ? void 0 : entry.sceneItemEnabled) === "boolean") {
-          enabled = !!entry.sceneItemEnabled;
-        } else {
-          try {
-            const enabledRes = await obs.call("GetSceneItemEnabled", { sceneName: groupName, sceneItemId: Number(entry.sceneItemId) });
-            enabled = !!(enabledRes == null ? void 0 : enabledRes.sceneItemEnabled);
-          } catch {
-            enabled = null;
-          }
-        }
-        if (enabled != null) {
-          result[index][label] = enabled;
+      const enabledOf = async (sceneItem) => {
+        if (typeof (sceneItem == null ? void 0 : sceneItem.sceneItemEnabled) === "boolean") return !!sceneItem.sceneItemEnabled;
+        try {
+          const en = await obs.call("GetSceneItemEnabled", { sceneName: containerName, sceneItemId: Number(sceneItem == null ? void 0 : sceneItem.sceneItemId) });
+          return !!(en == null ? void 0 : en.sceneItemEnabled);
+        } catch {
+          return null;
         }
       };
-      const lcIndex = String(index).toLowerCase();
-      await setStateFor("videoCaptureDevice", (name) => name.toLowerCase().startsWith("video capture device") && name.toLowerCase().includes(lcIndex));
-      await setStateFor("rtmp", (name) => name.toLowerCase().startsWith("rtmp") && name.toLowerCase().includes(lcIndex));
-      await setStateFor("webrtc", (name) => name.toLowerCase().startsWith("webrtc") && name.toLowerCase().includes(lcIndex));
+      for (const index of [1, 2, 3, 4]) {
+        const lcIndex = String(index);
+        const matchAndSet = async (label, prefix) => {
+          const entry = items.find((it) => String((it == null ? void 0 : it.sourceName) ?? "").toLowerCase().startsWith(prefix) && String((it == null ? void 0 : it.sourceName) ?? "").toLowerCase().includes(lcIndex));
+          if (!entry) return;
+          const on = await enabledOf(entry);
+          if (on != null) result[index][label] = on;
+        };
+        await matchAndSet("videoCaptureDevice", "video capture device");
+        await matchAndSet("rtmp", "rtmp");
+        await matchAndSet("webrtc", "webrtc");
+      }
     } catch {
     }
-  }
-  return result;
-}
-async function getGroupSceneItemListForScene(sceneName) {
-  const obs = getObsClient();
-  const result = { 1: [], 2: [], 3: [], 4: [] };
-  if (!obs) return result;
+  };
+  let hasAtLeastOneGroup = false;
   try {
-    const sceneRes = await obs.call("GetSceneItemList", { sceneName });
-    const sceneItems = Array.isArray(sceneRes == null ? void 0 : sceneRes.sceneItems) ? sceneRes.sceneItems : [];
-    const indexToGroupName = {};
-    for (const it of sceneItems) {
-      const name = String((it == null ? void 0 : it.sourceName) ?? "");
-      const m = /^source\s*(\d+)$/i.exec(name.trim());
-      if (m) {
-        const idx = Number(m[1]);
-        if (idx >= 1 && idx <= 4) indexToGroupName[idx] = name;
-      }
-    }
-    try {
-      const groups = await obs.call("GetGroupList");
-      const names = Array.isArray(groups == null ? void 0 : groups.groups) ? groups.groups : [];
-      for (const g of names) {
-        const m = /^source\s*(\d+)$/i.exec(String(g).trim());
-        if (m) {
-          const idx = Number(m[1]);
-          if (idx >= 1 && idx <= 4 && !indexToGroupName[idx]) indexToGroupName[idx] = String(g);
-        }
-      }
-    } catch {
-    }
+    const groups = await obs.call("GetGroupList");
+    const names = Array.isArray(groups == null ? void 0 : groups.groups) ? groups.groups : [];
     for (let index = 1; index <= 4; index++) {
-      const groupName = indexToGroupName[index] || `source ${index}`;
-      try {
-        const list = await obs.call("GetGroupSceneItemList", { sceneName: groupName });
-        const items = Array.isArray(list == null ? void 0 : list.sceneItems) ? list.sceneItems : [];
-        result[index] = items.map((it) => ({ id: Number(it == null ? void 0 : it.sceneItemId), name: String((it == null ? void 0 : it.sourceName) ?? "") }));
-      } catch {
+      const groupName = names.find((n) => String(n).toLowerCase() === `source ${index}`);
+      if (groupName) {
+        hasAtLeastOneGroup = true;
+        await resolveStatesFromContainer(String(groupName), "GetGroupSceneItemList");
       }
     }
   } catch {
+  }
+  if (!hasAtLeastOneGroup) {
+    try {
+      const currentScene = await obs.call("GetCurrentProgramScene");
+      const sceneName = String((currentScene == null ? void 0 : currentScene.currentProgramSceneName) ?? (currentScene == null ? void 0 : currentScene.sceneName) ?? "");
+      if (sceneName) {
+        await resolveStatesFromContainer(sceneName, "GetSceneItemList");
+      }
+    } catch {
+    }
   }
   return result;
 }
@@ -17335,36 +17360,54 @@ async function getActiveInputsForScene(sceneName) {
   const obs = getObsClient();
   const result = createDefaultState();
   if (!obs) return result;
-  await getGroupSceneItemListForScene(sceneName);
-  for (let index = 1; index <= 4; index++) {
-    const groupName = `source ${index}`;
+  const enabledOf = async (containerName, it) => {
+    if (typeof (it == null ? void 0 : it.sceneItemEnabled) === "boolean") return !!it.sceneItemEnabled;
     try {
-      const list = await obs.call("GetGroupSceneItemList", { sceneName: groupName });
+      const en = await obs.call("GetSceneItemEnabled", { sceneName: containerName, sceneItemId: Number(it == null ? void 0 : it.sceneItemId) });
+      return !!(en == null ? void 0 : en.sceneItemEnabled);
+    } catch {
+      return false;
+    }
+  };
+  try {
+    const top = await obs.call("GetSceneItemList", { sceneName });
+    const topItems = Array.isArray(top == null ? void 0 : top.sceneItems) ? top.sceneItems : [];
+    const groupNameByIndex = {};
+    for (const it of topItems) {
+      const n = String((it == null ? void 0 : it.sourceName) ?? "");
+      const m = /^source\s*(\d+)$/i.exec(n.trim());
+      if (m) {
+        const idx = Number(m[1]);
+        if (idx >= 1 && idx <= 4) groupNameByIndex[idx] = n;
+      }
+    }
+    const inspectContainer = async (containerName, getter) => {
+      const list = await obs.call(getter, { sceneName: containerName });
       const items = Array.isArray(list == null ? void 0 : list.sceneItems) ? list.sceneItems : [];
-      const enabledOf = async (sceneItem) => {
-        if (typeof (sceneItem == null ? void 0 : sceneItem.sceneItemEnabled) === "boolean") return !!sceneItem.sceneItemEnabled;
-        try {
-          const en = await obs.call("GetSceneItemEnabled", { sceneName: groupName, sceneItemId: Number(sceneItem == null ? void 0 : sceneItem.sceneItemId) });
-          return !!(en == null ? void 0 : en.sceneItemEnabled);
-        } catch {
-          return false;
-        }
-      };
       for (const it of items) {
         const name = String((it == null ? void 0 : it.sourceName) ?? "").toLowerCase();
         if (!name) continue;
-        const on = await enabledOf(it);
+        const on = await enabledOf(containerName, it);
         if (!on) continue;
-        if (name.startsWith("video capture device") && name.includes(String(index))) {
-          result[index].videoCaptureDevice = true;
-        } else if (name.startsWith("rtmp") && name.includes(String(index))) {
-          result[index].rtmp = true;
-        } else if (name.startsWith("webrtc") && name.includes(String(index))) {
-          result[index].webrtc = true;
+        for (let index = 1; index <= 4; index++) {
+          const idxStr = String(index);
+          if (name.startsWith("video capture device") && name.includes(idxStr)) result[index].videoCaptureDevice = true;
+          else if (name.startsWith("rtmp") && name.includes(idxStr)) result[index].rtmp = true;
+          else if (name.startsWith("webrtc") && name.includes(idxStr)) result[index].webrtc = true;
         }
       }
-    } catch {
+    };
+    let inspectedAnyGroup = false;
+    for (let i = 1; i <= 4; i++) {
+      if (groupNameByIndex[i]) {
+        inspectedAnyGroup = true;
+        await inspectContainer(groupNameByIndex[i], "GetGroupSceneItemList");
+      }
     }
+    if (!inspectedAnyGroup) {
+      await inspectContainer(sceneName, "GetSceneItemList");
+    }
+  } catch {
   }
   return result;
 }
