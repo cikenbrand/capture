@@ -17333,6 +17333,99 @@ ipcMain.handle("obs:get-active-video-items-for-scene", async (_e, sceneName) => 
     return { ok: false, error: message };
   }
 });
+const AUDIO_INPUT_NAME$2 = "audio input device";
+async function listPropertyItems(inputName, propertyName) {
+  const obs = getObsClient();
+  if (!obs) return [];
+  try {
+    const res = await obs.call("GetInputPropertiesListPropertyItems", { inputName, propertyName });
+    const items = Array.isArray(res == null ? void 0 : res.propertyItems) ? res.propertyItems : [];
+    return items.map((it) => ({ id: String((it == null ? void 0 : it.itemValue) ?? (it == null ? void 0 : it.value) ?? ""), name: String((it == null ? void 0 : it.itemName) ?? (it == null ? void 0 : it.name) ?? "") })).filter((d) => d.id && d.name);
+  } catch {
+    return [];
+  }
+}
+async function getAudioInputs() {
+  const results = [];
+  const pushUnique = (arr) => {
+    for (const it of arr) {
+      if (!results.some((x) => x.id === it.id)) results.push({ id: it.id, name: it.name });
+    }
+  };
+  pushUnique(await listPropertyItems(AUDIO_INPUT_NAME$2, "device_id"));
+  pushUnique(await listPropertyItems(AUDIO_INPUT_NAME$2, "device"));
+  return results;
+}
+ipcMain.handle("obs:get-audio-inputs", async () => {
+  try {
+    const list = await getAudioInputs();
+    return list;
+  } catch {
+    return [];
+  }
+});
+const AUDIO_INPUT_NAME$1 = "audio input device";
+async function setAudioInputDevice(deviceId) {
+  const obs = getObsClient();
+  if (!obs) return false;
+  try {
+    const current = await obs.call("GetInputSettings", { inputName: AUDIO_INPUT_NAME$1 });
+    const settings = (current == null ? void 0 : current.inputSettings) || {};
+    settings["device_id"] = deviceId;
+    settings["device"] = deviceId;
+    await obs.call("SetInputSettings", { inputName: AUDIO_INPUT_NAME$1, inputSettings: settings, overlay: true });
+    return true;
+  } catch {
+    return false;
+  }
+}
+ipcMain.handle("obs:set-audio-input", async (_e, deviceId) => {
+  try {
+    const ok = await setAudioInputDevice(String(deviceId));
+    return ok === true;
+  } catch {
+    return false;
+  }
+});
+const AUDIO_INPUT_NAME = "audio input device";
+async function toggleMuteAudioInput() {
+  const obs = getObsClient();
+  if (!obs) return false;
+  try {
+    const status = await obs.call("GetInputMute", { inputName: AUDIO_INPUT_NAME });
+    const current = !!(status == null ? void 0 : status.inputMuted);
+    await obs.call("SetInputMute", { inputName: AUDIO_INPUT_NAME, inputMuted: !current });
+    return true;
+  } catch {
+    return false;
+  }
+}
+ipcMain.handle("obs:toggle-audio-input-mute", async () => {
+  try {
+    const ok = await toggleMuteAudioInput();
+    return ok === true;
+  } catch {
+    return false;
+  }
+});
+async function getAudioInputMuted() {
+  const obs = getObsClient();
+  if (!obs) return false;
+  try {
+    const status = await obs.call("GetInputMute", { inputName: AUDIO_INPUT_NAME });
+    return !!(status == null ? void 0 : status.inputMuted);
+  } catch {
+    return false;
+  }
+}
+ipcMain.handle("obs:get-audio-input-muted", async () => {
+  try {
+    const muted = await getAudioInputMuted();
+    return muted;
+  } catch {
+    return false;
+  }
+});
 let audioLevelListener = null;
 function sendAudioLevel(mainWindow) {
   const obs = getObsClient();

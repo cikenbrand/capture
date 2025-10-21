@@ -18,7 +18,7 @@ import AddNewNodeForm from "./components/main-window/AddNewNodeForm"
 import EditNodeDetailsForm from "./components/main-window/EditNodeDetailsForm"
 // Delete node dialog removed
 import PreviewVirtualCam from "./components/main-window/PreviewVirtualCam"
-import { FaCircle, FaMicrophone, FaPause, FaPlay, FaStop } from "react-icons/fa"
+import { FaCircle, FaMicrophone, FaMicrophoneSlash, FaPause, FaPlay, FaStop } from "react-icons/fa"
 import { BsCameraFill } from "react-icons/bs";
 import AudioMeter, { AudioMeterLive } from "./components/main-window/AudioMeter"
 import CursorToolButton from "./components/main-window/CursorToolButton"
@@ -60,6 +60,7 @@ function App() {
   const [isStopClipDialogOpen, setIsStopClipDialogOpen] = useState(false)
   const [isTakeSnapshotDialogOpen, setIsTakeSnapshotDialogOpen] = useState(false)
   const [recordingState, setRecordingState] = useState({ isRecordingStarted: false, isRecordingPaused: false, isRecordingStopped: false, isClipRecordingStarted: false })
+  const [isMicMuted, setIsMicMuted] = useState(false)
 
   // WebSocket connections per overlay channel to broadcast project details
   const socketsRef = useRef<Record<number, WebSocket | null>>({})
@@ -187,6 +188,10 @@ function App() {
         try {
           const res = await window.ipcRenderer.invoke('recording:getState')
           if (!cancelled && res?.ok) setRecordingState(res.data)
+        try {
+          const muted = await window.ipcRenderer.invoke('obs:get-audio-input-muted')
+          if (!cancelled && typeof muted === 'boolean') setIsMicMuted(muted)
+        } catch {}
         } catch { }
       })()
     return () => { cancelled = true }
@@ -401,12 +406,22 @@ function App() {
                   <div className="h-[30px] w-[1px] bg-white/20 mx-1" />
                   <button
                     title="Mute Microphone"
-                    disabled={isSessionActionDisabled}
-                    className="flex items-center justify-center h-[28px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
-                    <FaMicrophone className="h-4 w-4" />
-                    <span className="font-medium">Mute Microphone</span>
+                    onClick={async () => {
+                      try {
+                        const ok = await window.ipcRenderer.invoke('obs:toggle-audio-input-mute')
+                        if (ok) {
+                          try {
+                            const muted = await window.ipcRenderer.invoke('obs:get-audio-input-muted')
+                            if (typeof muted === 'boolean') setIsMicMuted(muted)
+                          } catch {}
+                        }
+                      } catch {}
+                    }}
+                    className="flex items-center justify-center h-[28px] w-[180px] gap-1 px-2 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                    {isMicMuted ? <FaMicrophoneSlash className="h-4 w-4" /> : <FaMicrophone className="h-4 w-4" />}
+                    <span className="font-medium">{isMicMuted ? 'Unmute Microphone' : 'Mute Microphone'}</span>
                   </button>
-                  <AudioMeterLive />
+                  <AudioMeterLive muted={isMicMuted} />
                 </div>
               </TabsContent>
             </Tabs>

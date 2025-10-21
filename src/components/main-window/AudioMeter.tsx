@@ -6,6 +6,7 @@ export type AudioMeterProps = {
   minDb?: number
   maxDb?: number
   numSegments?: number
+  muted?: boolean
   className?: string
 }
 
@@ -14,6 +15,7 @@ export function AudioMeter({
   minDb = -60,
   maxDb = 0,
   numSegments = 24,
+  muted,
   className,
 }: AudioMeterProps) {
   const clamped = valueDb === null ? minDb : Math.max(minDb, Math.min(maxDb, valueDb))
@@ -21,6 +23,7 @@ export function AudioMeter({
   const segmentDbAtIndex = (i: number) => minDb + ((i + 1) / numSegments) * (maxDb - minDb)
   const isSegmentActive = (i: number) => clamped >= segmentDbAtIndex(i)
   const colorForDb = (dbVal: number) => {
+    if (muted) return '#6B7280' // gray when muted
     if (dbVal >= -9) return '#EF4444' // red
     if (dbVal >= -20) return '#F59E0B' // yellow
     return '#22C55E' // green
@@ -44,7 +47,9 @@ export function AudioMeter({
             className="h-[12px] flex-1 rounded-[2px] border border-black/50 transition-colors"
             style={{
               backgroundColor: isOn ? color : 'rgba(0,0,0,0.35)',
-              boxShadow: isOn ? `0 0 6px ${color}55 inset, 0 0 4px ${color}55` : 'inset 0 0 4px rgba(0,0,0,0.4)',
+              boxShadow: isOn
+                ? (muted ? 'inset 0 0 4px rgba(0,0,0,0.4)' : `0 0 6px ${color}55 inset, 0 0 4px ${color}55`)
+                : 'inset 0 0 4px rgba(0,0,0,0.4)',
             }}
           />
         )
@@ -61,6 +66,7 @@ export function AudioMeterLive({
   minDb = -60,
   maxDb = 0,
   numSegments = 24,
+  muted,
   className,
 }: Omit<AudioMeterProps, "valueDb">) {
   const [db, setDb] = useState<number | null>(null)
@@ -85,6 +91,7 @@ export function AudioMeterLive({
       minDb={minDb}
       maxDb={maxDb}
       numSegments={numSegments}
+      muted={muted}
       className={className}
     />
   )

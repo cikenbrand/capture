@@ -3,6 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs"
 import Webcam from "react-webcam"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "../ui/select"
 import { Input } from "../ui/input"
+import AudioMeter, { AudioMeterLive } from "./AudioMeter"
 
 type ChannelKey = "channel-1" | "channel-2" | "channel-3" | "channel-4"
 type TabKey = ChannelKey | "audio"
@@ -19,6 +20,7 @@ export default function VideoDeviceConfigurations() {
     const [activeTab, setActiveTab] = useState<TabKey>("channel-1")
     const [labelToDeviceId, setLabelToDeviceId] = useState<Record<string, string>>({})
     const [obsDevices, setObsDevices] = useState<Array<{ id: string; name: string }>>([])
+    const [audioDevices, setAudioDevices] = useState<Array<{ id: string; name: string }>>([])
     const [sceneNameByChannel, setSceneNameByChannel] = useState<Record<ChannelKey, string>>({
         'channel-1': 'channel 1',
         'channel-2': 'channel 2',
@@ -91,7 +93,7 @@ export default function VideoDeviceConfigurations() {
                         .filter(d => d.id && d.name && !/obs/i.test(d.name))
                     setObsDevices(sanitized)
                 }
-            } catch {}
+            } catch { }
         }
         loadFromObs()
         return () => { disposed = true }
@@ -121,7 +123,7 @@ export default function VideoDeviceConfigurations() {
                     if (capData && typeof capData === 'object' && capData[n] != null) {
                         return name
                     }
-                } catch {}
+                } catch { }
             }
             return `channel ${n}`
         }
@@ -144,7 +146,7 @@ export default function VideoDeviceConfigurations() {
                         if (st?.webrtc) return 'webrtc'
                         if (st?.videoCaptureDevice) return 'live-device'
                         if (st && !st?.rtmp && !st?.webrtc && !st?.videoCaptureDevice) return 'none'
-                    } catch {}
+                    } catch { }
                     return fallback
                 }
 
@@ -156,7 +158,7 @@ export default function VideoDeviceConfigurations() {
                         if (data && typeof data === 'object') {
                             updates[ck] = { ...(updates[ck] || {}), inputType: pickType(data[n], 'live-device') }
                         }
-                    } catch {}
+                    } catch { }
 
                     try {
                         const cap = await (window as any)?.ipcRenderer?.invoke?.('obs:get-active-capture-inputs', resolved[ck])
@@ -166,7 +168,7 @@ export default function VideoDeviceConfigurations() {
                             if (info?.deviceId) updates[ck] = { ...(updates[ck] || {}), deviceId: info.deviceId }
                             if (info?.deviceName) updates[ck] = { ...(updates[ck] || {}), deviceLabel: info.deviceName }
                         }
-                    } catch {}
+                    } catch { }
                 }
 
                 if (!cancelled) {
@@ -178,10 +180,28 @@ export default function VideoDeviceConfigurations() {
                         return next
                     })
                 }
-            } catch {}
+            } catch { }
         }
         loadActiveTypes()
         return () => { cancelled = true }
+    }, [])
+
+    // Load audio input devices from OBS (from 'audio input device')
+    useEffect(() => {
+        let disposed = false
+        async function loadAudioInputs() {
+            try {
+                const list = await (window as any)?.ipcRenderer?.invoke?.('obs:get-audio-inputs')
+                if (!disposed && Array.isArray(list)) {
+                    const sanitized = list
+                        .map((d: any) => ({ id: String(d?.id ?? ''), name: String(d?.name ?? '') }))
+                        .filter(d => d.id && d.name)
+                    setAudioDevices(sanitized)
+                }
+            } catch { }
+        }
+        loadAudioInputs()
+        return () => { disposed = true }
     }, [])
 
     // Removed default selection and OBS-side syncing; keep UI read-only list of live devices
@@ -247,14 +267,14 @@ export default function VideoDeviceConfigurations() {
 
                 <div className="flex flex-col gap-1">
                     <span>Input Type</span>
-                        <Select value={config.inputType} onValueChange={async (v) => {
+                    <Select value={config.inputType} onValueChange={async (v) => {
                         const nextType = v as InputType
                         updateChannelConfig(channelKey, p => ({ ...p, inputType: nextType }))
                         try {
                             const idx = channelKey === 'channel-1' ? 1 : channelKey === 'channel-2' ? 2 : channelKey === 'channel-3' ? 3 : 4
                             const sceneName = sceneNameByChannel[channelKey] || `channel ${idx}`
                             await (window as any)?.ipcRenderer?.invoke?.('obs:set-active-video-item', sceneName, idx, nextType)
-                        } catch {}
+                        } catch { }
                     }}>
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Source Type" />
@@ -277,13 +297,13 @@ export default function VideoDeviceConfigurations() {
                                 const idx = channelKey === 'channel-1' ? 1 : channelKey === 'channel-2' ? 2 : channelKey === 'channel-3' ? 3 : 4
                                 const sceneName = sceneNameByChannel[channelKey] || `channel ${idx}`
                                 await (window as any)?.ipcRenderer?.invoke?.('obs:set-capture-device-input', sceneName, idx, v)
-                            } catch {}
+                            } catch { }
                         }}>
                             <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Select device" />
                             </SelectTrigger>
                             <SelectContent>
-                            <SelectItem value="none">None</SelectItem>
+                                <SelectItem value="none">None</SelectItem>
                                 {filteredObsDevices.map(d => (
                                     <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                                 ))}
@@ -339,16 +359,29 @@ export default function VideoDeviceConfigurations() {
                 {activeTab === "channel-4" ? <ChannelForm channelKey="channel-4" /> : null}
             </TabsContent>
             <TabsContent value="audio" className="flex flex-col items-center gap-2">
-                <div className="flex flex-col gap-1 w-full">
-                    <span>Audio Device</span>
-                    <Select defaultValue="default">
-                        <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select audio device" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="default">Default</SelectItem>
-                        </SelectContent>
-                    </Select>
+                <div className="flex flex-col gap-2 w-full">
+                    <div className="flex flex-col gap-1">
+                        <span>Audio Device</span>
+                        <Select defaultValue={audioDevices[0]?.id}
+                            onValueChange={async (val) => {
+                                try {
+                                    await (window as any)?.ipcRenderer?.invoke?.('obs:set-audio-input', val)
+                                } catch { }
+                            }}>
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select audio device" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {audioDevices.map(d => (
+                                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <span>Audio Meter</span>
+                        <AudioMeterLive className="w-full" />
+                    </div>
                 </div>
             </TabsContent>
         </Tabs>
