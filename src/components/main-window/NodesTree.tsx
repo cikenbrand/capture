@@ -34,7 +34,7 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
         const ch = data[pid]?.children || []
         ch.forEach((cid) => { p[cid] = pid })
       })
-    } catch {}
+    } catch { }
     return p
   }, [data])
 
@@ -55,86 +55,88 @@ function TreeContent({ data, expanded, selectedId, onItemClick }: { data: Record
     try {
       const next = expanded && expanded.length ? expanded : ["root", "project-root"]
       const uniq = Array.from(new Set(next))
-      ;(tree as any).setExpandedItems?.(uniq)
-    } catch {}
+        ; (tree as any).setExpandedItems?.(uniq)
+    } catch { }
   }, [expanded, tree])
 
   useEffect(() => {
     try {
       const sel = selectedId ? [selectedId] : []
-      ;(tree as any).setSelectedItems?.(sel)
-    } catch {}
+        ; (tree as any).setSelectedItems?.(sel)
+    } catch { }
   }, [selectedId, tree])
 
   return (
-    <Tree
-      className="relative before:absolute before:inset-0 before:-ms-1 before:bg-[repeating-linear-gradient(to_right,transparent_0,transparent_calc(var(--tree-indent)-1px),rgba(255,255,255,0.1)_calc(var(--tree-indent)-1px),rgba(255,255,255,0.1)_calc(var(--tree-indent)))]"
-      indent={indent}
-      tree={tree}
-    >
-      <AssistiveTreeDescription tree={tree} />
-      {tree.getItems().map((item) => {
-        return (
+    <div className="border border-white/10 h-[630px] overflow-y-auto logs-scroll">
+      <Tree
+        className="relative before:absolute before:top-0 before:bottom-0 before:left-[var(--tree-indent)] before:right-0 before:bg-[repeating-linear-gradient(to_right,transparent_0,transparent_calc(var(--tree-indent)-1px),rgba(255,255,255,0.1)_calc(var(--tree-indent)-1px),rgba(255,255,255,0.1)_calc(var(--tree-indent)))]"
+        indent={indent}
+        tree={tree}
+      >
+        <AssistiveTreeDescription tree={tree} />
+        {tree.getItems().map((item) => {
+          return (
             <TreeItem
-            key={item.getId()}
-            item={item}
-            className="pb-0!"
-            onClickCapture={async () => {
-              try {
-            const id = item.getId()
-                const isFolder = typeof item.isFolder === 'function' ? (item.isFolder() || false) : false
-            const nextId = (id === 'root' || id === 'project-root') ? null : id
-                console.log('[NodesTree] selected node id:', nextId)
-                // Log hierarchical levels from top to selected
-                let pathNames: string[] = []
-                if (nextId) {
-                  const pathIds: string[] = []
-                  let cur: string | undefined = nextId
-                  let guard = 0
-                  while (cur && cur !== 'project-root' && cur !== 'root' && guard++ < 1000) {
-                    pathIds.push(cur)
-                    cur = parentOf[cur]
-                  }
-                  pathNames = pathIds.reverse().map((nid) => data[nid]?.name || '')
-                  if (pathNames.length) {
-                    const parts = pathNames.map((nm, idx) => `level ${idx + 1}: ${nm}`)
-                    console.log(parts.join(', '))
-                  }
-                }
-                try { onItemClick(id, isFolder, pathNames) } catch {}
-                await window.ipcRenderer.invoke('app:setSelectedNodeId', nextId)
+              key={item.getId()}
+              item={item}
+              className="pb-0!"
+              onClickCapture={async () => {
                 try {
-                  const ev = new CustomEvent('selectedNodeChanged', { detail: nextId })
-                  window.dispatchEvent(ev)
-                } catch {}
-              // persist last selected node on project
-              try {
-                const res = await window.ipcRenderer.invoke('app:getSelectedProjectId')
-                const pid = res?.ok ? (res.data ?? null) : null
-                if (pid) {
-                  await window.ipcRenderer.invoke('db:editProject', pid, { lastSelectedNodeId: nextId })
-                }
-              } catch {}
-              } catch {}
-            }}
-          >
-            <TreeItemLabel className="rounded-none py-1 text-left">
-              <span className="flex items-center gap-2 w-full justify-between">
-                <span className="flex-1 min-w-0 max-w-[240px] truncate whitespace-nowrap text-left">{item.getItemName() || '(deleted)'}</span>
-                {(() => {
                   const id = item.getId()
-                  const isRoot = id === 'root' || id === 'project-root'
-                  if (isRoot) return null
-                  const status = (data as any)[id]?.status as string | undefined
-                  const color = status === 'completed' ? '#22c55e' : status === 'ongoing' ? '#3b82f6' : '#9ca3af'
-                  return <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
-                })()}
-              </span>
-            </TreeItemLabel>
-          </TreeItem>
-        )
-      })}
-    </Tree>
+                  const isFolder = typeof item.isFolder === 'function' ? (item.isFolder() || false) : false
+                  const nextId = (id === 'root' || id === 'project-root') ? null : id
+                  console.log('[NodesTree] selected node id:', nextId)
+                  // Log hierarchical levels from top to selected
+                  let pathNames: string[] = []
+                  if (nextId) {
+                    const pathIds: string[] = []
+                    let cur: string | undefined = nextId
+                    let guard = 0
+                    while (cur && cur !== 'project-root' && cur !== 'root' && guard++ < 1000) {
+                      pathIds.push(cur)
+                      cur = parentOf[cur]
+                    }
+                    pathNames = pathIds.reverse().map((nid) => data[nid]?.name || '')
+                    if (pathNames.length) {
+                      const parts = pathNames.map((nm, idx) => `level ${idx + 1}: ${nm}`)
+                      console.log(parts.join(', '))
+                    }
+                  }
+                  try { onItemClick(id, isFolder, pathNames) } catch { }
+                  await window.ipcRenderer.invoke('app:setSelectedNodeId', nextId)
+                  try {
+                    const ev = new CustomEvent('selectedNodeChanged', { detail: nextId })
+                    window.dispatchEvent(ev)
+                  } catch { }
+                  // persist last selected node on project
+                  try {
+                    const res = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+                    const pid = res?.ok ? (res.data ?? null) : null
+                    if (pid) {
+                      await window.ipcRenderer.invoke('db:editProject', pid, { lastSelectedNodeId: nextId })
+                    }
+                  } catch { }
+                } catch { }
+              }}
+            >
+              <TreeItemLabel className="text-left">
+                <span className="flex items-center gap-2 w-full justify-between">
+                  <span className="flex-1 min-w-0 max-w-[240px] truncate whitespace-nowrap text-left">{item.getItemName() || '(deleted)'}</span>
+                  {(() => {
+                    const id = item.getId()
+                    const isRoot = id === 'root' || id === 'project-root'
+                    if (isRoot) return null
+                    const status = (data as any)[id]?.status as string | undefined
+                    const color = status === 'completed' ? '#22c55e' : status === 'ongoing' ? '#3b82f6' : '#9ca3af'
+                    return <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                  })()}
+                </span>
+              </TreeItemLabel>
+            </TreeItem>
+          )
+        })}
+      </Tree>
+    </div>
   )
 }
 
@@ -168,10 +170,10 @@ export default function NodesTree() {
     try {
       const ws = new WebSocket(`ws://${WS_HOST}:${WS_PORT}/overlay?ch=${channelIndex}`)
       ws.addEventListener('close', () => {
-        try { if (socketsRef.current[channelIndex] === ws) socketsRef.current[channelIndex] = null } catch {}
+        try { if (socketsRef.current[channelIndex] === ws) socketsRef.current[channelIndex] = null } catch { }
       })
       ws.addEventListener('error', () => {
-        try { /* ignore */ } catch {}
+        try { /* ignore */ } catch { }
       })
       socketsRef.current[channelIndex] = ws
       return ws
@@ -190,24 +192,24 @@ export default function NodesTree() {
           ws.send(payload)
         } else if (ws.readyState === WebSocket.CONNECTING) {
           ws.addEventListener('open', () => {
-            try { ws.send(payload) } catch {}
+            try { ws.send(payload) } catch { }
           }, { once: true })
         }
-      } catch {}
+      } catch { }
     }
   }
 
   // Keep selected project id in sync
   useEffect(() => {
     let done = false
-    ;(async () => {
-      try {
-        const res = await window.ipcRenderer.invoke('app:getSelectedProjectId')
-        if (!done && res?.ok) setProjectId(res.data ?? null)
-      } catch {}
-    })()
+      ; (async () => {
+        try {
+          const res = await window.ipcRenderer.invoke('app:getSelectedProjectId')
+          if (!done && res?.ok) setProjectId(res.data ?? null)
+        } catch { }
+      })()
     const onProjectChanged = (e: any) => {
-      try { setProjectId(e?.detail ?? null) } catch {}
+      try { setProjectId(e?.detail ?? null) } catch { }
     }
     window.addEventListener('selectedProjectChanged', onProjectChanged as any)
     return () => {
@@ -235,7 +237,7 @@ export default function NodesTree() {
         } else if (newId) {
           pendingSelectIdRef.current = newId
         }
-      } catch {}
+      } catch { }
       load()
     }
     async function load() {
@@ -297,7 +299,7 @@ export default function NodesTree() {
             setPendingExpandIds(null)
             pendingSelectIdRef.current = null
             pendingFocusParentIdRef.current = null
-          } catch {}
+          } catch { }
           setItemsVersion(v => v + 1)
         } else {
           setItems({
@@ -319,17 +321,17 @@ export default function NodesTree() {
   // Track recording state; disable interactions when recording is started
   useEffect(() => {
     let cancelled = false
-    ;(async () => {
-      try {
-        const res = await window.ipcRenderer.invoke('recording:getState')
-        if (!cancelled && res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
-      } catch {}
-    })()
+      ; (async () => {
+        try {
+          const res = await window.ipcRenderer.invoke('recording:getState')
+          if (!cancelled && res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
+        } catch { }
+      })()
     const onChanged = async () => {
       try {
         const res = await window.ipcRenderer.invoke('recording:getState')
         if (res?.ok) setIsRecordingStarted(!!res.data?.isRecordingStarted)
-      } catch {}
+      } catch { }
     }
     window.addEventListener('recordingStateChanged', onChanged as any)
     return () => {
@@ -357,13 +359,13 @@ export default function NodesTree() {
                 })
               }
               if (Array.isArray(pathNames) && pathNames.length) {
-                try { broadcastNodeLevels(pathNames) } catch {}
+                try { broadcastNodeLevels(pathNames) } catch { }
               }
             }}
           />
         </div>
       ) : (
-        <div className="flex items-center justify-center h-full text-white/70 text-sm border border-black bg-[#21262E]">
+        <div className="flex items-center justify-center h-full text-white/70 border border-black bg-[#21262E]">
           No project selected
         </div>
       )}

@@ -40,8 +40,8 @@ async function resolveClipFilePath(): Promise<string | null> {
 	let filterSettings: any = null
 	try {
 		const { filterSettings: fsSettings } = await obs.call('GetSourceFilter', {
-			sourceName: 'clip recording',
-			filterName: 'source record',
+			sourceName: 'clip',
+			filterName: 'Source Record (clip)',
 		})
 		filterSettings = fsSettings
 		const val = fsSettings && typeof fsSettings.filename_formatting === 'string'

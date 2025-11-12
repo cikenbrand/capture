@@ -59,14 +59,39 @@ export default function EditTaskForm({ onClose }: Props) {
     }
   }
 
+  async function onDelete() {
+    if (!taskId) return
+    setError(null)
+    try {
+      setSubmitting(true)
+      const res = await window.ipcRenderer.invoke('db:deleteTask', taskId)
+      if (!res?.ok) {
+        setError(res?.error || 'Failed to delete task')
+        return
+      }
+      try { await window.ipcRenderer.invoke('app:setSelectedTaskId', null) } catch {}
+      try {
+        const ev1 = new CustomEvent('selectedTaskChanged', { detail: null })
+        window.dispatchEvent(ev1)
+      } catch {}
+      try {
+        const ev2 = new CustomEvent('tasksChanged')
+        window.dispatchEvent(ev2)
+      } catch {}
+      onClose()
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <span>Task Name</span>
+        <span className="text-slate-400">Task Name</span>
         <Input value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="flex flex-col gap-1">
-        <span>Remarks</span>
+        <span className="text-slate-400">Remarks</span>
         <Input value={remarks} onChange={(e) => setRemarks(e.target.value)} />
       </div>
       {error ? <div className="text-red-400 text-sm">{error}</div> : null}

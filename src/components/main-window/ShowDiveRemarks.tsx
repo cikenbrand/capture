@@ -65,16 +65,12 @@ export default function ShowDiveRemarks() {
   }, [selectedDiveId])
 
   return (
-    <div className="flex gap-2 items-center text-nowrap">
-      <span>Remarks :</span>
       <Input
-        className="h-6.5"
+        className="select-none pointer-events-none caret-transparent"
         value={selectedDiveId && remarks.trim().length > 0 ? remarks : ""}
         readOnly
         disabled={!selectedDiveId || isStarted}
         placeholder={!selectedDiveId ? "No dive selected" : (remarks.trim().length > 0 ? "" : "No remarks")}
       />
-    </div>
-
   )
 }

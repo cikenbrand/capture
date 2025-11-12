@@ -45,9 +45,9 @@ export default function ShowNodesStatus() {
 
   const colorClass = status === 'completed' ? 'text-green-400' : status === 'ongoing' ? 'text-blue-400' : 'text-gray-400'
   return (
-    <div className="flex gap-2 items-center text-nowrap">
-      <span>Status :</span>
-      <Input value={value} placeholder="Not Started" readOnly disabled={!hasProject} className={`h-6.5 uppercase font-medium ${colorClass}`}/>
+    <div className="flex flex-col gap-1 text-nowrap">
+      <span className="text-slate-400">Status</span>
+      <Input value={value} placeholder="Not Started" readOnly disabled={!hasProject} className={`select-none pointer-events-none caret-transparent ${colorClass}`}/>
     </div>
   )
 }

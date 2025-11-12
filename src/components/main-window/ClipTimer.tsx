@@ -82,8 +82,10 @@ export default function ClipTimer() {
     }, [isClipStarted])
 
     return (
-        <div className="h-[26px] w-[140px] bg-black rounded-[3px] flex items-center justify-center">
-            <span className="tracking-[5px] font-bold text-lg">{formatHhMmSs(elapsedSeconds)}</span>
+        <div className="h-[26px] w-[140px] bg-black rounded-[7px] flex items-center justify-center">
+            <span className={`tracking-[5px] font-bold text-lg ${isClipStarted ? 'text-blue-300' : 'text-white/40'}`}>
+                {formatHhMmSs(elapsedSeconds)}
+            </span>
         </div>
     )
 }

@@ -71,6 +71,11 @@ import './obs/websocket_functions/startClipRecording'
 import './obs/websocket_functions/stopClipRecording'
 import './obs/websocket_functions/takeSnapshot'
 import './obs/websocket_functions/getActiveVideoSceneItem'
+import './obs/websocket_functions/getActiveVideoSources'
+import './obs/websocket_functions/getDShowDevices'
+import './obs/websocket_functions/setDShowDevices'
+import './obs/websocket_functions/addMediaToChannel'
+import './obs/websocket_functions/deleteMediaFromChannel'
 import './obs/websocket_functions/setCaptureDeviceInput'
 import './obs/websocket_functions/getAudioInputs'
 import './obs/websocket_functions/setAudioInput'
@@ -91,11 +96,15 @@ import './db/editEventLog'
 import { getExternalMonitorList } from './other_functions/getExternalMonitorList'
 import './other_functions/getExternalMonitorList'
 import { startComDeviceWatcher } from './other_functions/detectComDevice'
+import { startCameraDeviceWatcher } from './other_functions/detectCameraDevice'
 import './other_functions/openFile'
 import './other_functions/exportEntireProject'
 import './other_functions/exportProjectFileToJson'
 import './other_functions/importProjectFileJson'
 import './getter-setter/audioLevel'
+import './getter-setter/videoChannelState'
+import './db/deleteTask'
+import './db/deleteDive'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -115,6 +124,7 @@ let pipWin: BrowserWindow | null = null
 let eventingWin: BrowserWindow | null = null
 let dataConfigWin: BrowserWindow | null = null
 let stopComWatcher: (() => void) | null = null
+let stopCamWatcher: (() => void) | null = null
 
 // ——— helpers ———
 function delay(ms: number) {
@@ -231,6 +241,11 @@ async function createWindow() {
     stopComWatcher = startComDeviceWatcher(() => win)
   } catch {}
 
+  // Start Camera device watcher
+  try {
+    stopCamWatcher = startCameraDeviceWatcher(() => win)
+  } catch {}
+
   // 5) Check for updates (GitHub) when online
   try {
     const online = await new Promise<boolean>((resolve) => {
@@ -286,6 +301,7 @@ app.on('before-quit', async (e) => {
   } catch {}
   try { await stopBrowserSourceService() } catch {}
   try { stopComWatcher?.() } catch {}
+  try { stopCamWatcher?.() } catch {}
   app.quit()
 })
 app.on('activate', () => {

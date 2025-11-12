@@ -58,10 +58,10 @@ export default memo(function PauseSessionForm({ onClose }: Props) {
     }
     return (
         <div className="flex flex-col gap-4">
-            <div className="text-white/80">Pause or resume the current recording?</div>
+            <div className="text-slate-400">Pause the current recording?</div>
             <div className="mt-2 flex justify-end gap-2">
-                <Button onClick={onClose}>Close</Button>
-                <Button onClick={handlePause}>Toggle Pause</Button>
+                <Button onClick={onClose}>Cancel</Button>
+                <Button onClick={handlePause}>Pause</Button>
             </div>
         </div>
     )

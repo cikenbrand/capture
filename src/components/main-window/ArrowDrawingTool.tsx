@@ -69,10 +69,8 @@ export default function ArrowDrawingTool() {
             data-draw-ui='true'
             title="Pointer Drawing Tool"
             className={clsx(
-                "flex items-center justify-center h-[28px] px-2 gap-2 rounded-[2px] disabled:opacity-50 disabled:pointer-events-none",
-                isActive
-                    ? "bg-[#202832] text-[#71BCFC]"
-                    : "text-white hover:bg-[#4C525E] active:bg-[#202832] active:text-[#71BCFC]"
+                "rounded-[7px] bg-[#1D2229] border border-2 border-white/10 flex items-center justify-center h-[28px] px-2 gap-2 rounded-[2px] text-white disabled:opacity-30 disabled:pointer-events-none",
+                isActive ? "bg-[#374F66] text-white" : "hover:bg-white/5"
             )}
         >
             <BsArrowUpRight className="h-4 w-4" />

@@ -201,17 +201,17 @@ export default function DiveSelection() {
   const disabled = !projectId || loading || !dives.length
 
   return (
-    <Select value={selectedDiveId ?? undefined} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger className={`w-full ${isStarted ? 'cursor-not-allowed' : ''}`}
-        title={isStarted ? 'Dive in progress - selection locked' : undefined}
-      >
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {dives.map(d => (
-          <SelectItem key={d._id} value={d._id}>{d.name}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      <Select value={selectedDiveId ?? undefined} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger className={`w-full ${isStarted ? 'cursor-not-allowed' : ''}`}
+          title={isStarted ? 'Dive in progress - selection locked' : undefined}
+        >
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {dives.map(d => (
+            <SelectItem key={d._id} value={d._id}>{d.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
   )
 }

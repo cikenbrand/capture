@@ -113,7 +113,7 @@ export default function AddNewNodeForm({ onClose }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <span>Node Name(s)</span>
+        <span className="text-slate-400">Node Name(s)</span>
         <Textarea value={name} onChange={(e) => setName(e.target.value)} onPaste={onPasteNames} autoFocus placeholder="Example: Item A, Item B, Item C" />
       </div>
       {/* Remarks input removed */}

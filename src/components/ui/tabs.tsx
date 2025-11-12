@@ -10,7 +10,7 @@ function Tabs({
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
-      className={cn("flex flex-col bg-[#252B34]", className)}
+      className={cn("flex flex-col bg-[#1A1E25] overflow-hidden", className)}
       {...props}
     />
   )
@@ -40,7 +40,7 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "bg-[#252B34] data-[state=active]:bg-[#363D4A] data-[state=active]:border-t-[#5B94C5] data-[state=active]:border-t-2 data-[state=inactive]:border-t-transparent data-[state=active]:text-white focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring text-white/20 inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "bg-[#1A1E25] data-[state=active]:bg-[#161A22] data-[state=active]:border-b-[#5B94C5] data-[state=active]:border-b-2 data-[state=inactive]:border-b-transparent data-[state=active]:text-slate-400 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring text-white/20 inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 border border-transparent px-4 py-1.5 font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -55,7 +55,7 @@ function TabsContent({
   return (
     <TabsPrimitive.Content
       data-slot="tabs-content"
-      className={cn("flex-1 outline-none bg-[#363D4A] p-2", className)}
+      className={cn("flex-1 outline-none bg-[#161A22] p-2 border-white/10 border-t", className)}
       {...props}
     />
   )

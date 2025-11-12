@@ -26,6 +26,7 @@ import DeleteOverlayConfirmation from "./components/overlay-editor/DeleteOverlay
 import CreateProjectDetailsButton from "./components/overlay-editor/CreateProjectDetailsButton";
 import { FaFileExport, FaFileImport } from "react-icons/fa";
 import { toast } from "sonner";
+import { Button } from "./components/ui/button";
 
 export default function OverlayEditor() {
     const [newOverlayOpen, setNewOverlayOpen] = useState(false)
@@ -158,16 +159,15 @@ export default function OverlayEditor() {
         <div className='h-screen flex flex-col bg-[#1D2229]'>
             <OverlayWindowBar />
             <div className="flex-1 flex p-2 gap-1">
-                <div className="flex-none flex flex-col gap-1 h-full w-[300px]">
+                <div className="flex-none flex flex-col gap-1 h-full w-[310px]">
                     <Tabs defaultValue="overlay" className="h-full">
                         <TabsList>
                             <TabsTrigger value="overlay">Overlay</TabsTrigger>
                         </TabsList>
                         <TabsContent value="overlay" className="flex flex-col gap-1">
                             <div className="flex gap-1">
-                                <button
+                                <Button
                                     title="Export Overlay"
-                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
                                     disabled={!selectedOverlayId}
                                     onClick={async () => {
                                         try {
@@ -190,11 +190,10 @@ export default function OverlayEditor() {
                                     }}
                                 >
                                     <FaFileExport className="h-4 w-4" />
-                                    <span className="font-medium">Export Overlay</span>
-                                </button>
-                                <button
+                                    <span>Export Overlay</span>
+                                </Button>
+                                <Button
                                     title="Import Overlay"
-                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
                                     onClick={async () => {
                                         try {
                                             // Ask main process to select a JSON file
@@ -218,23 +217,31 @@ export default function OverlayEditor() {
                                     }}
                                 >
                                     <FaFileImport className="h-4 w-4" />
-                                    <span className="font-medium">Import Overlay</span>
-                                </button>
+                                    <span>Import Overlay</span>
+                                </Button>
                             </div>
-                            <div className="flex gap-1">
-                                <button onClick={() => setNewOverlayOpen(true)} title="New Overlay" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                            <div className="flex flex-wrap gap-1">
+                                <Button 
+                                    onClick={() => setNewOverlayOpen(true)} 
+                                    title="New Overlay"
+                                >
                                     <BiPlus className="h-6 w-6" />
-                                </button>
-                                <button onClick={() => setRenameOverlayOpen(true)} title="Rename Overlay" className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none">
+                                    <span>New Overlay</span>
+                                </Button>
+                                <Button 
+                                    onClick={() => setRenameOverlayOpen(true)} 
+                                    title="Rename Overlay" 
+                                >
                                     <MdEdit className="h-4.5 w-4.5" />
-                                </button>
-                                <button
+                                    <span>Rename Overlay</span>
+                                </Button>
+                                <Button
                                     title="Delete Overlay"
-                                    className="flex items-center justify-center h-[28px] aspect-square hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
                                     onClick={() => setDeleteOverlayOpen(true)}
                                 >
                                     <MdDelete className="h-4.5 w-4.5" />
-                                </button>
+                                    <span>Delete Overlay</span>
+                                </Button>
                             </div>
                             <OverlayList />
                         </TabsContent>
@@ -343,16 +350,15 @@ export default function OverlayEditor() {
                         </TabsList>
                         <TabsContent value="properties" className="flex flex-col gap-1">
                             <div className="flex gap-1">
-                                <button
+                                <Button
+                                    disabled={!selectedOverlayId || selectedComponentIds.length === 0}
                                     onClick={() => setEditComponentOpen(true)}
-                                    title="Edit Component"
-                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    title="Edit Component">
                                     <MdEdit className="h-4.5 w-4.5" />
-                                    <span className="font-medium">Edit Item</span>
-                                </button>
-                                <button
+                                    <span>Edit Item</span>
+                                </Button>
+                                <Button
                                     title="Delete Component(s)"
-                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
                                     disabled={!selectedOverlayId || selectedComponentIds.length === 0}
                                     onClick={async () => {
                                         try {
@@ -373,28 +379,28 @@ export default function OverlayEditor() {
                                     }}
                                 >
                                     <MdDelete className="h-4.5 w-4.5" />
-                                    <span className="font-medium">Delete Item</span>
-                                </button>
+                                    <span>Delete Item</span>
+                                </Button>
                             </div>
                             <div className="flex gap-1">
                                 <button
                                     onClick={() => applyAlignment('left')}
                                     title="Align Left"
-                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignHorizontalLeft className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align Left</span>
                                 </button>
                                 <button
                                     onClick={() => applyAlignment('hcenter')}
                                     title="Align Horizontal Center"
-                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignHorizontalCenter className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align H Cntr</span>
                                 </button>
                                 <button
                                     onClick={() => applyAlignment('right')}
                                     title="Align Right"
-                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignHorizontalRight className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align Right</span>
                                 </button>
@@ -403,21 +409,21 @@ export default function OverlayEditor() {
                                 <button
                                     onClick={() => applyAlignment('top')}
                                     title="Align Top"
-                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignVerticalTop className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align Top</span>
                                 </button>
                                 <button
                                     onClick={() => applyAlignment('vcenter')}
                                     title="Align Vertical Center"
-                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignVerticalCenter className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align V Cntr</span>
                                 </button>
                                 <button
                                     onClick={() => applyAlignment('bottom')}
                                     title="Align Bottom"
-                                    className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
                                     <MdAlignVerticalBottom className="h-4.5 w-4.5" />
                                     <span className="font-medium text-[10px]">Align Bottom</span>
                                 </button>

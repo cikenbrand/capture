@@ -27,8 +27,8 @@ import require$$4$2 from "http";
 import fs$k from "node:fs/promises";
 import { SerialPort } from "serialport";
 import { EventEmitter } from "node:events";
-const OBS_EXECUTABLE_PATH = "C:\\Program Files\\obs-studio\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\");
-const OBS_WORKING_DIR = "C:\\Program Files\\obs-studio\\bin\\64bit".replace(/\\/g, "\\");
+const OBS_EXECUTABLE_PATH = "D:\\obs\\build_x64\\rundir\\Release\\bin\\64bit\\obs64.exe".replace(/\\/g, "\\");
+const OBS_WORKING_DIR = "D:\\obs\\build_x64\\rundir\\Release\\bin\\64bit".replace(/\\/g, "\\");
 const OBS_WEBSOCKET_URL = "ws://127.0.0.1:4455";
 const OBS_LAUNCH_PARAMS = ["--startvirtualcam", "--disable-shutdown-check"];
 path$m.join(
@@ -42,9 +42,9 @@ path$m.join(
 const OVERLAY_WS_PORT = 3620;
 const MONGODB_URI = "mongodb://localhost:27017/capture";
 const SPLASHSCREEN_DURATION_MS = 5e3;
-let cachedClient$A = null;
-async function getClient$A() {
-  if (cachedClient$A) return cachedClient$A;
+let cachedClient$C = null;
+async function getClient$C() {
+  if (cachedClient$C) return cachedClient$C;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -53,11 +53,11 @@ async function getClient$A() {
     }
   });
   await client.connect();
-  cachedClient$A = client;
+  cachedClient$C = client;
   return client;
 }
 async function getAllOverlay() {
-  const client = await getClient$A();
+  const client = await getClient$C();
   const db = client.db("capture");
   const overlays = db.collection("overlays");
   return overlays.find({}).sort({ createdAt: -1 }).toArray();
@@ -77,9 +77,9 @@ ipcMain.handle("db:getAllOverlay", async () => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$z = null;
-async function getClient$z() {
-  if (cachedClient$z) return cachedClient$z;
+let cachedClient$B = null;
+async function getClient$B() {
+  if (cachedClient$B) return cachedClient$B;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -88,11 +88,11 @@ async function getClient$z() {
     }
   });
   await client.connect();
-  cachedClient$z = client;
+  cachedClient$B = client;
   return client;
 }
 async function createOverlay(input) {
-  const client = await getClient$z();
+  const client = await getClient$B();
   const db = client.db("capture");
   const overlays = db.collection("overlays");
   const now = /* @__PURE__ */ new Date();
@@ -7093,95 +7093,95 @@ function State$1(input, options) {
   this.firstTabInLine = -1;
   this.documents = [];
 }
-function generateError(state, message) {
+function generateError(state2, message) {
   var mark = {
-    name: state.filename,
-    buffer: state.input.slice(0, -1),
+    name: state2.filename,
+    buffer: state2.input.slice(0, -1),
     // omit trailing \0
-    position: state.position,
-    line: state.line,
-    column: state.position - state.lineStart
+    position: state2.position,
+    line: state2.line,
+    column: state2.position - state2.lineStart
   };
   mark.snippet = makeSnippet(mark);
   return new YAMLException$1(message, mark);
 }
-function throwError(state, message) {
-  throw generateError(state, message);
+function throwError(state2, message) {
+  throw generateError(state2, message);
 }
-function throwWarning(state, message) {
-  if (state.onWarning) {
-    state.onWarning.call(null, generateError(state, message));
+function throwWarning(state2, message) {
+  if (state2.onWarning) {
+    state2.onWarning.call(null, generateError(state2, message));
   }
 }
 var directiveHandlers = {
-  YAML: function handleYamlDirective(state, name, args) {
+  YAML: function handleYamlDirective(state2, name, args) {
     var match, major2, minor2;
-    if (state.version !== null) {
-      throwError(state, "duplication of %YAML directive");
+    if (state2.version !== null) {
+      throwError(state2, "duplication of %YAML directive");
     }
     if (args.length !== 1) {
-      throwError(state, "YAML directive accepts exactly one argument");
+      throwError(state2, "YAML directive accepts exactly one argument");
     }
     match = /^([0-9]+)\.([0-9]+)$/.exec(args[0]);
     if (match === null) {
-      throwError(state, "ill-formed argument of the YAML directive");
+      throwError(state2, "ill-formed argument of the YAML directive");
     }
     major2 = parseInt(match[1], 10);
     minor2 = parseInt(match[2], 10);
     if (major2 !== 1) {
-      throwError(state, "unacceptable YAML version of the document");
+      throwError(state2, "unacceptable YAML version of the document");
     }
-    state.version = args[0];
-    state.checkLineBreaks = minor2 < 2;
+    state2.version = args[0];
+    state2.checkLineBreaks = minor2 < 2;
     if (minor2 !== 1 && minor2 !== 2) {
-      throwWarning(state, "unsupported YAML version of the document");
+      throwWarning(state2, "unsupported YAML version of the document");
     }
   },
-  TAG: function handleTagDirective(state, name, args) {
+  TAG: function handleTagDirective(state2, name, args) {
     var handle, prefix;
     if (args.length !== 2) {
-      throwError(state, "TAG directive accepts exactly two arguments");
+      throwError(state2, "TAG directive accepts exactly two arguments");
     }
     handle = args[0];
     prefix = args[1];
     if (!PATTERN_TAG_HANDLE.test(handle)) {
-      throwError(state, "ill-formed tag handle (first argument) of the TAG directive");
+      throwError(state2, "ill-formed tag handle (first argument) of the TAG directive");
     }
-    if (_hasOwnProperty$1.call(state.tagMap, handle)) {
-      throwError(state, 'there is a previously declared suffix for "' + handle + '" tag handle');
+    if (_hasOwnProperty$1.call(state2.tagMap, handle)) {
+      throwError(state2, 'there is a previously declared suffix for "' + handle + '" tag handle');
     }
     if (!PATTERN_TAG_URI.test(prefix)) {
-      throwError(state, "ill-formed tag prefix (second argument) of the TAG directive");
+      throwError(state2, "ill-formed tag prefix (second argument) of the TAG directive");
     }
     try {
       prefix = decodeURIComponent(prefix);
     } catch (err) {
-      throwError(state, "tag prefix is malformed: " + prefix);
+      throwError(state2, "tag prefix is malformed: " + prefix);
     }
-    state.tagMap[handle] = prefix;
+    state2.tagMap[handle] = prefix;
   }
 };
-function captureSegment(state, start, end, checkJson) {
+function captureSegment(state2, start, end, checkJson) {
   var _position, _length, _character, _result;
   if (start < end) {
-    _result = state.input.slice(start, end);
+    _result = state2.input.slice(start, end);
     if (checkJson) {
       for (_position = 0, _length = _result.length; _position < _length; _position += 1) {
         _character = _result.charCodeAt(_position);
         if (!(_character === 9 || 32 <= _character && _character <= 1114111)) {
-          throwError(state, "expected valid JSON character");
+          throwError(state2, "expected valid JSON character");
         }
       }
     } else if (PATTERN_NON_PRINTABLE.test(_result)) {
-      throwError(state, "the stream contains non-printable characters");
+      throwError(state2, "the stream contains non-printable characters");
     }
-    state.result += _result;
+    state2.result += _result;
   }
 }
-function mergeMappings(state, destination, source, overridableKeys) {
+function mergeMappings(state2, destination, source, overridableKeys) {
   var sourceKeys, key, index, quantity;
   if (!common$1.isObject(source)) {
-    throwError(state, "cannot merge mappings; the provided source object is unacceptable");
+    throwError(state2, "cannot merge mappings; the provided source object is unacceptable");
   }
   sourceKeys = Object.keys(source);
   for (index = 0, quantity = sourceKeys.length; index < quantity; index += 1) {
@@ -7192,13 +7192,13 @@ function mergeMappings(state, destination, source, overridableKeys) {
     }
   }
 }
-function storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, valueNode, startLine, startLineStart, startPos) {
+function storeMappingPair(state2, _result, overridableKeys, keyTag, keyNode, valueNode, startLine, startLineStart, startPos) {
   var index, quantity;
   if (Array.isArray(keyNode)) {
     keyNode = Array.prototype.slice.call(keyNode);
     for (index = 0, quantity = keyNode.length; index < quantity; index += 1) {
       if (Array.isArray(keyNode[index])) {
-        throwError(state, "nested arrays are not supported inside keys");
+        throwError(state2, "nested arrays are not supported inside keys");
       }
       if (typeof keyNode === "object" && _class(keyNode[index]) === "[object Object]") {
         keyNode[index] = "[object Object]";
@@ -7215,17 +7215,17 @@ function storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, valu
   if (keyTag === "tag:yaml.org,2002:merge") {
     if (Array.isArray(valueNode)) {
       for (index = 0, quantity = valueNode.length; index < quantity; index += 1) {
-        mergeMappings(state, _result, valueNode[index], overridableKeys);
+        mergeMappings(state2, _result, valueNode[index], overridableKeys);
       }
     } else {
-      mergeMappings(state, _result, valueNode, overridableKeys);
+      mergeMappings(state2, _result, valueNode, overridableKeys);
     }
   } else {
-    if (!state.json && !_hasOwnProperty$1.call(overridableKeys, keyNode) && _hasOwnProperty$1.call(_result, keyNode)) {
-      state.line = startLine || state.line;
-      state.lineStart = startLineStart || state.lineStart;
-      state.position = startPos || state.position;
-      throwError(state, "duplicated mapping key");
+    if (!state2.json && !_hasOwnProperty$1.call(overridableKeys, keyNode) && _hasOwnProperty$1.call(_result, keyNode)) {
+      state2.line = startLine || state2.line;
+      state2.lineStart = startLineStart || state2.lineStart;
+      state2.position = startPos || state2.position;
+      throwError(state2, "duplicated mapping key");
     }
     if (keyNode === "__proto__") {
       Object.defineProperty(_result, keyNode, {
@@ -7241,229 +7241,229 @@ function storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, valu
   }
   return _result;
 }
-function readLineBreak(state) {
+function readLineBreak(state2) {
   var ch;
-  ch = state.input.charCodeAt(state.position);
+  ch = state2.input.charCodeAt(state2.position);
   if (ch === 10) {
-    state.position++;
+    state2.position++;
   } else if (ch === 13) {
-    state.position++;
-    if (state.input.charCodeAt(state.position) === 10) {
-      state.position++;
+    state2.position++;
+    if (state2.input.charCodeAt(state2.position) === 10) {
+      state2.position++;
     }
   } else {
-    throwError(state, "a line break is expected");
+    throwError(state2, "a line break is expected");
   }
-  state.line += 1;
-  state.lineStart = state.position;
-  state.firstTabInLine = -1;
+  state2.line += 1;
+  state2.lineStart = state2.position;
+  state2.firstTabInLine = -1;
 }
-function skipSeparationSpace(state, allowComments, checkIndent) {
-  var lineBreaks = 0, ch = state.input.charCodeAt(state.position);
+function skipSeparationSpace(state2, allowComments, checkIndent) {
+  var lineBreaks = 0, ch = state2.input.charCodeAt(state2.position);
   while (ch !== 0) {
     while (is_WHITE_SPACE(ch)) {
-      if (ch === 9 && state.firstTabInLine === -1) {
-        state.firstTabInLine = state.position;
+      if (ch === 9 && state2.firstTabInLine === -1) {
+        state2.firstTabInLine = state2.position;
       }
-      ch = state.input.charCodeAt(++state.position);
+      ch = state2.input.charCodeAt(++state2.position);
     }
     if (allowComments && ch === 35) {
       do {
-        ch = state.input.charCodeAt(++state.position);
+        ch = state2.input.charCodeAt(++state2.position);
       } while (ch !== 10 && ch !== 13 && ch !== 0);
     }
     if (is_EOL(ch)) {
-      readLineBreak(state);
-      ch = state.input.charCodeAt(state.position);
+      readLineBreak(state2);
+      ch = state2.input.charCodeAt(state2.position);
       lineBreaks++;
-      state.lineIndent = 0;
+      state2.lineIndent = 0;
       while (ch === 32) {
-        state.lineIndent++;
-        ch = state.input.charCodeAt(++state.position);
+        state2.lineIndent++;
+        ch = state2.input.charCodeAt(++state2.position);
       }
     } else {
       break;
     }
   }
-  if (checkIndent !== -1 && lineBreaks !== 0 && state.lineIndent < checkIndent) {
-    throwWarning(state, "deficient indentation");
+  if (checkIndent !== -1 && lineBreaks !== 0 && state2.lineIndent < checkIndent) {
+    throwWarning(state2, "deficient indentation");
   }
   return lineBreaks;
 }
-function testDocumentSeparator(state) {
-  var _position = state.position, ch;
-  ch = state.input.charCodeAt(_position);
-  if ((ch === 45 || ch === 46) && ch === state.input.charCodeAt(_position + 1) && ch === state.input.charCodeAt(_position + 2)) {
+function testDocumentSeparator(state2) {
+  var _position = state2.position, ch;
+  ch = state2.input.charCodeAt(_position);
+  if ((ch === 45 || ch === 46) && ch === state2.input.charCodeAt(_position + 1) && ch === state2.input.charCodeAt(_position + 2)) {
     _position += 3;
-    ch = state.input.charCodeAt(_position);
+    ch = state2.input.charCodeAt(_position);
     if (ch === 0 || is_WS_OR_EOL(ch)) {
       return true;
     }
   }
   return false;
 }
-function writeFoldedLines(state, count) {
+function writeFoldedLines(state2, count) {
   if (count === 1) {
-    state.result += " ";
+    state2.result += " ";
   } else if (count > 1) {
-    state.result += common$1.repeat("\n", count - 1);
+    state2.result += common$1.repeat("\n", count - 1);
   }
 }
-function readPlainScalar(state, nodeIndent, withinFlowCollection) {
-  var preceding, following, captureStart, captureEnd, hasPendingContent, _line, _lineStart, _lineIndent, _kind = state.kind, _result = state.result, ch;
-  ch = state.input.charCodeAt(state.position);
+function readPlainScalar(state2, nodeIndent, withinFlowCollection) {
+  var preceding, following, captureStart, captureEnd, hasPendingContent, _line, _lineStart, _lineIndent, _kind = state2.kind, _result = state2.result, ch;
+  ch = state2.input.charCodeAt(state2.position);
   if (is_WS_OR_EOL(ch) || is_FLOW_INDICATOR(ch) || ch === 35 || ch === 38 || ch === 42 || ch === 33 || ch === 124 || ch === 62 || ch === 39 || ch === 34 || ch === 37 || ch === 64 || ch === 96) {
     return false;
   }
   if (ch === 63 || ch === 45) {
-    following = state.input.charCodeAt(state.position + 1);
+    following = state2.input.charCodeAt(state2.position + 1);
     if (is_WS_OR_EOL(following) || withinFlowCollection && is_FLOW_INDICATOR(following)) {
       return false;
     }
   }
-  state.kind = "scalar";
-  state.result = "";
-  captureStart = captureEnd = state.position;
+  state2.kind = "scalar";
+  state2.result = "";
+  captureStart = captureEnd = state2.position;
   hasPendingContent = false;
   while (ch !== 0) {
     if (ch === 58) {
-      following = state.input.charCodeAt(state.position + 1);
+      following = state2.input.charCodeAt(state2.position + 1);
       if (is_WS_OR_EOL(following) || withinFlowCollection && is_FLOW_INDICATOR(following)) {
         break;
       }
     } else if (ch === 35) {
-      preceding = state.input.charCodeAt(state.position - 1);
+      preceding = state2.input.charCodeAt(state2.position - 1);
       if (is_WS_OR_EOL(preceding)) {
         break;
       }
-    } else if (state.position === state.lineStart && testDocumentSeparator(state) || withinFlowCollection && is_FLOW_INDICATOR(ch)) {
+    } else if (state2.position === state2.lineStart && testDocumentSeparator(state2) || withinFlowCollection && is_FLOW_INDICATOR(ch)) {
       break;
     } else if (is_EOL(ch)) {
-      _line = state.line;
-      _lineStart = state.lineStart;
-      _lineIndent = state.lineIndent;
-      skipSeparationSpace(state, false, -1);
-      if (state.lineIndent >= nodeIndent) {
+      _line = state2.line;
+      _lineStart = state2.lineStart;
+      _lineIndent = state2.lineIndent;
+      skipSeparationSpace(state2, false, -1);
+      if (state2.lineIndent >= nodeIndent) {
         hasPendingContent = true;
-        ch = state.input.charCodeAt(state.position);
+        ch = state2.input.charCodeAt(state2.position);
         continue;
       } else {
-        state.position = captureEnd;
-        state.line = _line;
-        state.lineStart = _lineStart;
-        state.lineIndent = _lineIndent;
+        state2.position = captureEnd;
+        state2.line = _line;
+        state2.lineStart = _lineStart;
+        state2.lineIndent = _lineIndent;
         break;
       }
     }
     if (hasPendingContent) {
-      captureSegment(state, captureStart, captureEnd, false);
-      writeFoldedLines(state, state.line - _line);
-      captureStart = captureEnd = state.position;
+      captureSegment(state2, captureStart, captureEnd, false);
+      writeFoldedLines(state2, state2.line - _line);
+      captureStart = captureEnd = state2.position;
       hasPendingContent = false;
     }
     if (!is_WHITE_SPACE(ch)) {
-      captureEnd = state.position + 1;
+      captureEnd = state2.position + 1;
     }
-    ch = state.input.charCodeAt(++state.position);
+    ch = state2.input.charCodeAt(++state2.position);
   }
-  captureSegment(state, captureStart, captureEnd, false);
-  if (state.result) {
+  captureSegment(state2, captureStart, captureEnd, false);
+  if (state2.result) {
     return true;
   }
-  state.kind = _kind;
-  state.result = _result;
+  state2.kind = _kind;
+  state2.result = _result;
   return false;
 }
-function readSingleQuotedScalar(state, nodeIndent) {
+function readSingleQuotedScalar(state2, nodeIndent) {
   var ch, captureStart, captureEnd;
-  ch = state.input.charCodeAt(state.position);
+  ch = state2.input.charCodeAt(state2.position);
   if (ch !== 39) {
     return false;
   }
-  state.kind = "scalar";
-  state.result = "";
-  state.position++;
-  captureStart = captureEnd = state.position;
-  while ((ch = state.input.charCodeAt(state.position)) !== 0) {
+  state2.kind = "scalar";
+  state2.result = "";
+  state2.position++;
+  captureStart = captureEnd = state2.position;
+  while ((ch = state2.input.charCodeAt(state2.position)) !== 0) {
     if (ch === 39) {
-      captureSegment(state, captureStart, state.position, true);
-      ch = state.input.charCodeAt(++state.position);
+      captureSegment(state2, captureStart, state2.position, true);
+      ch = state2.input.charCodeAt(++state2.position);
       if (ch === 39) {
-        captureStart = state.position;
-        state.position++;
-        captureEnd = state.position;
+        captureStart = state2.position;
+        state2.position++;
+        captureEnd = state2.position;
       } else {
         return true;
       }
     } else if (is_EOL(ch)) {
-      captureSegment(state, captureStart, captureEnd, true);
-      writeFoldedLines(state, skipSeparationSpace(state, false, nodeIndent));
-      captureStart = captureEnd = state.position;
-    } else if (state.position === state.lineStart && testDocumentSeparator(state)) {
-      throwError(state, "unexpected end of the document within a single quoted scalar");
+      captureSegment(state2, captureStart, captureEnd, true);
+      writeFoldedLines(state2, skipSeparationSpace(state2, false, nodeIndent));
+      captureStart = captureEnd = state2.position;
+    } else if (state2.position === state2.lineStart && testDocumentSeparator(state2)) {
+      throwError(state2, "unexpected end of the document within a single quoted scalar");
     } else {
-      state.position++;
-      captureEnd = state.position;
+      state2.position++;
+      captureEnd = state2.position;
     }
   }
-  throwError(state, "unexpected end of the stream within a single quoted scalar");
+  throwError(state2, "unexpected end of the stream within a single quoted scalar");
 }
-function readDoubleQuotedScalar(state, nodeIndent) {
+function readDoubleQuotedScalar(state2, nodeIndent) {
   var captureStart, captureEnd, hexLength, hexResult, tmp, ch;
-  ch = state.input.charCodeAt(state.position);
+  ch = state2.input.charCodeAt(state2.position);
   if (ch !== 34) {
     return false;
   }
-  state.kind = "scalar";
-  state.result = "";
-  state.position++;
-  captureStart = captureEnd = state.position;
-  while ((ch = state.input.charCodeAt(state.position)) !== 0) {
+  state2.kind = "scalar";
+  state2.result = "";
+  state2.position++;
+  captureStart = captureEnd = state2.position;
+  while ((ch = state2.input.charCodeAt(state2.position)) !== 0) {
     if (ch === 34) {
-      captureSegment(state, captureStart, state.position, true);
-      state.position++;
+      captureSegment(state2, captureStart, state2.position, true);
+      state2.position++;
       return true;
     } else if (ch === 92) {
-      captureSegment(state, captureStart, state.position, true);
-      ch = state.input.charCodeAt(++state.position);
+      captureSegment(state2, captureStart, state2.position, true);
+      ch = state2.input.charCodeAt(++state2.position);
       if (is_EOL(ch)) {
-        skipSeparationSpace(state, false, nodeIndent);
+        skipSeparationSpace(state2, false, nodeIndent);
       } else if (ch < 256 && simpleEscapeCheck[ch]) {
-        state.result += simpleEscapeMap[ch];
-        state.position++;
+        state2.result += simpleEscapeMap[ch];
+        state2.position++;
       } else if ((tmp = escapedHexLen(ch)) > 0) {
         hexLength = tmp;
         hexResult = 0;
         for (; hexLength > 0; hexLength--) {
-          ch = state.input.charCodeAt(++state.position);
+          ch = state2.input.charCodeAt(++state2.position);
           if ((tmp = fromHexCode(ch)) >= 0) {
             hexResult = (hexResult << 4) + tmp;
           } else {
-            throwError(state, "expected hexadecimal character");
+            throwError(state2, "expected hexadecimal character");
           }
         }
-        state.result += charFromCodepoint(hexResult);
-        state.position++;
+        state2.result += charFromCodepoint(hexResult);
+        state2.position++;
       } else {
-        throwError(state, "unknown escape sequence");
+        throwError(state2, "unknown escape sequence");
       }
-      captureStart = captureEnd = state.position;
+      captureStart = captureEnd = state2.position;
     } else if (is_EOL(ch)) {
-      captureSegment(state, captureStart, captureEnd, true);
-      writeFoldedLines(state, skipSeparationSpace(state, false, nodeIndent));
-      captureStart = captureEnd = state.position;
-    } else if (state.position === state.lineStart && testDocumentSeparator(state)) {
-      throwError(state, "unexpected end of the document within a double quoted scalar");
+      captureSegment(state2, captureStart, captureEnd, true);
+      writeFoldedLines(state2, skipSeparationSpace(state2, false, nodeIndent));
+      captureStart = captureEnd = state2.position;
+    } else if (state2.position === state2.lineStart && testDocumentSeparator(state2)) {
+      throwError(state2, "unexpected end of the document within a double quoted scalar");
     } else {
-      state.position++;
-      captureEnd = state.position;
+      state2.position++;
+      captureEnd = state2.position;
     }
   }
-  throwError(state, "unexpected end of the stream within a double quoted scalar");
+  throwError(state2, "unexpected end of the stream within a double quoted scalar");
 }
-function readFlowCollection(state, nodeIndent) {
-  var readNext = true, _line, _lineStart, _pos, _tag = state.tag, _result, _anchor = state.anchor, following, terminator, isPair, isExplicitPair, isMapping, overridableKeys = /* @__PURE__ */ Object.create(null), keyNode, keyTag, valueNode, ch;
-  ch = state.input.charCodeAt(state.position);
+function readFlowCollection(state2, nodeIndent) {
+  var readNext = true, _line, _lineStart, _pos, _tag = state2.tag, _result, _anchor = state2.anchor, following, terminator, isPair, isExplicitPair, isMapping, overridableKeys = /* @__PURE__ */ Object.create(null), keyNode, keyTag, valueNode, ch;
+  ch = state2.input.charCodeAt(state2.position);
   if (ch === 91) {
     terminator = 93;
     isMapping = false;
@@ -7475,71 +7475,71 @@ function readFlowCollection(state, nodeIndent) {
   } else {
     return false;
   }
-  if (state.anchor !== null) {
-    state.anchorMap[state.anchor] = _result;
+  if (state2.anchor !== null) {
+    state2.anchorMap[state2.anchor] = _result;
   }
-  ch = state.input.charCodeAt(++state.position);
+  ch = state2.input.charCodeAt(++state2.position);
   while (ch !== 0) {
-    skipSeparationSpace(state, true, nodeIndent);
-    ch = state.input.charCodeAt(state.position);
+    skipSeparationSpace(state2, true, nodeIndent);
+    ch = state2.input.charCodeAt(state2.position);
     if (ch === terminator) {
-      state.position++;
-      state.tag = _tag;
-      state.anchor = _anchor;
-      state.kind = isMapping ? "mapping" : "sequence";
-      state.result = _result;
+      state2.position++;
+      state2.tag = _tag;
+      state2.anchor = _anchor;
+      state2.kind = isMapping ? "mapping" : "sequence";
+      state2.result = _result;
       return true;
     } else if (!readNext) {
-      throwError(state, "missed comma between flow collection entries");
+      throwError(state2, "missed comma between flow collection entries");
     } else if (ch === 44) {
-      throwError(state, "expected the node content, but found ','");
+      throwError(state2, "expected the node content, but found ','");
     }
     keyTag = keyNode = valueNode = null;
     isPair = isExplicitPair = false;
     if (ch === 63) {
-      following = state.input.charCodeAt(state.position + 1);
+      following = state2.input.charCodeAt(state2.position + 1);
       if (is_WS_OR_EOL(following)) {
         isPair = isExplicitPair = true;
-        state.position++;
-        skipSeparationSpace(state, true, nodeIndent);
+        state2.position++;
+        skipSeparationSpace(state2, true, nodeIndent);
       }
     }
-    _line = state.line;
-    _lineStart = state.lineStart;
-    _pos = state.position;
-    composeNode(state, nodeIndent, CONTEXT_FLOW_IN, false, true);
-    keyTag = state.tag;
-    keyNode = state.result;
-    skipSeparationSpace(state, true, nodeIndent);
-    ch = state.input.charCodeAt(state.position);
-    if ((isExplicitPair || state.line === _line) && ch === 58) {
+    _line = state2.line;
+    _lineStart = state2.lineStart;
+    _pos = state2.position;
+    composeNode(state2, nodeIndent, CONTEXT_FLOW_IN, false, true);
+    keyTag = state2.tag;
+    keyNode = state2.result;
+    skipSeparationSpace(state2, true, nodeIndent);
+    ch = state2.input.charCodeAt(state2.position);
+    if ((isExplicitPair || state2.line === _line) && ch === 58) {
       isPair = true;
-      ch = state.input.charCodeAt(++state.position);
-      skipSeparationSpace(state, true, nodeIndent);
-      composeNode(state, nodeIndent, CONTEXT_FLOW_IN, false, true);
-      valueNode = state.result;
+      ch = state2.input.charCodeAt(++state2.position);
+      skipSeparationSpace(state2, true, nodeIndent);
+      composeNode(state2, nodeIndent, CONTEXT_FLOW_IN, false, true);
+      valueNode = state2.result;
     }
     if (isMapping) {
-      storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, valueNode, _line, _lineStart, _pos);
+      storeMappingPair(state2, _result, overridableKeys, keyTag, keyNode, valueNode, _line, _lineStart, _pos);
     } else if (isPair) {
-      _result.push(storeMappingPair(state, null, overridableKeys, keyTag, keyNode, valueNode, _line, _lineStart, _pos));
+      _result.push(storeMappingPair(state2, null, overridableKeys, keyTag, keyNode, valueNode, _line, _lineStart, _pos));
     } else {
       _result.push(keyNode);
     }
-    skipSeparationSpace(state, true, nodeIndent);
-    ch = state.input.charCodeAt(state.position);
+    skipSeparationSpace(state2, true, nodeIndent);
+    ch = state2.input.charCodeAt(state2.position);
     if (ch === 44) {
       readNext = true;
-      ch = state.input.charCodeAt(++state.position);
+      ch = state2.input.charCodeAt(++state2.position);
     } else {
       readNext = false;
     }
   }
-  throwError(state, "unexpected end of the stream within a flow collection");
+  throwError(state2, "unexpected end of the stream within a flow collection");
 }
-function readBlockScalar(state, nodeIndent) {
+function readBlockScalar(state2, nodeIndent) {
   var captureStart, folding, chomping = CHOMPING_CLIP, didReadContent = false, detectedIndent = false, textIndent = nodeIndent, emptyLines = 0, atMoreIndented = false, tmp, ch;
-  ch = state.input.charCodeAt(state.position);
+  ch = state2.input.charCodeAt(state2.position);
   if (ch === 124) {
     folding = false;
   } else if (ch === 62) {
@@ -7547,24 +7547,24 @@ function readBlockScalar(state, nodeIndent) {
   } else {
     return false;
   }
-  state.kind = "scalar";
-  state.result = "";
+  state2.kind = "scalar";
+  state2.result = "";
   while (ch !== 0) {
-    ch = state.input.charCodeAt(++state.position);
+    ch = state2.input.charCodeAt(++state2.position);
     if (ch === 43 || ch === 45) {
       if (CHOMPING_CLIP === chomping) {
         chomping = ch === 43 ? CHOMPING_KEEP : CHOMPING_STRIP;
       } else {
-        throwError(state, "repeat of a chomping mode identifier");
+        throwError(state2, "repeat of a chomping mode identifier");
       }
     } else if ((tmp = fromDecimalCode(ch)) >= 0) {
       if (tmp === 0) {
-        throwError(state, "bad explicit indentation width of a block scalar; it cannot be less than one");
+        throwError(state2, "bad explicit indentation width of a block scalar; it cannot be less than one");
       } else if (!detectedIndent) {
         textIndent = nodeIndent + tmp - 1;
         detectedIndent = true;
       } else {
-        throwError(state, "repeat of an indentation width identifier");
+        throwError(state2, "repeat of an indentation width identifier");
       }
     } else {
       break;
@@ -7572,35 +7572,35 @@ function readBlockScalar(state, nodeIndent) {
   }
   if (is_WHITE_SPACE(ch)) {
     do {
-      ch = state.input.charCodeAt(++state.position);
+      ch = state2.input.charCodeAt(++state2.position);
     } while (is_WHITE_SPACE(ch));
     if (ch === 35) {
       do {
-        ch = state.input.charCodeAt(++state.position);
+        ch = state2.input.charCodeAt(++state2.position);
       } while (!is_EOL(ch) && ch !== 0);
     }
   }
   while (ch !== 0) {
-    readLineBreak(state);
-    state.lineIndent = 0;
-    ch = state.input.charCodeAt(state.position);
-    while ((!detectedIndent || state.lineIndent < textIndent) && ch === 32) {
-      state.lineIndent++;
-      ch = state.input.charCodeAt(++state.position);
+    readLineBreak(state2);
+    state2.lineIndent = 0;
+    ch = state2.input.charCodeAt(state2.position);
+    while ((!detectedIndent || state2.lineIndent < textIndent) && ch === 32) {
+      state2.lineIndent++;
+      ch = state2.input.charCodeAt(++state2.position);
     }
-    if (!detectedIndent && state.lineIndent > textIndent) {
-      textIndent = state.lineIndent;
+    if (!detectedIndent && state2.lineIndent > textIndent) {
+      textIndent = state2.lineIndent;
     }
     if (is_EOL(ch)) {
       emptyLines++;
       continue;
     }
-    if (state.lineIndent < textIndent) {
+    if (state2.lineIndent < textIndent) {
       if (chomping === CHOMPING_KEEP) {
-        state.result += common$1.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
+        state2.result += common$1.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
       } else if (chomping === CHOMPING_CLIP) {
         if (didReadContent) {
-          state.result += "\n";
+          state2.result += "\n";
         }
       }
       break;
@@ -7608,97 +7608,97 @@ function readBlockScalar(state, nodeIndent) {
     if (folding) {
       if (is_WHITE_SPACE(ch)) {
         atMoreIndented = true;
-        state.result += common$1.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
+        state2.result += common$1.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
       } else if (atMoreIndented) {
         atMoreIndented = false;
-        state.result += common$1.repeat("\n", emptyLines + 1);
+        state2.result += common$1.repeat("\n", emptyLines + 1);
       } else if (emptyLines === 0) {
         if (didReadContent) {
-          state.result += " ";
+          state2.result += " ";
         }
       } else {
-        state.result += common$1.repeat("\n", emptyLines);
+        state2.result += common$1.repeat("\n", emptyLines);
       }
     } else {
-      state.result += common$1.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
+      state2.result += common$1.repeat("\n", didReadContent ? 1 + emptyLines : emptyLines);
     }
     didReadContent = true;
     detectedIndent = true;
     emptyLines = 0;
-    captureStart = state.position;
+    captureStart = state2.position;
     while (!is_EOL(ch) && ch !== 0) {
-      ch = state.input.charCodeAt(++state.position);
+      ch = state2.input.charCodeAt(++state2.position);
     }
-    captureSegment(state, captureStart, state.position, false);
+    captureSegment(state2, captureStart, state2.position, false);
   }
   return true;
 }
-function readBlockSequence(state, nodeIndent) {
-  var _line, _tag = state.tag, _anchor = state.anchor, _result = [], following, detected = false, ch;
-  if (state.firstTabInLine !== -1) return false;
-  if (state.anchor !== null) {
-    state.anchorMap[state.anchor] = _result;
+function readBlockSequence(state2, nodeIndent) {
+  var _line, _tag = state2.tag, _anchor = state2.anchor, _result = [], following, detected = false, ch;
+  if (state2.firstTabInLine !== -1) return false;
+  if (state2.anchor !== null) {
+    state2.anchorMap[state2.anchor] = _result;
   }
-  ch = state.input.charCodeAt(state.position);
+  ch = state2.input.charCodeAt(state2.position);
   while (ch !== 0) {
-    if (state.firstTabInLine !== -1) {
-      state.position = state.firstTabInLine;
-      throwError(state, "tab characters must not be used in indentation");
+    if (state2.firstTabInLine !== -1) {
+      state2.position = state2.firstTabInLine;
+      throwError(state2, "tab characters must not be used in indentation");
     }
     if (ch !== 45) {
       break;
     }
-    following = state.input.charCodeAt(state.position + 1);
+    following = state2.input.charCodeAt(state2.position + 1);
     if (!is_WS_OR_EOL(following)) {
       break;
     }
     detected = true;
-    state.position++;
-    if (skipSeparationSpace(state, true, -1)) {
-      if (state.lineIndent <= nodeIndent) {
+    state2.position++;
+    if (skipSeparationSpace(state2, true, -1)) {
+      if (state2.lineIndent <= nodeIndent) {
         _result.push(null);
-        ch = state.input.charCodeAt(state.position);
+        ch = state2.input.charCodeAt(state2.position);
         continue;
       }
     }
-    _line = state.line;
-    composeNode(state, nodeIndent, CONTEXT_BLOCK_IN, false, true);
-    _result.push(state.result);
-    skipSeparationSpace(state, true, -1);
-    ch = state.input.charCodeAt(state.position);
-    if ((state.line === _line || state.lineIndent > nodeIndent) && ch !== 0) {
-      throwError(state, "bad indentation of a sequence entry");
-    } else if (state.lineIndent < nodeIndent) {
+    _line = state2.line;
+    composeNode(state2, nodeIndent, CONTEXT_BLOCK_IN, false, true);
+    _result.push(state2.result);
+    skipSeparationSpace(state2, true, -1);
+    ch = state2.input.charCodeAt(state2.position);
+    if ((state2.line === _line || state2.lineIndent > nodeIndent) && ch !== 0) {
+      throwError(state2, "bad indentation of a sequence entry");
+    } else if (state2.lineIndent < nodeIndent) {
       break;
     }
   }
   if (detected) {
-    state.tag = _tag;
-    state.anchor = _anchor;
-    state.kind = "sequence";
-    state.result = _result;
+    state2.tag = _tag;
+    state2.anchor = _anchor;
+    state2.kind = "sequence";
+    state2.result = _result;
     return true;
   }
   return false;
 }
-function readBlockMapping(state, nodeIndent, flowIndent) {
-  var following, allowCompact, _line, _keyLine, _keyLineStart, _keyPos, _tag = state.tag, _anchor = state.anchor, _result = {}, overridableKeys = /* @__PURE__ */ Object.create(null), keyTag = null, keyNode = null, valueNode = null, atExplicitKey = false, detected = false, ch;
-  if (state.firstTabInLine !== -1) return false;
-  if (state.anchor !== null) {
-    state.anchorMap[state.anchor] = _result;
+function readBlockMapping(state2, nodeIndent, flowIndent) {
+  var following, allowCompact, _line, _keyLine, _keyLineStart, _keyPos, _tag = state2.tag, _anchor = state2.anchor, _result = {}, overridableKeys = /* @__PURE__ */ Object.create(null), keyTag = null, keyNode = null, valueNode = null, atExplicitKey = false, detected = false, ch;
+  if (state2.firstTabInLine !== -1) return false;
+  if (state2.anchor !== null) {
+    state2.anchorMap[state2.anchor] = _result;
   }
-  ch = state.input.charCodeAt(state.position);
+  ch = state2.input.charCodeAt(state2.position);
   while (ch !== 0) {
-    if (!atExplicitKey && state.firstTabInLine !== -1) {
-      state.position = state.firstTabInLine;
-      throwError(state, "tab characters must not be used in indentation");
+    if (!atExplicitKey && state2.firstTabInLine !== -1) {
+      state2.position = state2.firstTabInLine;
+      throwError(state2, "tab characters must not be used in indentation");
     }
-    following = state.input.charCodeAt(state.position + 1);
-    _line = state.line;
+    following = state2.input.charCodeAt(state2.position + 1);
+    _line = state2.line;
     if ((ch === 63 || ch === 58) && is_WS_OR_EOL(following)) {
       if (ch === 63) {
         if (atExplicitKey) {
-          storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, null, _keyLine, _keyLineStart, _keyPos);
+          storeMappingPair(state2, _result, overridableKeys, keyTag, keyNode, null, _keyLine, _keyLineStart, _keyPos);
           keyTag = keyNode = valueNode = null;
         }
         detected = true;
@@ -7708,229 +7708,229 @@ function readBlockMapping(state, nodeIndent, flowIndent) {
         atExplicitKey = false;
         allowCompact = true;
       } else {
-        throwError(state, "incomplete explicit mapping pair; a key node is missed; or followed by a non-tabulated empty line");
+        throwError(state2, "incomplete explicit mapping pair; a key node is missed; or followed by a non-tabulated empty line");
       }
-      state.position += 1;
+      state2.position += 1;
       ch = following;
     } else {
-      _keyLine = state.line;
-      _keyLineStart = state.lineStart;
-      _keyPos = state.position;
-      if (!composeNode(state, flowIndent, CONTEXT_FLOW_OUT, false, true)) {
+      _keyLine = state2.line;
+      _keyLineStart = state2.lineStart;
+      _keyPos = state2.position;
+      if (!composeNode(state2, flowIndent, CONTEXT_FLOW_OUT, false, true)) {
         break;
       }
-      if (state.line === _line) {
-        ch = state.input.charCodeAt(state.position);
+      if (state2.line === _line) {
+        ch = state2.input.charCodeAt(state2.position);
         while (is_WHITE_SPACE(ch)) {
-          ch = state.input.charCodeAt(++state.position);
+          ch = state2.input.charCodeAt(++state2.position);
         }
         if (ch === 58) {
-          ch = state.input.charCodeAt(++state.position);
+          ch = state2.input.charCodeAt(++state2.position);
           if (!is_WS_OR_EOL(ch)) {
-            throwError(state, "a whitespace character is expected after the key-value separator within a block mapping");
+            throwError(state2, "a whitespace character is expected after the key-value separator within a block mapping");
           }
           if (atExplicitKey) {
-            storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, null, _keyLine, _keyLineStart, _keyPos);
+            storeMappingPair(state2, _result, overridableKeys, keyTag, keyNode, null, _keyLine, _keyLineStart, _keyPos);
             keyTag = keyNode = valueNode = null;
           }
           detected = true;
           atExplicitKey = false;
           allowCompact = false;
-          keyTag = state.tag;
-          keyNode = state.result;
+          keyTag = state2.tag;
+          keyNode = state2.result;
         } else if (detected) {
-          throwError(state, "can not read an implicit mapping pair; a colon is missed");
+          throwError(state2, "can not read an implicit mapping pair; a colon is missed");
         } else {
-          state.tag = _tag;
-          state.anchor = _anchor;
+          state2.tag = _tag;
+          state2.anchor = _anchor;
           return true;
         }
       } else if (detected) {
-        throwError(state, "can not read a block mapping entry; a multiline key may not be an implicit key");
+        throwError(state2, "can not read a block mapping entry; a multiline key may not be an implicit key");
       } else {
-        state.tag = _tag;
-        state.anchor = _anchor;
+        state2.tag = _tag;
+        state2.anchor = _anchor;
         return true;
       }
     }
-    if (state.line === _line || state.lineIndent > nodeIndent) {
+    if (state2.line === _line || state2.lineIndent > nodeIndent) {
       if (atExplicitKey) {
-        _keyLine = state.line;
-        _keyLineStart = state.lineStart;
-        _keyPos = state.position;
+        _keyLine = state2.line;
+        _keyLineStart = state2.lineStart;
+        _keyPos = state2.position;
       }
-      if (composeNode(state, nodeIndent, CONTEXT_BLOCK_OUT, true, allowCompact)) {
+      if (composeNode(state2, nodeIndent, CONTEXT_BLOCK_OUT, true, allowCompact)) {
         if (atExplicitKey) {
-          keyNode = state.result;
+          keyNode = state2.result;
         } else {
-          valueNode = state.result;
+          valueNode = state2.result;
         }
       }
       if (!atExplicitKey) {
-        storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, valueNode, _keyLine, _keyLineStart, _keyPos);
+        storeMappingPair(state2, _result, overridableKeys, keyTag, keyNode, valueNode, _keyLine, _keyLineStart, _keyPos);
         keyTag = keyNode = valueNode = null;
       }
-      skipSeparationSpace(state, true, -1);
-      ch = state.input.charCodeAt(state.position);
+      skipSeparationSpace(state2, true, -1);
+      ch = state2.input.charCodeAt(state2.position);
     }
-    if ((state.line === _line || state.lineIndent > nodeIndent) && ch !== 0) {
-      throwError(state, "bad indentation of a mapping entry");
-    } else if (state.lineIndent < nodeIndent) {
+    if ((state2.line === _line || state2.lineIndent > nodeIndent) && ch !== 0) {
+      throwError(state2, "bad indentation of a mapping entry");
+    } else if (state2.lineIndent < nodeIndent) {
       break;
     }
   }
   if (atExplicitKey) {
-    storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, null, _keyLine, _keyLineStart, _keyPos);
+    storeMappingPair(state2, _result, overridableKeys, keyTag, keyNode, null, _keyLine, _keyLineStart, _keyPos);
   }
   if (detected) {
-    state.tag = _tag;
-    state.anchor = _anchor;
-    state.kind = "mapping";
-    state.result = _result;
+    state2.tag = _tag;
+    state2.anchor = _anchor;
+    state2.kind = "mapping";
+    state2.result = _result;
   }
   return detected;
 }
-function readTagProperty(state) {
+function readTagProperty(state2) {
   var _position, isVerbatim = false, isNamed = false, tagHandle, tagName, ch;
-  ch = state.input.charCodeAt(state.position);
+  ch = state2.input.charCodeAt(state2.position);
   if (ch !== 33) return false;
-  if (state.tag !== null) {
-    throwError(state, "duplication of a tag property");
+  if (state2.tag !== null) {
+    throwError(state2, "duplication of a tag property");
   }
-  ch = state.input.charCodeAt(++state.position);
+  ch = state2.input.charCodeAt(++state2.position);
   if (ch === 60) {
     isVerbatim = true;
-    ch = state.input.charCodeAt(++state.position);
+    ch = state2.input.charCodeAt(++state2.position);
   } else if (ch === 33) {
     isNamed = true;
     tagHandle = "!!";
-    ch = state.input.charCodeAt(++state.position);
+    ch = state2.input.charCodeAt(++state2.position);
   } else {
     tagHandle = "!";
   }
-  _position = state.position;
+  _position = state2.position;
   if (isVerbatim) {
     do {
-      ch = state.input.charCodeAt(++state.position);
+      ch = state2.input.charCodeAt(++state2.position);
     } while (ch !== 0 && ch !== 62);
-    if (state.position < state.length) {
-      tagName = state.input.slice(_position, state.position);
-      ch = state.input.charCodeAt(++state.position);
+    if (state2.position < state2.length) {
+      tagName = state2.input.slice(_position, state2.position);
+      ch = state2.input.charCodeAt(++state2.position);
     } else {
-      throwError(state, "unexpected end of the stream within a verbatim tag");
+      throwError(state2, "unexpected end of the stream within a verbatim tag");
     }
   } else {
     while (ch !== 0 && !is_WS_OR_EOL(ch)) {
       if (ch === 33) {
         if (!isNamed) {
-          tagHandle = state.input.slice(_position - 1, state.position + 1);
+          tagHandle = state2.input.slice(_position - 1, state2.position + 1);
           if (!PATTERN_TAG_HANDLE.test(tagHandle)) {
-            throwError(state, "named tag handle cannot contain such characters");
+            throwError(state2, "named tag handle cannot contain such characters");
           }
           isNamed = true;
-          _position = state.position + 1;
+          _position = state2.position + 1;
         } else {
-          throwError(state, "tag suffix cannot contain exclamation marks");
+          throwError(state2, "tag suffix cannot contain exclamation marks");
         }
       }
-      ch = state.input.charCodeAt(++state.position);
+      ch = state2.input.charCodeAt(++state2.position);
     }
-    tagName = state.input.slice(_position, state.position);
+    tagName = state2.input.slice(_position, state2.position);
     if (PATTERN_FLOW_INDICATORS.test(tagName)) {
-      throwError(state, "tag suffix cannot contain flow indicator characters");
+      throwError(state2, "tag suffix cannot contain flow indicator characters");
     }
   }
   if (tagName && !PATTERN_TAG_URI.test(tagName)) {
-    throwError(state, "tag name cannot contain such characters: " + tagName);
+    throwError(state2, "tag name cannot contain such characters: " + tagName);
   }
   try {
     tagName = decodeURIComponent(tagName);
   } catch (err) {
-    throwError(state, "tag name is malformed: " + tagName);
+    throwError(state2, "tag name is malformed: " + tagName);
   }
   if (isVerbatim) {
-    state.tag = tagName;
-  } else if (_hasOwnProperty$1.call(state.tagMap, tagHandle)) {
-    state.tag = state.tagMap[tagHandle] + tagName;
+    state2.tag = tagName;
+  } else if (_hasOwnProperty$1.call(state2.tagMap, tagHandle)) {
+    state2.tag = state2.tagMap[tagHandle] + tagName;
   } else if (tagHandle === "!") {
-    state.tag = "!" + tagName;
+    state2.tag = "!" + tagName;
   } else if (tagHandle === "!!") {
-    state.tag = "tag:yaml.org,2002:" + tagName;
+    state2.tag = "tag:yaml.org,2002:" + tagName;
   } else {
-    throwError(state, 'undeclared tag handle "' + tagHandle + '"');
+    throwError(state2, 'undeclared tag handle "' + tagHandle + '"');
   }
   return true;
 }
-function readAnchorProperty(state) {
+function readAnchorProperty(state2) {
   var _position, ch;
-  ch = state.input.charCodeAt(state.position);
+  ch = state2.input.charCodeAt(state2.position);
   if (ch !== 38) return false;
-  if (state.anchor !== null) {
-    throwError(state, "duplication of an anchor property");
+  if (state2.anchor !== null) {
+    throwError(state2, "duplication of an anchor property");
   }
-  ch = state.input.charCodeAt(++state.position);
-  _position = state.position;
+  ch = state2.input.charCodeAt(++state2.position);
+  _position = state2.position;
   while (ch !== 0 && !is_WS_OR_EOL(ch) && !is_FLOW_INDICATOR(ch)) {
-    ch = state.input.charCodeAt(++state.position);
+    ch = state2.input.charCodeAt(++state2.position);
   }
-  if (state.position === _position) {
-    throwError(state, "name of an anchor node must contain at least one character");
+  if (state2.position === _position) {
+    throwError(state2, "name of an anchor node must contain at least one character");
   }
-  state.anchor = state.input.slice(_position, state.position);
+  state2.anchor = state2.input.slice(_position, state2.position);
   return true;
 }
-function readAlias(state) {
+function readAlias(state2) {
   var _position, alias, ch;
-  ch = state.input.charCodeAt(state.position);
+  ch = state2.input.charCodeAt(state2.position);
   if (ch !== 42) return false;
-  ch = state.input.charCodeAt(++state.position);
-  _position = state.position;
+  ch = state2.input.charCodeAt(++state2.position);
+  _position = state2.position;
   while (ch !== 0 && !is_WS_OR_EOL(ch) && !is_FLOW_INDICATOR(ch)) {
-    ch = state.input.charCodeAt(++state.position);
+    ch = state2.input.charCodeAt(++state2.position);
   }
-  if (state.position === _position) {
-    throwError(state, "name of an alias node must contain at least one character");
+  if (state2.position === _position) {
+    throwError(state2, "name of an alias node must contain at least one character");
   }
-  alias = state.input.slice(_position, state.position);
-  if (!_hasOwnProperty$1.call(state.anchorMap, alias)) {
-    throwError(state, 'unidentified alias "' + alias + '"');
+  alias = state2.input.slice(_position, state2.position);
+  if (!_hasOwnProperty$1.call(state2.anchorMap, alias)) {
+    throwError(state2, 'unidentified alias "' + alias + '"');
   }
-  state.result = state.anchorMap[alias];
-  skipSeparationSpace(state, true, -1);
+  state2.result = state2.anchorMap[alias];
+  skipSeparationSpace(state2, true, -1);
   return true;
 }
-function composeNode(state, parentIndent, nodeContext, allowToSeek, allowCompact) {
+function composeNode(state2, parentIndent, nodeContext, allowToSeek, allowCompact) {
   var allowBlockStyles, allowBlockScalars, allowBlockCollections, indentStatus = 1, atNewLine = false, hasContent = false, typeIndex, typeQuantity, typeList, type2, flowIndent, blockIndent;
-  if (state.listener !== null) {
-    state.listener("open", state);
+  if (state2.listener !== null) {
+    state2.listener("open", state2);
   }
-  state.tag = null;
-  state.anchor = null;
-  state.kind = null;
-  state.result = null;
+  state2.tag = null;
+  state2.anchor = null;
+  state2.kind = null;
+  state2.result = null;
   allowBlockStyles = allowBlockScalars = allowBlockCollections = CONTEXT_BLOCK_OUT === nodeContext || CONTEXT_BLOCK_IN === nodeContext;
   if (allowToSeek) {
-    if (skipSeparationSpace(state, true, -1)) {
+    if (skipSeparationSpace(state2, true, -1)) {
       atNewLine = true;
-      if (state.lineIndent > parentIndent) {
+      if (state2.lineIndent > parentIndent) {
         indentStatus = 1;
-      } else if (state.lineIndent === parentIndent) {
+      } else if (state2.lineIndent === parentIndent) {
         indentStatus = 0;
-      } else if (state.lineIndent < parentIndent) {
+      } else if (state2.lineIndent < parentIndent) {
         indentStatus = -1;
       }
     }
   }
   if (indentStatus === 1) {
-    while (readTagProperty(state) || readAnchorProperty(state)) {
-      if (skipSeparationSpace(state, true, -1)) {
+    while (readTagProperty(state2) || readAnchorProperty(state2)) {
+      if (skipSeparationSpace(state2, true, -1)) {
         atNewLine = true;
         allowBlockCollections = allowBlockStyles;
-        if (state.lineIndent > parentIndent) {
+        if (state2.lineIndent > parentIndent) {
           indentStatus = 1;
-        } else if (state.lineIndent === parentIndent) {
+        } else if (state2.lineIndent === parentIndent) {
           indentStatus = 0;
-        } else if (state.lineIndent < parentIndent) {
+        } else if (state2.lineIndent < parentIndent) {
           indentStatus = -1;
         }
       } else {
@@ -7947,153 +7947,153 @@ function composeNode(state, parentIndent, nodeContext, allowToSeek, allowCompact
     } else {
       flowIndent = parentIndent + 1;
     }
-    blockIndent = state.position - state.lineStart;
+    blockIndent = state2.position - state2.lineStart;
     if (indentStatus === 1) {
-      if (allowBlockCollections && (readBlockSequence(state, blockIndent) || readBlockMapping(state, blockIndent, flowIndent)) || readFlowCollection(state, flowIndent)) {
+      if (allowBlockCollections && (readBlockSequence(state2, blockIndent) || readBlockMapping(state2, blockIndent, flowIndent)) || readFlowCollection(state2, flowIndent)) {
         hasContent = true;
       } else {
-        if (allowBlockScalars && readBlockScalar(state, flowIndent) || readSingleQuotedScalar(state, flowIndent) || readDoubleQuotedScalar(state, flowIndent)) {
+        if (allowBlockScalars && readBlockScalar(state2, flowIndent) || readSingleQuotedScalar(state2, flowIndent) || readDoubleQuotedScalar(state2, flowIndent)) {
           hasContent = true;
-        } else if (readAlias(state)) {
+        } else if (readAlias(state2)) {
           hasContent = true;
-          if (state.tag !== null || state.anchor !== null) {
-            throwError(state, "alias node should not have any properties");
+          if (state2.tag !== null || state2.anchor !== null) {
+            throwError(state2, "alias node should not have any properties");
           }
-        } else if (readPlainScalar(state, flowIndent, CONTEXT_FLOW_IN === nodeContext)) {
+        } else if (readPlainScalar(state2, flowIndent, CONTEXT_FLOW_IN === nodeContext)) {
           hasContent = true;
-          if (state.tag === null) {
-            state.tag = "?";
+          if (state2.tag === null) {
+            state2.tag = "?";
           }
         }
-        if (state.anchor !== null) {
-          state.anchorMap[state.anchor] = state.result;
+        if (state2.anchor !== null) {
+          state2.anchorMap[state2.anchor] = state2.result;
         }
       }
     } else if (indentStatus === 0) {
-      hasContent = allowBlockCollections && readBlockSequence(state, blockIndent);
+      hasContent = allowBlockCollections && readBlockSequence(state2, blockIndent);
     }
   }
-  if (state.tag === null) {
-    if (state.anchor !== null) {
-      state.anchorMap[state.anchor] = state.result;
+  if (state2.tag === null) {
+    if (state2.anchor !== null) {
+      state2.anchorMap[state2.anchor] = state2.result;
     }
-  } else if (state.tag === "?") {
-    if (state.result !== null && state.kind !== "scalar") {
-      throwError(state, 'unacceptable node kind for !<?> tag; it should be "scalar", not "' + state.kind + '"');
+  } else if (state2.tag === "?") {
+    if (state2.result !== null && state2.kind !== "scalar") {
+      throwError(state2, 'unacceptable node kind for !<?> tag; it should be "scalar", not "' + state2.kind + '"');
     }
-    for (typeIndex = 0, typeQuantity = state.implicitTypes.length; typeIndex < typeQuantity; typeIndex += 1) {
-      type2 = state.implicitTypes[typeIndex];
-      if (type2.resolve(state.result)) {
-        state.result = type2.construct(state.result);
-        state.tag = type2.tag;
-        if (state.anchor !== null) {
-          state.anchorMap[state.anchor] = state.result;
+    for (typeIndex = 0, typeQuantity = state2.implicitTypes.length; typeIndex < typeQuantity; typeIndex += 1) {
+      type2 = state2.implicitTypes[typeIndex];
+      if (type2.resolve(state2.result)) {
+        state2.result = type2.construct(state2.result);
+        state2.tag = type2.tag;
+        if (state2.anchor !== null) {
+          state2.anchorMap[state2.anchor] = state2.result;
         }
         break;
       }
     }
-  } else if (state.tag !== "!") {
-    if (_hasOwnProperty$1.call(state.typeMap[state.kind || "fallback"], state.tag)) {
-      type2 = state.typeMap[state.kind || "fallback"][state.tag];
+  } else if (state2.tag !== "!") {
+    if (_hasOwnProperty$1.call(state2.typeMap[state2.kind || "fallback"], state2.tag)) {
+      type2 = state2.typeMap[state2.kind || "fallback"][state2.tag];
     } else {
       type2 = null;
-      typeList = state.typeMap.multi[state.kind || "fallback"];
+      typeList = state2.typeMap.multi[state2.kind || "fallback"];
       for (typeIndex = 0, typeQuantity = typeList.length; typeIndex < typeQuantity; typeIndex += 1) {
-        if (state.tag.slice(0, typeList[typeIndex].tag.length) === typeList[typeIndex].tag) {
+        if (state2.tag.slice(0, typeList[typeIndex].tag.length) === typeList[typeIndex].tag) {
           type2 = typeList[typeIndex];
           break;
         }
       }
     }
     if (!type2) {
-      throwError(state, "unknown tag !<" + state.tag + ">");
+      throwError(state2, "unknown tag !<" + state2.tag + ">");
     }
-    if (state.result !== null && type2.kind !== state.kind) {
-      throwError(state, "unacceptable node kind for !<" + state.tag + '> tag; it should be "' + type2.kind + '", not "' + state.kind + '"');
+    if (state2.result !== null && type2.kind !== state2.kind) {
+      throwError(state2, "unacceptable node kind for !<" + state2.tag + '> tag; it should be "' + type2.kind + '", not "' + state2.kind + '"');
     }
-    if (!type2.resolve(state.result, state.tag)) {
-      throwError(state, "cannot resolve a node with !<" + state.tag + "> explicit tag");
+    if (!type2.resolve(state2.result, state2.tag)) {
+      throwError(state2, "cannot resolve a node with !<" + state2.tag + "> explicit tag");
     } else {
-      state.result = type2.construct(state.result, state.tag);
-      if (state.anchor !== null) {
-        state.anchorMap[state.anchor] = state.result;
+      state2.result = type2.construct(state2.result, state2.tag);
+      if (state2.anchor !== null) {
+        state2.anchorMap[state2.anchor] = state2.result;
       }
     }
   }
-  if (state.listener !== null) {
-    state.listener("close", state);
+  if (state2.listener !== null) {
+    state2.listener("close", state2);
   }
-  return state.tag !== null || state.anchor !== null || hasContent;
+  return state2.tag !== null || state2.anchor !== null || hasContent;
 }
-function readDocument(state) {
-  var documentStart = state.position, _position, directiveName, directiveArgs, hasDirectives = false, ch;
-  state.version = null;
-  state.checkLineBreaks = state.legacy;
-  state.tagMap = /* @__PURE__ */ Object.create(null);
-  state.anchorMap = /* @__PURE__ */ Object.create(null);
-  while ((ch = state.input.charCodeAt(state.position)) !== 0) {
-    skipSeparationSpace(state, true, -1);
-    ch = state.input.charCodeAt(state.position);
-    if (state.lineIndent > 0 || ch !== 37) {
+function readDocument(state2) {
+  var documentStart = state2.position, _position, directiveName, directiveArgs, hasDirectives = false, ch;
+  state2.version = null;
+  state2.checkLineBreaks = state2.legacy;
+  state2.tagMap = /* @__PURE__ */ Object.create(null);
+  state2.anchorMap = /* @__PURE__ */ Object.create(null);
+  while ((ch = state2.input.charCodeAt(state2.position)) !== 0) {
+    skipSeparationSpace(state2, true, -1);
+    ch = state2.input.charCodeAt(state2.position);
+    if (state2.lineIndent > 0 || ch !== 37) {
       break;
     }
     hasDirectives = true;
-    ch = state.input.charCodeAt(++state.position);
-    _position = state.position;
+    ch = state2.input.charCodeAt(++state2.position);
+    _position = state2.position;
     while (ch !== 0 && !is_WS_OR_EOL(ch)) {
-      ch = state.input.charCodeAt(++state.position);
+      ch = state2.input.charCodeAt(++state2.position);
     }
-    directiveName = state.input.slice(_position, state.position);
+    directiveName = state2.input.slice(_position, state2.position);
     directiveArgs = [];
     if (directiveName.length < 1) {
-      throwError(state, "directive name must not be less than one character in length");
+      throwError(state2, "directive name must not be less than one character in length");
     }
     while (ch !== 0) {
       while (is_WHITE_SPACE(ch)) {
-        ch = state.input.charCodeAt(++state.position);
+        ch = state2.input.charCodeAt(++state2.position);
       }
       if (ch === 35) {
         do {
-          ch = state.input.charCodeAt(++state.position);
+          ch = state2.input.charCodeAt(++state2.position);
         } while (ch !== 0 && !is_EOL(ch));
         break;
       }
       if (is_EOL(ch)) break;
-      _position = state.position;
+      _position = state2.position;
       while (ch !== 0 && !is_WS_OR_EOL(ch)) {
-        ch = state.input.charCodeAt(++state.position);
+        ch = state2.input.charCodeAt(++state2.position);
       }
-      directiveArgs.push(state.input.slice(_position, state.position));
+      directiveArgs.push(state2.input.slice(_position, state2.position));
     }
-    if (ch !== 0) readLineBreak(state);
+    if (ch !== 0) readLineBreak(state2);
     if (_hasOwnProperty$1.call(directiveHandlers, directiveName)) {
-      directiveHandlers[directiveName](state, directiveName, directiveArgs);
+      directiveHandlers[directiveName](state2, directiveName, directiveArgs);
     } else {
-      throwWarning(state, 'unknown document directive "' + directiveName + '"');
+      throwWarning(state2, 'unknown document directive "' + directiveName + '"');
     }
   }
-  skipSeparationSpace(state, true, -1);
-  if (state.lineIndent === 0 && state.input.charCodeAt(state.position) === 45 && state.input.charCodeAt(state.position + 1) === 45 && state.input.charCodeAt(state.position + 2) === 45) {
-    state.position += 3;
-    skipSeparationSpace(state, true, -1);
+  skipSeparationSpace(state2, true, -1);
+  if (state2.lineIndent === 0 && state2.input.charCodeAt(state2.position) === 45 && state2.input.charCodeAt(state2.position + 1) === 45 && state2.input.charCodeAt(state2.position + 2) === 45) {
+    state2.position += 3;
+    skipSeparationSpace(state2, true, -1);
   } else if (hasDirectives) {
-    throwError(state, "directives end mark is expected");
+    throwError(state2, "directives end mark is expected");
   }
-  composeNode(state, state.lineIndent - 1, CONTEXT_BLOCK_OUT, false, true);
-  skipSeparationSpace(state, true, -1);
-  if (state.checkLineBreaks && PATTERN_NON_ASCII_LINE_BREAKS.test(state.input.slice(documentStart, state.position))) {
-    throwWarning(state, "non-ASCII line breaks are interpreted as content");
+  composeNode(state2, state2.lineIndent - 1, CONTEXT_BLOCK_OUT, false, true);
+  skipSeparationSpace(state2, true, -1);
+  if (state2.checkLineBreaks && PATTERN_NON_ASCII_LINE_BREAKS.test(state2.input.slice(documentStart, state2.position))) {
+    throwWarning(state2, "non-ASCII line breaks are interpreted as content");
   }
-  state.documents.push(state.result);
-  if (state.position === state.lineStart && testDocumentSeparator(state)) {
-    if (state.input.charCodeAt(state.position) === 46) {
-      state.position += 3;
-      skipSeparationSpace(state, true, -1);
+  state2.documents.push(state2.result);
+  if (state2.position === state2.lineStart && testDocumentSeparator(state2)) {
+    if (state2.input.charCodeAt(state2.position) === 46) {
+      state2.position += 3;
+      skipSeparationSpace(state2, true, -1);
     }
     return;
   }
-  if (state.position < state.length - 1) {
-    throwError(state, "end of the stream or a document separator is expected");
+  if (state2.position < state2.length - 1) {
+    throwError(state2, "end of the stream or a document separator is expected");
   } else {
     return;
   }
@@ -8109,21 +8109,21 @@ function loadDocuments(input, options) {
       input = input.slice(1);
     }
   }
-  var state = new State$1(input, options);
+  var state2 = new State$1(input, options);
   var nullpos = input.indexOf("\0");
   if (nullpos !== -1) {
-    state.position = nullpos;
-    throwError(state, "null byte is not allowed in input");
+    state2.position = nullpos;
+    throwError(state2, "null byte is not allowed in input");
   }
-  state.input += "\0";
-  while (state.input.charCodeAt(state.position) === 32) {
-    state.lineIndent += 1;
-    state.position += 1;
+  state2.input += "\0";
+  while (state2.input.charCodeAt(state2.position) === 32) {
+    state2.lineIndent += 1;
+    state2.position += 1;
   }
-  while (state.position < state.length - 1) {
-    readDocument(state);
+  while (state2.position < state2.length - 1) {
+    readDocument(state2);
   }
-  return state.documents;
+  return state2.documents;
 }
 function loadAll(input, iterator, options) {
   if (iterator !== null && typeof iterator === "object" && typeof options === "undefined") {
@@ -8290,13 +8290,13 @@ function indentString(string, spaces) {
   }
   return result;
 }
-function generateNextLine(state, level) {
-  return "\n" + common.repeat(" ", state.indent * level);
+function generateNextLine(state2, level) {
+  return "\n" + common.repeat(" ", state2.indent * level);
 }
-function testImplicitResolving(state, str2) {
+function testImplicitResolving(state2, str2) {
   var index, length, type2;
-  for (index = 0, length = state.implicitTypes.length; index < length; index += 1) {
-    type2 = state.implicitTypes[index];
+  for (index = 0, length = state2.implicitTypes.length; index < length; index += 1) {
+    type2 = state2.implicitTypes[index];
     if (type2.resolve(str2)) {
       return true;
     }
@@ -8394,30 +8394,30 @@ function chooseScalarStyle(string, singleLineOnly, indentPerLevel, lineWidth, te
   }
   return quotingType === QUOTING_TYPE_DOUBLE ? STYLE_DOUBLE : STYLE_SINGLE;
 }
-function writeScalar(state, string, level, iskey, inblock) {
-  state.dump = function() {
+function writeScalar(state2, string, level, iskey, inblock) {
+  state2.dump = function() {
     if (string.length === 0) {
-      return state.quotingType === QUOTING_TYPE_DOUBLE ? '""' : "''";
+      return state2.quotingType === QUOTING_TYPE_DOUBLE ? '""' : "''";
     }
-    if (!state.noCompatMode) {
+    if (!state2.noCompatMode) {
       if (DEPRECATED_BOOLEANS_SYNTAX.indexOf(string) !== -1 || DEPRECATED_BASE60_SYNTAX.test(string)) {
-        return state.quotingType === QUOTING_TYPE_DOUBLE ? '"' + string + '"' : "'" + string + "'";
+        return state2.quotingType === QUOTING_TYPE_DOUBLE ? '"' + string + '"' : "'" + string + "'";
       }
     }
-    var indent = state.indent * Math.max(1, level);
-    var lineWidth = state.lineWidth === -1 ? -1 : Math.max(Math.min(state.lineWidth, 40), state.lineWidth - indent);
-    var singleLineOnly = iskey || state.flowLevel > -1 && level >= state.flowLevel;
+    var indent = state2.indent * Math.max(1, level);
+    var lineWidth = state2.lineWidth === -1 ? -1 : Math.max(Math.min(state2.lineWidth, 40), state2.lineWidth - indent);
+    var singleLineOnly = iskey || state2.flowLevel > -1 && level >= state2.flowLevel;
     function testAmbiguity(string2) {
-      return testImplicitResolving(state, string2);
+      return testImplicitResolving(state2, string2);
     }
     switch (chooseScalarStyle(
       string,
       singleLineOnly,
-      state.indent,
+      state2.indent,
       lineWidth,
       testAmbiguity,
-      state.quotingType,
-      state.forceQuotes && !iskey,
+      state2.quotingType,
+      state2.forceQuotes && !iskey,
       inblock
     )) {
       case STYLE_PLAIN:
@@ -8425,9 +8425,9 @@ function writeScalar(state, string, level, iskey, inblock) {
       case STYLE_SINGLE:
         return "'" + string.replace(/'/g, "''") + "'";
       case STYLE_LITERAL:
-        return "|" + blockHeader(string, state.indent) + dropEndingNewline(indentString(string, indent));
+        return "|" + blockHeader(string, state2.indent) + dropEndingNewline(indentString(string, indent));
       case STYLE_FOLDED:
-        return ">" + blockHeader(string, state.indent) + dropEndingNewline(indentString(foldString(string, lineWidth), indent));
+        return ">" + blockHeader(string, state2.indent) + dropEndingNewline(indentString(foldString(string, lineWidth), indent));
       case STYLE_DOUBLE:
         return '"' + escapeString(string) + '"';
       default:
@@ -8503,133 +8503,133 @@ function escapeString(string) {
   }
   return result;
 }
-function writeFlowSequence(state, level, object) {
-  var _result = "", _tag = state.tag, index, length, value;
+function writeFlowSequence(state2, level, object) {
+  var _result = "", _tag = state2.tag, index, length, value;
   for (index = 0, length = object.length; index < length; index += 1) {
     value = object[index];
-    if (state.replacer) {
-      value = state.replacer.call(object, String(index), value);
+    if (state2.replacer) {
+      value = state2.replacer.call(object, String(index), value);
     }
-    if (writeNode(state, level, value, false, false) || typeof value === "undefined" && writeNode(state, level, null, false, false)) {
-      if (_result !== "") _result += "," + (!state.condenseFlow ? " " : "");
-      _result += state.dump;
+    if (writeNode(state2, level, value, false, false) || typeof value === "undefined" && writeNode(state2, level, null, false, false)) {
+      if (_result !== "") _result += "," + (!state2.condenseFlow ? " " : "");
+      _result += state2.dump;
     }
   }
-  state.tag = _tag;
-  state.dump = "[" + _result + "]";
+  state2.tag = _tag;
+  state2.dump = "[" + _result + "]";
 }
-function writeBlockSequence(state, level, object, compact) {
-  var _result = "", _tag = state.tag, index, length, value;
+function writeBlockSequence(state2, level, object, compact) {
+  var _result = "", _tag = state2.tag, index, length, value;
   for (index = 0, length = object.length; index < length; index += 1) {
     value = object[index];
-    if (state.replacer) {
-      value = state.replacer.call(object, String(index), value);
+    if (state2.replacer) {
+      value = state2.replacer.call(object, String(index), value);
     }
-    if (writeNode(state, level + 1, value, true, true, false, true) || typeof value === "undefined" && writeNode(state, level + 1, null, true, true, false, true)) {
+    if (writeNode(state2, level + 1, value, true, true, false, true) || typeof value === "undefined" && writeNode(state2, level + 1, null, true, true, false, true)) {
       if (!compact || _result !== "") {
-        _result += generateNextLine(state, level);
+        _result += generateNextLine(state2, level);
       }
-      if (state.dump && CHAR_LINE_FEED === state.dump.charCodeAt(0)) {
+      if (state2.dump && CHAR_LINE_FEED === state2.dump.charCodeAt(0)) {
         _result += "-";
       } else {
         _result += "- ";
       }
-      _result += state.dump;
+      _result += state2.dump;
     }
   }
-  state.tag = _tag;
-  state.dump = _result || "[]";
+  state2.tag = _tag;
+  state2.dump = _result || "[]";
 }
-function writeFlowMapping(state, level, object) {
-  var _result = "", _tag = state.tag, objectKeyList = Object.keys(object), index, length, objectKey, objectValue, pairBuffer;
+function writeFlowMapping(state2, level, object) {
+  var _result = "", _tag = state2.tag, objectKeyList = Object.keys(object), index, length, objectKey, objectValue, pairBuffer;
   for (index = 0, length = objectKeyList.length; index < length; index += 1) {
     pairBuffer = "";
     if (_result !== "") pairBuffer += ", ";
-    if (state.condenseFlow) pairBuffer += '"';
+    if (state2.condenseFlow) pairBuffer += '"';
     objectKey = objectKeyList[index];
     objectValue = object[objectKey];
-    if (state.replacer) {
-      objectValue = state.replacer.call(object, objectKey, objectValue);
+    if (state2.replacer) {
+      objectValue = state2.replacer.call(object, objectKey, objectValue);
     }
-    if (!writeNode(state, level, objectKey, false, false)) {
+    if (!writeNode(state2, level, objectKey, false, false)) {
       continue;
     }
-    if (state.dump.length > 1024) pairBuffer += "? ";
-    pairBuffer += state.dump + (state.condenseFlow ? '"' : "") + ":" + (state.condenseFlow ? "" : " ");
-    if (!writeNode(state, level, objectValue, false, false)) {
+    if (state2.dump.length > 1024) pairBuffer += "? ";
+    pairBuffer += state2.dump + (state2.condenseFlow ? '"' : "") + ":" + (state2.condenseFlow ? "" : " ");
+    if (!writeNode(state2, level, objectValue, false, false)) {
       continue;
     }
-    pairBuffer += state.dump;
+    pairBuffer += state2.dump;
     _result += pairBuffer;
   }
-  state.tag = _tag;
-  state.dump = "{" + _result + "}";
+  state2.tag = _tag;
+  state2.dump = "{" + _result + "}";
 }
-function writeBlockMapping(state, level, object, compact) {
-  var _result = "", _tag = state.tag, objectKeyList = Object.keys(object), index, length, objectKey, objectValue, explicitPair, pairBuffer;
-  if (state.sortKeys === true) {
+function writeBlockMapping(state2, level, object, compact) {
+  var _result = "", _tag = state2.tag, objectKeyList = Object.keys(object), index, length, objectKey, objectValue, explicitPair, pairBuffer;
+  if (state2.sortKeys === true) {
     objectKeyList.sort();
-  } else if (typeof state.sortKeys === "function") {
-    objectKeyList.sort(state.sortKeys);
-  } else if (state.sortKeys) {
+  } else if (typeof state2.sortKeys === "function") {
+    objectKeyList.sort(state2.sortKeys);
+  } else if (state2.sortKeys) {
     throw new YAMLException("sortKeys must be a boolean or a function");
   }
   for (index = 0, length = objectKeyList.length; index < length; index += 1) {
     pairBuffer = "";
     if (!compact || _result !== "") {
-      pairBuffer += generateNextLine(state, level);
+      pairBuffer += generateNextLine(state2, level);
     }
     objectKey = objectKeyList[index];
     objectValue = object[objectKey];
-    if (state.replacer) {
-      objectValue = state.replacer.call(object, objectKey, objectValue);
+    if (state2.replacer) {
+      objectValue = state2.replacer.call(object, objectKey, objectValue);
     }
-    if (!writeNode(state, level + 1, objectKey, true, true, true)) {
+    if (!writeNode(state2, level + 1, objectKey, true, true, true)) {
       continue;
     }
-    explicitPair = state.tag !== null && state.tag !== "?" || state.dump && state.dump.length > 1024;
+    explicitPair = state2.tag !== null && state2.tag !== "?" || state2.dump && state2.dump.length > 1024;
     if (explicitPair) {
-      if (state.dump && CHAR_LINE_FEED === state.dump.charCodeAt(0)) {
+      if (state2.dump && CHAR_LINE_FEED === state2.dump.charCodeAt(0)) {
         pairBuffer += "?";
       } else {
         pairBuffer += "? ";
       }
     }
-    pairBuffer += state.dump;
+    pairBuffer += state2.dump;
     if (explicitPair) {
-      pairBuffer += generateNextLine(state, level);
+      pairBuffer += generateNextLine(state2, level);
     }
-    if (!writeNode(state, level + 1, objectValue, true, explicitPair)) {
+    if (!writeNode(state2, level + 1, objectValue, true, explicitPair)) {
       continue;
     }
-    if (state.dump && CHAR_LINE_FEED === state.dump.charCodeAt(0)) {
+    if (state2.dump && CHAR_LINE_FEED === state2.dump.charCodeAt(0)) {
       pairBuffer += ":";
     } else {
       pairBuffer += ": ";
     }
-    pairBuffer += state.dump;
+    pairBuffer += state2.dump;
     _result += pairBuffer;
   }
-  state.tag = _tag;
-  state.dump = _result || "{}";
+  state2.tag = _tag;
+  state2.dump = _result || "{}";
 }
-function detectType(state, object, explicit) {
+function detectType(state2, object, explicit) {
   var _result, typeList, index, length, type2, style;
-  typeList = explicit ? state.explicitTypes : state.implicitTypes;
+  typeList = explicit ? state2.explicitTypes : state2.implicitTypes;
   for (index = 0, length = typeList.length; index < length; index += 1) {
     type2 = typeList[index];
     if ((type2.instanceOf || type2.predicate) && (!type2.instanceOf || typeof object === "object" && object instanceof type2.instanceOf) && (!type2.predicate || type2.predicate(object))) {
       if (explicit) {
         if (type2.multi && type2.representName) {
-          state.tag = type2.representName(object);
+          state2.tag = type2.representName(object);
         } else {
-          state.tag = type2.tag;
+          state2.tag = type2.tag;
         }
       } else {
-        state.tag = "?";
+        state2.tag = "?";
       }
       if (type2.represent) {
-        style = state.styleMap[type2.tag] || type2.defaultStyle;
+        style = state2.styleMap[type2.tag] || type2.defaultStyle;
         if (_toString.call(type2.represent) === "[object Function]") {
           _result = type2.represent(object, style);
         } else if (_hasOwnProperty.call(type2.represent, style)) {
@@ -8637,100 +8637,100 @@ function detectType(state, object, explicit) {
         } else {
           throw new YAMLException("!<" + type2.tag + '> tag resolver accepts not "' + style + '" style');
         }
-        state.dump = _result;
+        state2.dump = _result;
       }
       return true;
     }
   }
   return false;
 }
-function writeNode(state, level, object, block, compact, iskey, isblockseq) {
-  state.tag = null;
-  state.dump = object;
-  if (!detectType(state, object, false)) {
-    detectType(state, object, true);
+function writeNode(state2, level, object, block, compact, iskey, isblockseq) {
+  state2.tag = null;
+  state2.dump = object;
+  if (!detectType(state2, object, false)) {
+    detectType(state2, object, true);
   }
-  var type2 = _toString.call(state.dump);
+  var type2 = _toString.call(state2.dump);
   var inblock = block;
   var tagStr;
   if (block) {
-    block = state.flowLevel < 0 || state.flowLevel > level;
+    block = state2.flowLevel < 0 || state2.flowLevel > level;
   }
   var objectOrArray = type2 === "[object Object]" || type2 === "[object Array]", duplicateIndex, duplicate;
   if (objectOrArray) {
-    duplicateIndex = state.duplicates.indexOf(object);
+    duplicateIndex = state2.duplicates.indexOf(object);
     duplicate = duplicateIndex !== -1;
   }
-  if (state.tag !== null && state.tag !== "?" || duplicate || state.indent !== 2 && level > 0) {
+  if (state2.tag !== null && state2.tag !== "?" || duplicate || state2.indent !== 2 && level > 0) {
     compact = false;
   }
-  if (duplicate && state.usedDuplicates[duplicateIndex]) {
-    state.dump = "*ref_" + duplicateIndex;
+  if (duplicate && state2.usedDuplicates[duplicateIndex]) {
+    state2.dump = "*ref_" + duplicateIndex;
   } else {
-    if (objectOrArray && duplicate && !state.usedDuplicates[duplicateIndex]) {
-      state.usedDuplicates[duplicateIndex] = true;
+    if (objectOrArray && duplicate && !state2.usedDuplicates[duplicateIndex]) {
+      state2.usedDuplicates[duplicateIndex] = true;
     }
     if (type2 === "[object Object]") {
-      if (block && Object.keys(state.dump).length !== 0) {
-        writeBlockMapping(state, level, state.dump, compact);
+      if (block && Object.keys(state2.dump).length !== 0) {
+        writeBlockMapping(state2, level, state2.dump, compact);
         if (duplicate) {
-          state.dump = "&ref_" + duplicateIndex + state.dump;
+          state2.dump = "&ref_" + duplicateIndex + state2.dump;
         }
       } else {
-        writeFlowMapping(state, level, state.dump);
+        writeFlowMapping(state2, level, state2.dump);
         if (duplicate) {
-          state.dump = "&ref_" + duplicateIndex + " " + state.dump;
+          state2.dump = "&ref_" + duplicateIndex + " " + state2.dump;
         }
       }
     } else if (type2 === "[object Array]") {
-      if (block && state.dump.length !== 0) {
-        if (state.noArrayIndent && !isblockseq && level > 0) {
-          writeBlockSequence(state, level - 1, state.dump, compact);
+      if (block && state2.dump.length !== 0) {
+        if (state2.noArrayIndent && !isblockseq && level > 0) {
+          writeBlockSequence(state2, level - 1, state2.dump, compact);
         } else {
-          writeBlockSequence(state, level, state.dump, compact);
+          writeBlockSequence(state2, level, state2.dump, compact);
         }
         if (duplicate) {
-          state.dump = "&ref_" + duplicateIndex + state.dump;
+          state2.dump = "&ref_" + duplicateIndex + state2.dump;
         }
       } else {
-        writeFlowSequence(state, level, state.dump);
+        writeFlowSequence(state2, level, state2.dump);
         if (duplicate) {
-          state.dump = "&ref_" + duplicateIndex + " " + state.dump;
+          state2.dump = "&ref_" + duplicateIndex + " " + state2.dump;
         }
       }
     } else if (type2 === "[object String]") {
-      if (state.tag !== "?") {
-        writeScalar(state, state.dump, level, iskey, inblock);
+      if (state2.tag !== "?") {
+        writeScalar(state2, state2.dump, level, iskey, inblock);
       }
     } else if (type2 === "[object Undefined]") {
       return false;
     } else {
-      if (state.skipInvalid) return false;
+      if (state2.skipInvalid) return false;
       throw new YAMLException("unacceptable kind of an object to dump " + type2);
     }
-    if (state.tag !== null && state.tag !== "?") {
+    if (state2.tag !== null && state2.tag !== "?") {
       tagStr = encodeURI(
-        state.tag[0] === "!" ? state.tag.slice(1) : state.tag
+        state2.tag[0] === "!" ? state2.tag.slice(1) : state2.tag
       ).replace(/!/g, "%21");
-      if (state.tag[0] === "!") {
+      if (state2.tag[0] === "!") {
         tagStr = "!" + tagStr;
       } else if (tagStr.slice(0, 18) === "tag:yaml.org,2002:") {
         tagStr = "!!" + tagStr.slice(18);
       } else {
         tagStr = "!<" + tagStr + ">";
       }
-      state.dump = tagStr + " " + state.dump;
+      state2.dump = tagStr + " " + state2.dump;
     }
   }
   return true;
 }
-function getDuplicateReferences(object, state) {
+function getDuplicateReferences(object, state2) {
   var objects = [], duplicatesIndexes = [], index, length;
   inspectNode(object, objects, duplicatesIndexes);
   for (index = 0, length = duplicatesIndexes.length; index < length; index += 1) {
-    state.duplicates.push(objects[duplicatesIndexes[index]]);
+    state2.duplicates.push(objects[duplicatesIndexes[index]]);
   }
-  state.usedDuplicates = new Array(length);
+  state2.usedDuplicates = new Array(length);
 }
 function inspectNode(object, objects, duplicatesIndexes) {
   var objectKeyList, index, length;
@@ -8757,13 +8757,13 @@ function inspectNode(object, objects, duplicatesIndexes) {
 }
 function dump(input, options) {
   options = options || {};
-  var state = new State(options);
-  if (!state.noRefs) getDuplicateReferences(input, state);
+  var state2 = new State(options);
+  if (!state2.noRefs) getDuplicateReferences(input, state2);
   var value = input;
-  if (state.replacer) {
-    value = state.replacer.call({ "": value }, "", value);
+  if (state2.replacer) {
+    value = state2.replacer.call({ "": value }, "", value);
   }
-  if (writeNode(state, 0, value, true, true)) return state.dump + "\n";
+  if (writeNode(state2, 0, value, true, true)) return state2.dump + "\n";
   return "";
 }
 dumper$1.dump = dump;
@@ -14393,9 +14393,9 @@ NsisUpdater$1.NsisUpdater = NsisUpdater;
     }
   });
 })(main$1);
-let cachedClient$y = null;
-async function getClient$y() {
-  if (cachedClient$y) return cachedClient$y;
+let cachedClient$A = null;
+async function getClient$A() {
+  if (cachedClient$A) return cachedClient$A;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14404,11 +14404,11 @@ async function getClient$y() {
     }
   });
   await client.connect();
-  cachedClient$y = client;
+  cachedClient$A = client;
   return client;
 }
 async function createProject(input) {
-  const client = await getClient$y();
+  const client = await getClient$A();
   const db = client.db("capture");
   const projects = db.collection("projects");
   const now = /* @__PURE__ */ new Date();
@@ -14447,9 +14447,9 @@ ipcMain.handle("db:createProject", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$x = null;
-async function getClient$x() {
-  if (cachedClient$x) return cachedClient$x;
+let cachedClient$z = null;
+async function getClient$z() {
+  if (cachedClient$z) return cachedClient$z;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14458,11 +14458,11 @@ async function getClient$x() {
     }
   });
   await client.connect();
-  cachedClient$x = client;
+  cachedClient$z = client;
   return client;
 }
 async function createTask(input) {
-  const client = await getClient$x();
+  const client = await getClient$z();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const now = /* @__PURE__ */ new Date();
@@ -14499,9 +14499,9 @@ ipcMain.handle("db:createTask", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$w = null;
-async function getClient$w() {
-  if (cachedClient$w) return cachedClient$w;
+let cachedClient$y = null;
+async function getClient$y() {
+  if (cachedClient$y) return cachedClient$y;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14510,11 +14510,11 @@ async function getClient$w() {
     }
   });
   await client.connect();
-  cachedClient$w = client;
+  cachedClient$y = client;
   return client;
 }
 async function getAllTasks(projectId) {
-  const client = await getClient$w();
+  const client = await getClient$y();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   return tasks.find({ projectId: new ObjectId(projectId) }).sort({ createdAt: -1 }).toArray();
@@ -14542,9 +14542,9 @@ ipcMain.handle("db:getAllTasks", async (_event, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$v = null;
-async function getClient$v() {
-  if (cachedClient$v) return cachedClient$v;
+let cachedClient$x = null;
+async function getClient$x() {
+  if (cachedClient$x) return cachedClient$x;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14553,11 +14553,11 @@ async function getClient$v() {
     }
   });
   await client.connect();
-  cachedClient$v = client;
+  cachedClient$x = client;
   return client;
 }
 async function getSelectedTaskDetails(taskId) {
-  const client = await getClient$v();
+  const client = await getClient$x();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const _id = new ObjectId(taskId);
@@ -14585,9 +14585,9 @@ ipcMain.handle("db:getSelectedTaskDetails", async (_event, taskId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$u = null;
-async function getClient$u() {
-  if (cachedClient$u) return cachedClient$u;
+let cachedClient$w = null;
+async function getClient$w() {
+  if (cachedClient$w) return cachedClient$w;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14596,11 +14596,11 @@ async function getClient$u() {
     }
   });
   await client.connect();
-  cachedClient$u = client;
+  cachedClient$w = client;
   return client;
 }
 async function editTask(taskId, updates) {
-  const client = await getClient$u();
+  const client = await getClient$w();
   const db = client.db("capture");
   const tasks = db.collection("tasks");
   const _id = new ObjectId(taskId);
@@ -14627,9 +14627,9 @@ ipcMain.handle("db:editTask", async (_event, taskId, updates) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$t = null;
-async function getClient$t() {
-  if (cachedClient$t) return cachedClient$t;
+let cachedClient$v = null;
+async function getClient$v() {
+  if (cachedClient$v) return cachedClient$v;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14638,11 +14638,11 @@ async function getClient$t() {
     }
   });
   await client.connect();
-  cachedClient$t = client;
+  cachedClient$v = client;
   return client;
 }
 async function createDive(input) {
-  const client = await getClient$t();
+  const client = await getClient$v();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const now = /* @__PURE__ */ new Date();
@@ -14680,9 +14680,9 @@ ipcMain.handle("db:createDive", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$s = null;
-async function getClient$s() {
-  if (cachedClient$s) return cachedClient$s;
+let cachedClient$u = null;
+async function getClient$u() {
+  if (cachedClient$u) return cachedClient$u;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14691,11 +14691,11 @@ async function getClient$s() {
     }
   });
   await client.connect();
-  cachedClient$s = client;
+  cachedClient$u = client;
   return client;
 }
 async function createSession(input) {
-  const client = await getClient$s();
+  const client = await getClient$u();
   const db = client.db("capture");
   const sessions = db.collection("sessions");
   const now = /* @__PURE__ */ new Date();
@@ -14765,9 +14765,9 @@ ipcMain.handle("db:createSession", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$r = null;
-async function getClient$r() {
-  if (cachedClient$r) return cachedClient$r;
+let cachedClient$t = null;
+async function getClient$t() {
+  if (cachedClient$t) return cachedClient$t;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14776,11 +14776,11 @@ async function getClient$r() {
     }
   });
   await client.connect();
-  cachedClient$r = client;
+  cachedClient$t = client;
   return client;
 }
 async function editDive(diveId, updates) {
-  const client = await getClient$r();
+  const client = await getClient$t();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const _id = new ObjectId(diveId);
@@ -14808,9 +14808,9 @@ ipcMain.handle("db:editDive", async (_event, diveId, updates) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$q = null;
-async function getClient$q() {
-  if (cachedClient$q) return cachedClient$q;
+let cachedClient$s = null;
+async function getClient$s() {
+  if (cachedClient$s) return cachedClient$s;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14819,11 +14819,11 @@ async function getClient$q() {
     }
   });
   await client.connect();
-  cachedClient$q = client;
+  cachedClient$s = client;
   return client;
 }
 async function createNodes(input) {
-  const client = await getClient$q();
+  const client = await getClient$s();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
   const now = /* @__PURE__ */ new Date();
@@ -14868,9 +14868,9 @@ ipcMain.handle("db:createNode", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$p = null;
-async function getClient$p() {
-  if (cachedClient$p) return cachedClient$p;
+let cachedClient$r = null;
+async function getClient$r() {
+  if (cachedClient$r) return cachedClient$r;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14879,7 +14879,7 @@ async function getClient$p() {
     }
   });
   await client.connect();
-  cachedClient$p = client;
+  cachedClient$r = client;
   return client;
 }
 async function getDescendantIds(nodes, rootId) {
@@ -14915,7 +14915,7 @@ async function recomputeAncestors(nodes, startParentId, now) {
   }
 }
 async function editNode(nodeId, updates, options) {
-  const client = await getClient$p();
+  const client = await getClient$r();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
   const _id = new ObjectId(nodeId);
@@ -14957,9 +14957,9 @@ ipcMain.handle("db:editNode", async (_event, nodeId, updates, options) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$o = null;
-async function getClient$o() {
-  if (cachedClient$o) return cachedClient$o;
+let cachedClient$q = null;
+async function getClient$q() {
+  if (cachedClient$q) return cachedClient$q;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -14968,11 +14968,11 @@ async function getClient$o() {
     }
   });
   await client.connect();
-  cachedClient$o = client;
+  cachedClient$q = client;
   return client;
 }
 async function getAllNodes(projectId) {
-  const client = await getClient$o();
+  const client = await getClient$q();
   const db = client.db("capture");
   const nodesCol = db.collection("nodes");
   const projectObjectId = new ObjectId(projectId);
@@ -15017,9 +15017,9 @@ ipcMain.handle("db:getAllNodes", async (_event, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$n = null;
-async function getClient$n() {
-  if (cachedClient$n) return cachedClient$n;
+let cachedClient$p = null;
+async function getClient$p() {
+  if (cachedClient$p) return cachedClient$p;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15028,11 +15028,11 @@ async function getClient$n() {
     }
   });
   await client.connect();
-  cachedClient$n = client;
+  cachedClient$p = client;
   return client;
 }
 async function deleteNode(nodeId) {
-  const client = await getClient$n();
+  const client = await getClient$p();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
   const rootId = new ObjectId(nodeId);
@@ -15063,9 +15063,9 @@ ipcMain.handle("db:deleteNode", async (_event, nodeId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$m = null;
-async function getClient$m() {
-  if (cachedClient$m) return cachedClient$m;
+let cachedClient$o = null;
+async function getClient$o() {
+  if (cachedClient$o) return cachedClient$o;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15074,11 +15074,11 @@ async function getClient$m() {
     }
   });
   await client.connect();
-  cachedClient$m = client;
+  cachedClient$o = client;
   return client;
 }
 async function getSelectedNodeDetails(nodeId) {
-  const client = await getClient$m();
+  const client = await getClient$o();
   const db = client.db("capture");
   const nodes = db.collection("nodes");
   const _id = new ObjectId(nodeId);
@@ -15109,9 +15109,9 @@ ipcMain.handle("db:getSelectedNodeDetails", async (_event, nodeId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$l = null;
-async function getClient$l() {
-  if (cachedClient$l) return cachedClient$l;
+let cachedClient$n = null;
+async function getClient$n() {
+  if (cachedClient$n) return cachedClient$n;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15120,11 +15120,11 @@ async function getClient$l() {
     }
   });
   await client.connect();
-  cachedClient$l = client;
+  cachedClient$n = client;
   return client;
 }
 async function getAllProjects() {
-  const client = await getClient$l();
+  const client = await getClient$n();
   const db = client.db("capture");
   const projects = db.collection("projects");
   return projects.find({}).sort({ createdAt: -1 }).toArray();
@@ -15303,9 +15303,9 @@ ipcMain.handle("app:getSelectedNodeId", async () => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$k = null;
-async function getClient$k() {
-  if (cachedClient$k) return cachedClient$k;
+let cachedClient$m = null;
+async function getClient$m() {
+  if (cachedClient$m) return cachedClient$m;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15314,11 +15314,11 @@ async function getClient$k() {
     }
   });
   await client.connect();
-  cachedClient$k = client;
+  cachedClient$m = client;
   return client;
 }
 async function getAllDives(projectId) {
-  const client = await getClient$k();
+  const client = await getClient$m();
   const db = client.db("capture");
   const dives = db.collection("dives");
   return dives.find({ projectId: new ObjectId(projectId) }).sort({ createdAt: -1 }).toArray();
@@ -15347,9 +15347,9 @@ ipcMain.handle("db:getAllDives", async (_event, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$j = null;
-async function getClient$j() {
-  if (cachedClient$j) return cachedClient$j;
+let cachedClient$l = null;
+async function getClient$l() {
+  if (cachedClient$l) return cachedClient$l;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15358,7 +15358,7 @@ async function getClient$j() {
     }
   });
   await client.connect();
-  cachedClient$j = client;
+  cachedClient$l = client;
   return client;
 }
 function formatSessionCode(date) {
@@ -15417,7 +15417,7 @@ function withMkvIfNoExt(p) {
 }
 async function getExportedProjectHierarchy(projectId) {
   var _a, _b, _c, _d, _e, _f, _g, _h;
-  const client = await getClient$j();
+  const client = await getClient$l();
   const db = client.db("capture");
   const dives = await db.collection("dives").find({ projectId: new ObjectId(projectId) }, { projection: { name: 1 } }).toArray();
   const diveIdToName = /* @__PURE__ */ new Map();
@@ -15500,9 +15500,9 @@ ipcMain.handle("db:getExportedProjectHierarchy", async (_e, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$i = null;
-async function getClient$i() {
-  if (cachedClient$i) return cachedClient$i;
+let cachedClient$k = null;
+async function getClient$k() {
+  if (cachedClient$k) return cachedClient$k;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15511,11 +15511,11 @@ async function getClient$i() {
     }
   });
   await client.connect();
-  cachedClient$i = client;
+  cachedClient$k = client;
   return client;
 }
 async function getSelectedProjectDetails(projectId) {
-  const client = await getClient$i();
+  const client = await getClient$k();
   const db = client.db("capture");
   const projects = db.collection("projects");
   const _id = new ObjectId(projectId);
@@ -15553,9 +15553,9 @@ ipcMain.handle("db:getSelectedProjectDetails", async (_event, projectId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$h = null;
-async function getClient$h() {
-  if (cachedClient$h) return cachedClient$h;
+let cachedClient$j = null;
+async function getClient$j() {
+  if (cachedClient$j) return cachedClient$j;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15564,11 +15564,11 @@ async function getClient$h() {
     }
   });
   await client.connect();
-  cachedClient$h = client;
+  cachedClient$j = client;
   return client;
 }
 async function getSelectedDiveDetails(diveId) {
-  const client = await getClient$h();
+  const client = await getClient$j();
   const db = client.db("capture");
   const dives = db.collection("dives");
   const _id = new ObjectId(diveId);
@@ -15597,9 +15597,9 @@ ipcMain.handle("db:getSelectedDiveDetails", async (_event, diveId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$g = null;
-async function getClient$g() {
-  if (cachedClient$g) return cachedClient$g;
+let cachedClient$i = null;
+async function getClient$i() {
+  if (cachedClient$i) return cachedClient$i;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15608,11 +15608,11 @@ async function getClient$g() {
     }
   });
   await client.connect();
-  cachedClient$g = client;
+  cachedClient$i = client;
   return client;
 }
 async function editProject(projectId, updates) {
-  const client = await getClient$g();
+  const client = await getClient$i();
   const db = client.db("capture");
   const projects = db.collection("projects");
   const _id = new ObjectId(projectId);
@@ -15789,9 +15789,9 @@ ipcMain.handle("app:getActiveSessionId", async () => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$f = null;
-async function getClient$f() {
-  if (cachedClient$f) return cachedClient$f;
+let cachedClient$h = null;
+async function getClient$h() {
+  if (cachedClient$h) return cachedClient$h;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15800,11 +15800,11 @@ async function getClient$f() {
     }
   });
   await client.connect();
-  cachedClient$f = client;
+  cachedClient$h = client;
   return client;
 }
 async function renameOverlay(id, name) {
-  const client = await getClient$f();
+  const client = await getClient$h();
   const db = client.db("capture");
   const overlays = db.collection("overlays");
   const _id = new ObjectId(id);
@@ -15840,9 +15840,9 @@ ipcMain.handle("db:renameOverlay", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$e = null;
-async function getClient$e() {
-  if (cachedClient$e) return cachedClient$e;
+let cachedClient$g = null;
+async function getClient$g() {
+  if (cachedClient$g) return cachedClient$g;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15851,11 +15851,11 @@ async function getClient$e() {
     }
   });
   await client.connect();
-  cachedClient$e = client;
+  cachedClient$g = client;
   return client;
 }
 async function deleteOverlay(id) {
-  const client = await getClient$e();
+  const client = await getClient$g();
   const db = client.db("capture");
   const overlays = db.collection("overlays");
   const _id = new ObjectId(id);
@@ -15883,9 +15883,9 @@ ipcMain.handle("db:deleteOverlay", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$d = null;
-async function getClient$d() {
-  if (cachedClient$d) return cachedClient$d;
+let cachedClient$f = null;
+async function getClient$f() {
+  if (cachedClient$f) return cachedClient$f;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -15894,7 +15894,7 @@ async function getClient$d() {
     }
   });
   await client.connect();
-  cachedClient$d = client;
+  cachedClient$f = client;
   return client;
 }
 async function createOverlayComponent(input) {
@@ -15946,7 +15946,7 @@ async function createOverlayComponent(input) {
       }
       break;
   }
-  const client = await getClient$d();
+  const client = await getClient$f();
   const db = client.db("capture");
   const components = db.collection("overlay_components");
   const existingCount = await components.countDocuments({ overlayId: overlayObjectId });
@@ -15989,9 +15989,9 @@ const createOverlayComponent$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ O
   __proto__: null,
   createOverlayComponent
 }, Symbol.toStringTag, { value: "Module" }));
-let cachedClient$c = null;
-async function getClient$c() {
-  if (cachedClient$c) return cachedClient$c;
+let cachedClient$e = null;
+async function getClient$e() {
+  if (cachedClient$e) return cachedClient$e;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -16000,11 +16000,11 @@ async function getClient$c() {
     }
   });
   await client.connect();
-  cachedClient$c = client;
+  cachedClient$e = client;
   return client;
 }
 async function getAllOverlayComponents(overlayId) {
-  const client = await getClient$c();
+  const client = await getClient$e();
   const db = client.db("capture");
   const components = db.collection("overlay_components");
   const filter = overlayId ? { overlayId: new ObjectId(overlayId) } : {};
@@ -16021,9 +16021,9 @@ ipcMain.handle("db:getAllOverlayComponents", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$b = null;
-async function getClient$b() {
-  if (cachedClient$b) return cachedClient$b;
+let cachedClient$d = null;
+async function getClient$d() {
+  if (cachedClient$d) return cachedClient$d;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -16032,7 +16032,7 @@ async function getClient$b() {
     }
   });
   await client.connect();
-  cachedClient$b = client;
+  cachedClient$d = client;
   return client;
 }
 function buildSetObject(updates) {
@@ -16066,7 +16066,7 @@ function buildSetObject(updates) {
   return $set;
 }
 async function editOverlayComponents(ids, updates) {
-  const client = await getClient$b();
+  const client = await getClient$d();
   const db = client.db("capture");
   const components = db.collection("overlay_components");
   const cleaned = Array.from(new Set((ids || []).map((s) => typeof s === "string" ? s.trim() : "").filter(Boolean)));
@@ -16087,9 +16087,9 @@ ipcMain.handle("db:editOverlayComponent", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$a = null;
-async function getClient$a() {
-  if (cachedClient$a) return cachedClient$a;
+let cachedClient$c = null;
+async function getClient$c() {
+  if (cachedClient$c) return cachedClient$c;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -16098,13 +16098,13 @@ async function getClient$a() {
     }
   });
   await client.connect();
-  cachedClient$a = client;
+  cachedClient$c = client;
   return client;
 }
 async function deleteOverlayComponents(ids) {
   const cleanedIds = Array.from(new Set((ids || []).map((s) => typeof s === "string" ? s.trim() : "").filter(Boolean)));
   if (!cleanedIds.length) return 0;
-  const client = await getClient$a();
+  const client = await getClient$c();
   const db = client.db("capture");
   const components = db.collection("overlay_components");
   const objectIds = cleanedIds.map((id) => new ObjectId(id));
@@ -16121,9 +16121,9 @@ ipcMain.handle("db:deleteOverlayComponent", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$9 = null;
-async function getClient$9() {
-  if (cachedClient$9) return cachedClient$9;
+let cachedClient$b = null;
+async function getClient$b() {
+  if (cachedClient$b) return cachedClient$b;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -16132,11 +16132,11 @@ async function getClient$9() {
     }
   });
   await client.connect();
-  cachedClient$9 = client;
+  cachedClient$b = client;
   return client;
 }
 async function getOverlayComponentsForRender(overlayId) {
-  const client = await getClient$9();
+  const client = await getClient$b();
   const db = client.db("capture");
   const components = db.collection("overlay_components");
   const filter = { overlayId: new ObjectId(overlayId) };
@@ -16277,9 +16277,9 @@ ipcMain.handle("fs:uploadOverlayImage", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$8 = null;
-async function getClient$8() {
-  if (cachedClient$8) return cachedClient$8;
+let cachedClient$a = null;
+async function getClient$a() {
+  if (cachedClient$a) return cachedClient$a;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -16288,14 +16288,14 @@ async function getClient$8() {
     }
   });
   await client.connect();
-  cachedClient$8 = client;
+  cachedClient$a = client;
   return client;
 }
 function pad2$2(n) {
   return String(n).padStart(2, "0");
 }
 async function addProjectLog(input) {
-  const client = await getClient$8();
+  const client = await getClient$a();
   const db = client.db("capture");
   const logs = db.collection("project_logs");
   const now = /* @__PURE__ */ new Date();
@@ -16523,9 +16523,10 @@ async function getFileNameFormatting() {
   for (let i = 0; i < sources.length; i++) {
     const sourceName = sources[i];
     try {
+      const filterName = `Source Record (channel ${i + 1})`;
       const { filterSettings } = await obs.call("GetSourceFilter", {
         sourceName,
-        filterName: "source record"
+        filterName
       });
       const value = filterSettings && typeof filterSettings.filename_formatting === "string" ? filterSettings.filename_formatting : "";
       results[i] = value;
@@ -16594,9 +16595,10 @@ async function setFileNameFormatting(format) {
     const sourceName = sources[i];
     const channelIndex = i + 1;
     try {
+      const filterName = `Source Record (channel ${channelIndex})`;
       await obs.call("SetSourceFilterSettings", {
         sourceName,
-        filterName: "source record",
+        filterName,
         filterSettings: { filename_formatting: `ch${channelIndex}-${format}` },
         overlay: true
       });
@@ -16638,9 +16640,9 @@ ipcMain.handle("obs:set-clip-file-name-formatting", async (_e, format) => {
     return false;
   }
 });
-let cachedClient$7 = null;
-async function getClient$7() {
-  if (cachedClient$7) return cachedClient$7;
+let cachedClient$9 = null;
+async function getClient$9() {
+  if (cachedClient$9) return cachedClient$9;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -16649,7 +16651,7 @@ async function getClient$7() {
     }
   });
   await client.connect();
-  cachedClient$7 = client;
+  cachedClient$9 = client;
   return client;
 }
 function cleanArray(input) {
@@ -16658,7 +16660,7 @@ function cleanArray(input) {
   return out2.length > 0 ? out2 : void 0;
 }
 async function editSession(sessionId, snapshots) {
-  const client = await getClient$7();
+  const client = await getClient$9();
   const db = client.db("capture");
   const sessions = db.collection("sessions");
   const _id = new ObjectId(sessionId);
@@ -16725,8 +16727,8 @@ async function resolveClipFilePath() {
   let filterSettings = null;
   try {
     const { filterSettings: fsSettings } = await obs.call("GetSourceFilter", {
-      sourceName: "clip recording",
-      filterName: "source record"
+      sourceName: "clip",
+      filterName: "Source Record (clip)"
     });
     filterSettings = fsSettings;
     const val = fsSettings && typeof fsSettings.filename_formatting === "string" ? fsSettings.filename_formatting.trim() : "";
@@ -16862,22 +16864,46 @@ async function startRecording(preview, ch1, ch2, ch3, ch4) {
       allOk = false;
     }
   }
-  async function triggerCtrlNumber(numberKey) {
-    const keyId = `OBS_KEY_${numberKey}`;
+  async function startSourceRecord(sourceName) {
+    const res = await obs.call("CallVendorRequest", {
+      vendorName: "source-record",
+      requestType: "record_start",
+      requestData: { source: sourceName, stop_existing: true }
+    });
+    return res == null ? void 0 : res.responseData;
+  }
+  if (ch1) {
     try {
-      await obs.call("TriggerHotkeyByKeySequence", {
-        keyId,
-        keyModifiers: { shift: false, control: true, alt: false, command: false }
-      });
-      return true;
+      const r = await startSourceRecord("channel 1");
+      allOk = !!(r == null ? void 0 : r.success) && allOk;
     } catch {
-      return false;
+      allOk = false;
     }
   }
-  if (ch1) allOk = await triggerCtrlNumber(1) && allOk;
-  if (ch2) allOk = await triggerCtrlNumber(2) && allOk;
-  if (ch3) allOk = await triggerCtrlNumber(3) && allOk;
-  if (ch4) allOk = await triggerCtrlNumber(4) && allOk;
+  if (ch2) {
+    try {
+      const r = await startSourceRecord("channel 2");
+      allOk = !!(r == null ? void 0 : r.success) && allOk;
+    } catch {
+      allOk = false;
+    }
+  }
+  if (ch3) {
+    try {
+      const r = await startSourceRecord("channel 3");
+      allOk = !!(r == null ? void 0 : r.success) && allOk;
+    } catch {
+      allOk = false;
+    }
+  }
+  if (ch4) {
+    try {
+      const r = await startSourceRecord("channel 4");
+      allOk = !!(r == null ? void 0 : r.success) && allOk;
+    } catch {
+      allOk = false;
+    }
+  }
   return allOk;
 }
 ipcMain.handle("obs:start-recording", async (_e, args) => {
@@ -16892,21 +16918,31 @@ ipcMain.handle("obs:start-recording", async (_e, args) => {
 async function stopRecording() {
   const obs = getObsClient();
   if (!obs) return false;
-  let ok = true;
+  let channelsOk = true;
+  let previewOk = true;
+  async function stopSourceRecord(sourceName) {
+    const res = await obs.call("CallVendorRequest", {
+      vendorName: "source-record",
+      requestType: "record_stop",
+      requestData: { source: sourceName }
+    });
+    return res == null ? void 0 : res.responseData;
+  }
+  for (const sourceName of ["channel 1", "channel 2", "channel 3", "channel 4"]) {
+    try {
+      const r = await stopSourceRecord(sourceName);
+      channelsOk = !!(r == null ? void 0 : r.success) && channelsOk;
+    } catch {
+      channelsOk = false;
+    }
+  }
   try {
     await obs.call("StopRecord");
+    previewOk = true;
   } catch {
-    ok = false;
+    previewOk = false;
   }
-  try {
-    await obs.call("TriggerHotkeyByKeySequence", {
-      keyId: "OBS_KEY_0",
-      keyModifiers: { shift: false, control: true, alt: false, command: false }
-    });
-  } catch {
-    ok = false;
-  }
-  return ok;
+  return channelsOk || previewOk;
 }
 ipcMain.handle("obs:stop-recording", async () => {
   try {
@@ -16921,7 +16957,7 @@ async function pauseRecording() {
   if (!obs) return false;
   let ok = true;
   try {
-    await obs.call("ToggleRecordPause");
+    await obs.call("PauseRecord");
   } catch {
     ok = false;
   }
@@ -17333,6 +17369,174 @@ ipcMain.handle("obs:get-active-video-items-for-scene", async (_e, sceneName) => 
     return { ok: false, error: message };
   }
 });
+function makeDefault() {
+  const out2 = {};
+  for (let i = 1; i <= 4; i++) {
+    const ch = `channel ${i}`;
+    out2[ch] = {
+      [`video capture device ${i}`]: false,
+      [`webrtc ${i}`]: false,
+      [`rtmp ${i}`]: false
+    };
+  }
+  return out2;
+}
+function normalize(name) {
+  return String(name || "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+async function getItemEnabled(obs, sceneName, item) {
+  if (!item) return false;
+  if (typeof item.sceneItemEnabled === "boolean") return !!item.sceneItemEnabled;
+  try {
+    const res = await obs.call("GetSceneItemEnabled", {
+      sceneName,
+      sceneItemId: Number(item.sceneItemId)
+    });
+    return !!(res == null ? void 0 : res.sceneItemEnabled);
+  } catch {
+    return false;
+  }
+}
+function findItem(items, prefix, index) {
+  const pfx = normalize(prefix);
+  const idx = String(index);
+  for (const it of items) {
+    const nm = normalize(it == null ? void 0 : it.sourceName);
+    if (!nm) continue;
+    if (nm.startsWith(pfx) && nm.includes(idx)) return it;
+  }
+  return null;
+}
+async function getChannelSourceEnabledStates() {
+  const obs = getObsClient();
+  if (!obs) return makeDefault();
+  const result = makeDefault();
+  for (let i = 1; i <= 4; i++) {
+    const sceneName = `channel ${i}`;
+    try {
+      const list = await obs.call("GetSceneItemList", { sceneName });
+      const items = Array.isArray(list == null ? void 0 : list.sceneItems) ? list.sceneItems : [];
+      const vItem = findItem(items, "video capture device", i);
+      const wItem = findItem(items, "webrtc", i);
+      const rItem = findItem(items, "rtmp", i);
+      result[sceneName][`video capture device ${i}`] = await getItemEnabled(obs, sceneName, vItem);
+      result[sceneName][`webrtc ${i}`] = await getItemEnabled(obs, sceneName, wItem);
+      result[sceneName][`rtmp ${i}`] = await getItemEnabled(obs, sceneName, rItem);
+    } catch {
+    }
+  }
+  return result;
+}
+ipcMain.handle("obs:get-channel-source-enabled-states", async () => {
+  try {
+    const data = await getChannelSourceEnabledStates();
+    return { ok: true, data };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+function normalizeDevice(raw) {
+  const id = String((raw == null ? void 0 : raw.id) ?? "").trim();
+  const name = String((raw == null ? void 0 : raw.name) ?? "").trim();
+  if (!id && !name) return null;
+  return { id, name };
+}
+async function getDShowDevices() {
+  const obs = getObsClient();
+  if (!obs) return { devices: [] };
+  try {
+    const res = await obs.call("GetDShowDevices");
+    const devicesArr = Array.isArray(res == null ? void 0 : res.devices) ? res.devices : [];
+    const devices = [];
+    for (const it of devicesArr) {
+      const d = normalizeDevice(it);
+      if (d) devices.push(d);
+    }
+    const selectedRaw = (res == null ? void 0 : res.selected) || {};
+    const selected = {};
+    if (selectedRaw && typeof selectedRaw === "object") {
+      const assignIf = (key, v) => {
+        const d = normalizeDevice(v);
+        if (d) selected[key] = d;
+      };
+      assignIf("channel1", selectedRaw.channel1);
+      assignIf("channel2", selectedRaw.channel2);
+      assignIf("channel3", selectedRaw.channel3);
+      assignIf("channel4", selectedRaw.channel4);
+    }
+    return Object.keys(selected).length > 0 ? { devices, selected } : { devices };
+  } catch {
+    return { devices: [] };
+  }
+}
+ipcMain.handle("obs:get-dshow-devices", async () => {
+  try {
+    const data = await getDShowDevices();
+    return { ok: true, data };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+async function setDShowDeviceToChannel(args) {
+  const obs = getObsClient();
+  if (!obs) throw new Error("OBS not connected");
+  const channel = Number(args == null ? void 0 : args.channel);
+  const deviceId = String((args == null ? void 0 : args.deviceId) ?? "").trim();
+  if (!Number.isFinite(channel) || channel < 1 || channel > 4) throw new Error("channel must be 1..4");
+  if (!deviceId) throw new Error("deviceId must be non-empty");
+  const res = await obs.call("SetDShowDeviceToChannel", { channel, deviceId });
+  const out2 = {
+    channel: Number((res == null ? void 0 : res.channel) ?? channel),
+    deviceId: String((res == null ? void 0 : res.deviceId) ?? deviceId)
+  };
+  return out2;
+}
+ipcMain.handle("obs:set-dshow-device", async (_e, channel, deviceId) => {
+  try {
+    const data = await setDShowDeviceToChannel({ channel, deviceId });
+    return { ok: true, data };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+async function addMediaToChannel(channel, kind = "dshow_input") {
+  const obs = getObsClient();
+  if (!obs) throw new Error("OBS not connected");
+  const ch = Number(channel);
+  if (!Number.isFinite(ch) || ch < 1 || ch > 4) throw new Error("channel must be 1..4");
+  const k = kind === "ffmpeg_source" ? "ffmpeg_source" : "dshow_input";
+  const res = await obs.call("AddMediaToChannel", { channel: ch, kind: k });
+  return { channel: Number((res == null ? void 0 : res.channel) ?? ch), added: !!(res == null ? void 0 : res.added) };
+}
+ipcMain.handle("obs:add-media-to-channel", async (_e, channel, kind) => {
+  try {
+    const data = await addMediaToChannel(channel, kind || "dshow_input");
+    return { ok: true, data };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+async function deleteMediaFromChannel(channel) {
+  const obs = getObsClient();
+  if (!obs) throw new Error("OBS not connected");
+  const ch = Number(channel);
+  if (!Number.isFinite(ch) || ch < 1 || ch > 4) throw new Error("channel must be 1..4");
+  const res = await obs.call("DeleteMediaFromChannel", { channel: ch });
+  return { channel: Number((res == null ? void 0 : res.channel) ?? ch), removed: !!(res == null ? void 0 : res.removed) };
+}
+ipcMain.handle("obs:delete-media-from-channel", async (_e, channel) => {
+  try {
+    const data = await deleteMediaFromChannel(channel);
+    return { ok: true, data };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 const AUDIO_INPUT_NAME$2 = "audio input device";
 async function listPropertyItems(inputName, propertyName) {
   const obs = getObsClient();
@@ -17461,9 +17665,9 @@ function sendAudioLevel(mainWindow) {
   }
   return true;
 }
-let cachedClient$6 = null;
-async function getClient$6() {
-  if (cachedClient$6) return cachedClient$6;
+let cachedClient$8 = null;
+async function getClient$8() {
+  if (cachedClient$8) return cachedClient$8;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -17472,11 +17676,11 @@ async function getClient$6() {
     }
   });
   await client.connect();
-  cachedClient$6 = client;
+  cachedClient$8 = client;
   return client;
 }
 async function getProjectLogs(projectId, limit = 100, offset = 0) {
-  const client = await getClient$6();
+  const client = await getClient$8();
   const db = client.db("capture");
   const logs = db.collection("project_logs");
   const _pid = new ObjectId(String(projectId));
@@ -17570,14 +17774,14 @@ ipcMain.handle("fs:deleteOverlayImage", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$5 = null;
-async function getClient$5() {
-  if (cachedClient$5) return cachedClient$5;
+let cachedClient$7 = null;
+async function getClient$7() {
+  if (cachedClient$7) return cachedClient$7;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
   });
   await client.connect();
-  cachedClient$5 = client;
+  cachedClient$7 = client;
   return client;
 }
 function ensureDirectoryFor(fileOrDir) {
@@ -17604,7 +17808,7 @@ ipcMain.handle("db:exportOverlay", async (_event, input) => {
   try {
     const destPath = String((input == null ? void 0 : input.destPath) || "").trim();
     if (!destPath) throw new Error("destPath is required");
-    const client = await getClient$5();
+    const client = await getClient$7();
     const db = client.db("capture");
     const overlays = db.collection("overlays");
     const components = db.collection("overlay_components");
@@ -18038,9 +18242,9 @@ ipcMain.handle("db:importOverlay", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$4 = null;
-async function getClient$4() {
-  if (cachedClient$4) return cachedClient$4;
+let cachedClient$6 = null;
+async function getClient$6() {
+  if (cachedClient$6) return cachedClient$6;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -18049,11 +18253,11 @@ async function getClient$4() {
     }
   });
   await client.connect();
-  cachedClient$4 = client;
+  cachedClient$6 = client;
   return client;
 }
 async function createDataKey(name) {
-  const client = await getClient$4();
+  const client = await getClient$6();
   const db = client.db("capture");
   const collection = db.collection("dataKeys");
   const keyName = (name ?? "").trim();
@@ -18072,9 +18276,9 @@ ipcMain.handle("db:createDataKey", async (_event, name) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$3 = null;
-async function getClient$3() {
-  if (cachedClient$3) return cachedClient$3;
+let cachedClient$5 = null;
+async function getClient$5() {
+  if (cachedClient$5) return cachedClient$5;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
@@ -18083,11 +18287,11 @@ async function getClient$3() {
     }
   });
   await client.connect();
-  cachedClient$3 = client;
+  cachedClient$5 = client;
   return client;
 }
 async function fetchDataKeys() {
-  const client = await getClient$3();
+  const client = await getClient$5();
   const db = client.db("capture");
   const collection = db.collection("dataKeys");
   const docs = await collection.find({}).sort({ createdAt: 1 }).toArray();
@@ -18110,14 +18314,14 @@ ipcMain.handle("db:fetchDataKeys", async () => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$2 = null;
-async function getClient$2() {
-  if (cachedClient$2) return cachedClient$2;
+let cachedClient$4 = null;
+async function getClient$4() {
+  if (cachedClient$4) return cachedClient$4;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
   });
   await client.connect();
-  cachedClient$2 = client;
+  cachedClient$4 = client;
   return client;
 }
 function pad2$1(n) {
@@ -18138,7 +18342,7 @@ function coerceTime$1(val) {
 async function addEventLog(input) {
   const sessionId = getActiveSessionId();
   if (!sessionId) throw new Error("No active session id");
-  const client = await getClient$2();
+  const client = await getClient$4();
   const db = client.db("capture");
   const col = db.collection("event_logs");
   const now = /* @__PURE__ */ new Date();
@@ -18166,20 +18370,20 @@ ipcMain.handle("db:addEventLog", async (_event, input) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient$1 = null;
-async function getClient$1() {
-  if (cachedClient$1) return cachedClient$1;
+let cachedClient$3 = null;
+async function getClient$3() {
+  if (cachedClient$3) return cachedClient$3;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
   });
   await client.connect();
-  cachedClient$1 = client;
+  cachedClient$3 = client;
   return client;
 }
 async function getEventLogsForActiveSession() {
   const sessionId = getActiveSessionId();
   if (!sessionId) return [];
-  const client = await getClient$1();
+  const client = await getClient$3();
   const db = client.db("capture");
   const col = db.collection("event_logs");
   const rows = await col.find({ sessionId: new ObjectId(String(sessionId)) }).sort({ createdAt: 1 }).toArray();
@@ -18193,7 +18397,7 @@ async function getEventLogsForActiveSession() {
 }
 async function getEventLogsForSession(sessionId) {
   if (!sessionId || typeof sessionId !== "string") return [];
-  const client = await getClient$1();
+  const client = await getClient$3();
   const db = client.db("capture");
   const col = db.collection("event_logs");
   const rows = await col.find({ sessionId: new ObjectId(String(sessionId)) }).sort({ createdAt: 1 }).toArray();
@@ -18223,14 +18427,14 @@ ipcMain.handle("db:getEventLogsForSession", async (_e, sessionId) => {
     return { ok: false, error: message };
   }
 });
-let cachedClient = null;
-async function getClient() {
-  if (cachedClient) return cachedClient;
+let cachedClient$2 = null;
+async function getClient$2() {
+  if (cachedClient$2) return cachedClient$2;
   const client = new MongoClient(MONGODB_URI, {
     serverApi: { version: ServerApiVersion.v1, strict: true, deprecationErrors: true }
   });
   await client.connect();
-  cachedClient = client;
+  cachedClient$2 = client;
   return client;
 }
 function pad2(n) {
@@ -18249,7 +18453,7 @@ function coerceTime(val) {
   return void 0;
 }
 async function editEventLog(id, patch2) {
-  const client = await getClient();
+  const client = await getClient$2();
   const db = client.db("capture");
   const col = db.collection("event_logs");
   const _id = new ObjectId(String(id));
@@ -18337,6 +18541,74 @@ function startComDeviceWatcher(getWindow, intervalMs = 1500) {
       last = new Set(initial);
     } catch {
       last = /* @__PURE__ */ new Set();
+    }
+    tick();
+  })();
+  return () => {
+    disposed = true;
+    if (timer) clearTimeout(timer);
+  };
+}
+function devicesToMap(devs) {
+  const m = /* @__PURE__ */ new Map();
+  for (const d of devs) {
+    const id = String((d == null ? void 0 : d.id) ?? "").trim();
+    if (!id) continue;
+    m.set(id, { id, name: String((d == null ? void 0 : d.name) ?? "") });
+  }
+  return m;
+}
+function startCameraDeviceWatcher(getWindow, intervalMs = 2e3) {
+  let disposed = false;
+  let last = /* @__PURE__ */ new Map();
+  let timer = null;
+  const notify = (title, body) => {
+    try {
+      const n = new Notification({ title, body, silent: false });
+      n.show();
+    } catch {
+    }
+  };
+  const tick = async () => {
+    if (disposed) return;
+    try {
+      const res = await getDShowDevices();
+      const list = Array.isArray(res == null ? void 0 : res.devices) ? res.devices : [];
+      const current = devicesToMap(list);
+      const added = [];
+      const removed = [];
+      for (const [id, dev] of current) if (!last.has(id)) added.push(dev);
+      for (const [id, dev] of last) if (!current.has(id)) removed.push(dev);
+      if (added.length || removed.length) {
+        for (const d of added) notify("Camera connected", d.name || d.id);
+        for (const d of removed) notify("Camera disconnected", d.name || d.id);
+        try {
+          const payload = { added, removed, all: Array.from(current.values()) };
+          const primary = getWindow();
+          if (primary && !primary.isDestroyed()) {
+            primary.webContents.send("camera:devices-changed", payload);
+          }
+          for (const w of BrowserWindow.getAllWindows()) {
+            try {
+              if (!w.isDestroyed()) w.webContents.send("camera:devices-changed", payload);
+            } catch {
+            }
+          }
+        } catch {
+        }
+      }
+      last = current;
+    } catch {
+    } finally {
+      if (!disposed) timer = setTimeout(tick, intervalMs);
+    }
+  };
+  (async () => {
+    try {
+      const res = await getDShowDevices();
+      last = devicesToMap(Array.isArray(res == null ? void 0 : res.devices) ? res.devices : []);
+    } catch {
+      last = /* @__PURE__ */ new Map();
     }
     tick();
   })();
@@ -18800,6 +19072,109 @@ ipcMain.handle("project:import-project-file-json", async (_e, jsonFilePath) => {
     return { ok: false, error: message };
   }
 });
+const defaultState = {
+  1: { inputType: "none" },
+  2: { inputType: "none" },
+  3: { inputType: "none" },
+  4: { inputType: "none" }
+};
+let state = { ...defaultState };
+function getVideoChannelState() {
+  return { ...state };
+}
+function setVideoChannelInputType(channel, inputType) {
+  state = { ...state, [channel]: { ...state[channel], inputType } };
+  try {
+    const all = BrowserWindow.getAllWindows();
+    for (const win2 of all) {
+      try {
+        win2.webContents.send("video:input-type-changed", { channel, inputType });
+      } catch {
+      }
+    }
+  } catch {
+  }
+}
+ipcMain.handle("video:get-channel-state", async () => {
+  try {
+    return { ok: true, data: getVideoChannelState() };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+});
+ipcMain.handle("video:set-channel-input-type", async (_e, channel, inputType) => {
+  try {
+    const ch = Math.max(1, Math.min(4, Number(channel || 0)));
+    setVideoChannelInputType(ch, inputType);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Unknown error" };
+  }
+});
+let cachedClient$1 = null;
+async function getClient$1() {
+  if (cachedClient$1) return cachedClient$1;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient$1 = client;
+  return client;
+}
+async function deleteTask(taskId) {
+  const client = await getClient$1();
+  const db = client.db("capture");
+  const tasks = db.collection("tasks");
+  const _id = new ObjectId(taskId);
+  const res = await tasks.deleteOne({ _id });
+  return res.deletedCount === 1;
+}
+ipcMain.handle("db:deleteTask", async (_event, taskId) => {
+  try {
+    const ok = await deleteTask(taskId);
+    if (!ok) throw new Error("Task not found");
+    return { ok: true, data: taskId };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
+let cachedClient = null;
+async function getClient() {
+  if (cachedClient) return cachedClient;
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true
+    }
+  });
+  await client.connect();
+  cachedClient = client;
+  return client;
+}
+async function deleteDive(diveId) {
+  const client = await getClient();
+  const db = client.db("capture");
+  const dives = db.collection("dives");
+  const _id = new ObjectId(diveId);
+  const res = await dives.deleteOne({ _id });
+  return res.deletedCount === 1;
+}
+ipcMain.handle("db:deleteDive", async (_event, diveId) => {
+  try {
+    const ok = await deleteDive(diveId);
+    if (!ok) throw new Error("Dive not found");
+    return { ok: true, data: diveId };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return { ok: false, error: message };
+  }
+});
 const __dirname$1 = path$m.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path$m.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -18813,6 +19188,7 @@ let pipWin = null;
 let eventingWin = null;
 let dataConfigWin = null;
 let stopComWatcher = null;
+let stopCamWatcher = null;
 function delay(ms2) {
   return new Promise((r) => setTimeout(r, ms2));
 }
@@ -18917,6 +19293,10 @@ async function createWindow() {
   } catch {
   }
   try {
+    stopCamWatcher = startCameraDeviceWatcher(() => win);
+  } catch {
+  }
+  try {
     const online = await new Promise((resolve) => {
       try {
         const req = require("node:https").request({ method: "HEAD", host: "api.github.com", path: "/", headers: { "User-Agent": "deepstrim-capture" }, timeout: 3e3 }, (res) => {
@@ -18992,6 +19372,10 @@ app.on("before-quit", async (e) => {
   }
   try {
     stopComWatcher == null ? void 0 : stopComWatcher();
+  } catch {
+  }
+  try {
+    stopCamWatcher == null ? void 0 : stopCamWatcher();
   } catch {
   }
   app.quit();

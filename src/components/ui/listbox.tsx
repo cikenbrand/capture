@@ -97,7 +97,7 @@ export function Listbox({
       aria-multiselectable={undefined}
       aria-activedescendant={activeIndex >= 0 ? `lb-item-${activeIndex}` : undefined}
       className={cn(
-        "bg-[#21262E] p-1 relative z-0 w-full overflow-auto outline-none h-full",
+        "bg-black/5 border border-white/10 p-2 relative z-0 w-full overflow-auto outline-none h-full",
         "focus-visible:ring-blue-300 focus-visible:ring-[1px]",
         className
       )}
@@ -118,10 +118,10 @@ export function Listbox({
             aria-selected={isSelected}
             aria-disabled={disabled}
             className={cn(
-              "relative flex w-full cursor-pointer items-center gap-2 py-1 pr-8 pl-2 text-sm select-none rounded-[3px] border border-transparent",
+              "relative flex w-full cursor-pointer items-center gap-2 py-1 pr-8 pl-2 select-none rounded border border-transparent text-slate-400",
               !isSelected && "hover:bg-[#2A3644]",
-              isActive && !isSelected && "bg-[#2A3644] text-white",
-              isSelected && "bg-[#374F66] text-white border-white/30",
+              isActive && !isSelected && "bg-[#2A3644] text-slate-400",
+              isSelected && "bg-[#374F66] text-slate-400",
               disabled && "opacity-50 pointer-events-none",
               itemClassName
             )}

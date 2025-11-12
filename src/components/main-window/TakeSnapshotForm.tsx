@@ -10,7 +10,7 @@ export default function TakeSnapshotForm ({ onClose }: Props) {
   const [ch3, setCh3] = useState(false)
   const [ch4, setCh4] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [outputDir, setOutputDir] = useState('D:\\_blob_\\snapshots')
+  const [outputDir, setOutputDir] = useState('D:\\_blob_\\snapshot')
   const [file1, setFile1] = useState('')
   const [file2, setFile2] = useState('')
   const [file3, setFile3] = useState('')

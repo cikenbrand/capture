@@ -28,9 +28,10 @@ export async function setFileNameFormatting(format: string): Promise<boolean> {
 		const sourceName = sources[i]
 		const channelIndex = i + 1
 		try {
+			const filterName = `Source Record (channel ${channelIndex})`
 			await obs.call('SetSourceFilterSettings', {
 				sourceName,
-				filterName: 'source record',
+				filterName,
 				filterSettings: { filename_formatting: `ch${channelIndex}-${format}` },
 				overlay: true,
 			})

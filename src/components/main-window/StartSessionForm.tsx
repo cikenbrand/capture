@@ -1,6 +1,4 @@
 import { memo, useEffect, useState } from "react"
-import { Checkbox } from "../ui/checkbox"
-import { Input } from "../ui/input"
 import { Button } from "../ui/button"
 
 type Props = {
@@ -23,6 +21,7 @@ export default memo(function StartSessionForm({ onClose }: Props) {
   const [channel2Enabled, setChannel2Enabled] = useState(false)
   const [channel3Enabled, setChannel3Enabled] = useState(false)
   const [channel4Enabled, setChannel4Enabled] = useState(false)
+  const [disabledChannels, setDisabledChannels] = useState<Record<number, boolean>>({ 1: false, 2: false, 3: false, 4: false })
 
     useEffect(() => {
         let cancelled = false
@@ -64,6 +63,22 @@ export default memo(function StartSessionForm({ onClose }: Props) {
             })()
         return () => { cancelled = true }
     }, [])
+
+  // Listen for input-type changes from VideoDeviceConfigurations and disable when type === 'none'
+  useEffect(() => {
+    const handler = (e: any) => {
+      try {
+        const detail = e?.detail || {}
+        const ch = Number(detail.channel)
+        const type = String(detail.inputType || '')
+        if (Number.isFinite(ch) && ch >= 1 && ch <= 4) {
+          setDisabledChannels(prev => ({ ...prev, [ch]: type === 'none' }))
+        }
+      } catch {}
+    }
+    window.addEventListener('video:input-type-changed', handler as any)
+    return () => { try { window.removeEventListener('video:input-type-changed', handler as any) } catch {} }
+  }, [])
 
     async function handleStart() {
         try {
@@ -157,86 +172,45 @@ export default memo(function StartSessionForm({ onClose }: Props) {
     }
 
     return (
-        <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1">
-                <div className="flex gap-2 items-center">
-                    <Checkbox checked={previewEnabled} onCheckedChange={(v) => setPreviewEnabled(v === true)} />
-                    <span className="font-bold">Preview</span>
-                </div>
-                <div className="flex gap-2 items-center text-nowrap">
-                    <div className="flex gap-1 items-center">
-                        <span>Path</span>
-                        <Input className="h-7" value={previewPath} onChange={(e) => setPreviewPath(e.target.value)} />
-                    </div>
-                    <div className="flex gap-1 items-center">
-                        <span>File Name</span>
-                        <Input className="h-7" value={previewFileName} onChange={(e) => setPreviewFileName(e.target.value)} />
-                    </div>
-                </div>
+        <div className="flex flex-col gap-6">
+            <div className="text-center text-slate-400">Select channel to record</div>
+            <div className="flex items-center justify-center gap-4">
+                <Button
+                    className={`h-[30px] px-4 min-w-[140px] text-white/40 hover:bg-black/20 ${previewEnabled ? 'bg-black/40 text-blue-200 hover:bg-black/40 font-semibold' : ''}`}
+                    onClick={() => setPreviewEnabled(v => !v)}
+                >
+                    Preview
+                </Button>
+                <Button
+                    className={`h-[30px] px-4 min-w-[140px] text-white/40 hover:bg-black/20 ${channel1Enabled ? 'bg-black/40 text-blue-200 hover:bg-black/40 font-semibold' : ''}`}
+                    onClick={() => setChannel1Enabled(v => !v)}
+                    disabled={disabledChannels[1]}
+                >
+                    Channel 1
+                </Button>
+                <Button
+                    className={`h-[30px] px-4 min-w-[140px] text-white/40 hover:bg-black/20 ${channel2Enabled ? 'bg-black/40 text-blue-200 hover:bg-black/40 font-semibold' : ''}`}
+                    onClick={() => setChannel2Enabled(v => !v)}
+                    disabled={disabledChannels[2]}
+                >
+                    Channel 2
+                </Button>
             </div>
-            <div className="flex flex-col gap-1">
-                <div className="flex gap-2 items-center">
-                    <Checkbox checked={channel1Enabled} onCheckedChange={(v) => setChannel1Enabled(v === true)} />
-                    <span className="font-bold">Channel 1</span>
-                </div>
-                <div className="flex gap-2 items-center text-nowrap">
-                    <div className="flex gap-1 items-center">
-                        <span>Path</span>
-                        <Input className="h-7" value={channel1Path} onChange={(e) => setChannel1Path(e.target.value)} />
-                    </div>
-                    <div className="flex gap-1 items-center">
-                        <span>File Name</span>
-                        <Input className="h-7" value={channel1FileName} onChange={(e) => setChannel1FileName(e.target.value)} />
-                    </div>
-                </div>
-            </div>
-            <div className="flex flex-col gap-1">
-                <div className="flex gap-2 items-center">
-                    <Checkbox checked={channel2Enabled} onCheckedChange={(v) => setChannel2Enabled(v === true)} />
-                    <span className="font-bold">Channel 2</span>
-                </div>
-                <div className="flex gap-2 items-center text-nowrap">
-                    <div className="flex gap-1 items-center">
-                        <span>Path</span>
-                        <Input className="h-7" value={channel2Path} onChange={(e) => setChannel2Path(e.target.value)} />
-                    </div>
-                    <div className="flex gap-1 items-center">
-                        <span>File Name</span>
-                        <Input className="h-7" value={channel2FileName} onChange={(e) => setChannel2FileName(e.target.value)} />
-                    </div>
-                </div>
-            </div>
-            <div className="flex flex-col gap-1">
-                <div className="flex gap-2 items-center">
-                    <Checkbox checked={channel3Enabled} onCheckedChange={(v) => setChannel3Enabled(v === true)} />
-                    <span className="font-bold">Channel 3</span>
-                </div>
-                <div className="flex gap-2 items-center text-nowrap">
-                    <div className="flex gap-1 items-center">
-                        <span>Path</span>
-                        <Input className="h-7" value={channel3Path} onChange={(e) => setChannel3Path(e.target.value)} />
-                    </div>
-                    <div className="flex gap-1 items-center">
-                        <span>File Name</span>
-                        <Input className="h-7" value={channel3FileName} onChange={(e) => setChannel3FileName(e.target.value)} />
-                    </div>
-                </div>
-            </div>
-            <div className="flex flex-col gap-1">
-                <div className="flex gap-2 items-center">
-                    <Checkbox checked={channel4Enabled} onCheckedChange={(v) => setChannel4Enabled(v === true)} />
-                    <span className="font-bold">Channel 4</span>
-                </div>
-                <div className="flex gap-2 items-center text-nowrap">
-                    <div className="flex gap-1 items-center">
-                        <span>Path</span>
-                        <Input className="h-7" value={channel4Path} onChange={(e) => setChannel4Path(e.target.value)} />
-                    </div>
-                    <div className="flex gap-1 items-center">
-                        <span>File Name</span>
-                        <Input className="h-7" value={channel4FileName} onChange={(e) => setChannel4FileName(e.target.value)} />
-                    </div>
-                </div>
+            <div className="flex items-center justify-center gap-4">
+                <Button
+                    className={`h-[30px] px-4 min-w-[140px] text-white/40 hover:bg-black/20 ${channel3Enabled ? 'bg-black/40 text-blue-200 hover:bg-black/40 font-semibold' : ''}`}
+                    onClick={() => setChannel3Enabled(v => !v)}
+                    disabled={disabledChannels[3]}
+                >
+                    Channel 3
+                </Button>
+                <Button
+                    className={`h-[30px] px-4 min-w-[140px] text-white/40 hover:bg-black/20 ${channel4Enabled ? 'bg-black/40 text-blue-200 hover:bg-black/40 font-semibold' : ''}`}
+                    onClick={() => setChannel4Enabled(v => !v)}
+                    disabled={disabledChannels[4]}
+                >
+                    Channel 4
+                </Button>
             </div>
             <div className="mt-2 flex justify-end gap-2">
                 <Button onClick={onClose}>Cancel</Button>

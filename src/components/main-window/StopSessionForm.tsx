@@ -87,12 +87,12 @@ export default memo(function StopSessionForm({ onClose }: Props) {
   }
   return (
     <div className="flex flex-col gap-4">
-      <div className="text-white/80">
+      <div className="text-slate-400">
         Are you sure you want to stop the session?
       </div>
       <label className="flex items-center gap-2 text-white/80">
         <Checkbox checked={markCompleted} onCheckedChange={(v) => setMarkCompleted(v === true)} />
-        <span>Mark current component as Completed</span>
+        <span className="text-slate-400">Mark current component as completed</span>
       </label>
       <div className="mt-2 flex justify-end gap-2">
         <Button onClick={onClose}>Cancel</Button>

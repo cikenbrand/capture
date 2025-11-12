@@ -12,7 +12,7 @@ export async function pauseRecording(): Promise<boolean> {
 	let ok = true
 
 	try {
-		await obs.call('ToggleRecordPause')
+		await obs.call('PauseRecord')
 	} catch {
 		ok = false
 	}

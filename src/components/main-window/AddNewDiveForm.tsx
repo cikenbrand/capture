@@ -68,17 +68,17 @@ export default function AddNewDive({ onClose }: Props) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <span>Dive Name</span>
+        <span className="text-slate-400">Dive Name</span>
         <Input value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="flex flex-col gap-1">
-        <span>Remarks</span>
+        <span className="text-slate-400">Remarks</span>
         <Input value={remarks} onChange={(e) => setRemarks(e.target.value)} />
       </div>
       {error ? <div className="text-red-400 text-sm">{error}</div> : null}
       <div className="mt-2 flex justify-end gap-2">
         <Button onClick={onClose} disabled={submitting}>Cancel</Button>
-        <Button onClick={onCreate} disabled={submitting || !name.trim()}>OK</Button>
+        <Button onClick={onCreate} disabled={submitting || !name.trim()}>Add</Button>
       </div>
     </div>
   )

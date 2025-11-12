@@ -144,23 +144,23 @@ export default function EditNodeDetailsForm({ onClose }: Props) {
       {!confirmingDelete ? (
         <>
           <div className="flex flex-col gap-1">
-            <span>Node Name</span>
+            <span className="text-slate-400">Node Name</span>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="flex flex-col gap-1">
-            <span>Status</span>
+            <span className="text-slate-400">Status</span>
             <RadioGroup className="flex flex-row gap-4" value={status} onValueChange={(v) => setStatus((v as any) || 'not-started')}>
               <label className="inline-flex items-center gap-2">
                 <RadioGroupItem value="completed" />
-                <span>Completed</span>
+                <span className="text-slate-400">Completed</span>
               </label>
               <label className="inline-flex items-center gap-2">
                 <RadioGroupItem value="ongoing" disabled={allChildrenCompleted} />
-                <span>Ongoing</span>
+                <span className="text-slate-400">Ongoing</span>
               </label>
               <label className="inline-flex items-center gap-2">
                 <RadioGroupItem value="not-started" disabled={allChildrenCompleted} />
-                <span>Not Started</span>
+                <span className="text-slate-400">Not Started</span>
               </label>
             </RadioGroup>
             {allChildrenCompleted ? (
@@ -168,7 +168,7 @@ export default function EditNodeDetailsForm({ onClose }: Props) {
             ) : null}
           </div>
           <div className="flex flex-col gap-1">
-            <span>Remarks</span>
+            <span className="text-slate-400">Remarks</span>
             <Input value={remarks} onChange={(e) => setRemarks(e.target.value)} />
           </div>
         </>
@@ -179,9 +179,7 @@ export default function EditNodeDetailsForm({ onClose }: Props) {
       <div className="mt-2 flex justify-between gap-2">
         {!confirmingDelete ? (
           <>
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setConfirmingDelete(true)} disabled={submitting || !nodeId}>Delete</Button>
-            </div>
+            <div />
             <div className="flex gap-2">
               <Button onClick={onClose} disabled={submitting}>Cancel</Button>
               <Button onClick={onApply} disabled={submitting || !nodeId}>Apply</Button>
@@ -192,7 +190,6 @@ export default function EditNodeDetailsForm({ onClose }: Props) {
             <div />
             <div className="flex gap-2">
               <Button onClick={() => setConfirmingDelete(false)} disabled={submitting}>Cancel</Button>
-              <Button onClick={onDelete} disabled={submitting || !nodeId}>Delete</Button>
             </div>
           </>
         )}

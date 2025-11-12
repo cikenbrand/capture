@@ -54,7 +54,7 @@ function MenubarTrigger({
     <MenubarPrimitive.Trigger
       data-slot="menubar-trigger"
       className={cn(
-        "text-[#B2B5BA] hover:text-white hover:bg-[#363A41] focus:bg-[#363A41] data-[state=open]:bg-[#363A41] data-[state=open]:text-blue-300 flex items-center rounded-[2px] px-2 py-1 text-sm outline-hidden select-none",
+        "text-slate-500 hover:bg-slate-700 data-[state=open]:bg-slate-700 flex items-center px-2 py-0.5 outline-hidden select-none rounded-[5px]",
         className
       )}
       {...props}
@@ -66,7 +66,7 @@ function MenubarContent({
   className,
   align = "start",
   alignOffset = 0,
-  sideOffset = 0,
+  sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof MenubarPrimitive.Content>) {
   return (
@@ -77,7 +77,7 @@ function MenubarContent({
         alignOffset={alignOffset}
         sideOffset={sideOffset}
         className={cn(
-          "bg-[#363D4A] text z-50 min-w-[12rem] origin-(--radix-menubar-content-transform-origin) overflow-hidden border border-black",
+          "border border-slate-700 p-1 bg-[#1A1E25] text z-50 min-w-[15rem] origin-(--radix-menubar-content-transform-origin) overflow-hidden rounded-[5px] shadow-2xl",
           className
         )}
         {...props}
@@ -101,7 +101,7 @@ function MenubarItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "focus:bg-[#4C525E] focus:text-white data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 px-2 py-1.5 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "text-slate-500 focus:bg-slate-700 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex cursor-default items-center gap-2 px-6 py-1 outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 rounded-[5px]",
         className
       )}
       {...props}
@@ -119,7 +119,7 @@ function MenubarCheckboxItem({
     <MenubarPrimitive.CheckboxItem
       data-slot="menubar-checkbox-item"
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-xs py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-xs py-1.5 pr-2 pl-8 outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       checked={checked}
@@ -144,7 +144,7 @@ function MenubarRadioItem({
     <MenubarPrimitive.RadioItem
       data-slot="menubar-radio-item"
       className={cn(
-        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-xs py-1.5 pr-2 pl-8 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "focus:bg-accent focus:text-accent-foreground relative flex cursor-default items-center gap-2 rounded-xs py-1.5 pr-2 pl-8 outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -171,7 +171,7 @@ function MenubarLabel({
       data-slot="menubar-label"
       data-inset={inset}
       className={cn(
-        "px-2 py-1.5 text-sm data-[inset]:pl-8",
+        "px-2 py-1.5 data-[inset]:pl-8",
         className
       )}
       {...props}
@@ -200,7 +200,7 @@ function MenubarShortcut({
     <span
       data-slot="menubar-shortcut"
       className={cn(
-        "text-muted-foreground ml-auto text-xs tracking-widest",
+        "text-muted-foreground ml-auto tracking-widest",
         className
       )}
       {...props}
@@ -228,7 +228,7 @@ function MenubarSubTrigger({
       data-inset={inset}
       className={cn(
         // Match MenubarTrigger styling
-        "text-[#B2B5BA] hover:text-white hover:bg-[#363A41] focus:bg-[#363A41] data-[state=open]:bg-[#363A41] data-[state=open]:text-blue-300 flex items-center rounded-[2px] px-2 py-1 text-sm outline-hidden select-none data-[inset]:pl-8",
+        "text-slate-500 focus:bg-slate-700 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:focus:text-destructive data-[variant=destructive]:*:[svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 pl-6 pr-2 py-1 outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 rounded-[5px]",
         className
       )}
       {...props}
@@ -248,7 +248,7 @@ function MenubarSubContent({
       data-slot="menubar-sub-content"
       className={cn(
         // Match MenubarContent styling
-        "bg-[#363D4A] text z-50 min-w-[12rem] origin-(--radix-menubar-content-transform-origin) overflow-hidden border border-black",
+        "border border-slate-700 p-1 bg-[#1A1E25] text z-50 min-w-[15rem] origin-(--radix-menubar-content-transform-origin) overflow-hidden rounded-[5px] shadow-2xl",
         className
       )}
       {...props}

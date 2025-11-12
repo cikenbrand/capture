@@ -141,14 +141,14 @@ export default function AppWindowBar() {
     }, [])
 
     return (
-        <div className='h-9 w-full drag flex items-center justify-between pl-2' >
+        <div className='h-9 w-full drag flex items-center justify-between pl-2 border-b border-slate-700' >
             <div className="flex gap-2 w-full items-center">
                 <div className="h-5 w-5 overflow-hidden rounded">
                     <img src="./dc.png" className="object-contain" />
                 </div>
                 <Menubar className='no-drag h-6 bg-transparent border-0 p-0 shadow-none text-white'>
                     <MenubarMenu>
-                        <MenubarTrigger className='px-2 py-1'>File</MenubarTrigger>
+                        <MenubarTrigger>File</MenubarTrigger>
                         <MenubarContent>
                             <MenubarItem onClick={() => setNewProjectOpen(true)} disabled={isRecordingStarted}>
                                 New Project
@@ -234,7 +234,7 @@ export default function AppWindowBar() {
                         </MenubarContent>
                     </MenubarMenu>
                     <MenubarMenu>
-                        <MenubarTrigger className='px-2 py-1'>Window</MenubarTrigger>
+                        <MenubarTrigger>Window</MenubarTrigger>
                         <MenubarContent>
                             <MenubarItem onClick={() => window.ipcRenderer.invoke('window:open-overlay-editor')}>Open Overlay Editor</MenubarItem>
                             <MenubarItem onClick={() => window.ipcRenderer.invoke('window:open-data-configurations')}>Open Data Configurations</MenubarItem>
@@ -242,7 +242,7 @@ export default function AppWindowBar() {
                         </MenubarContent>
                     </MenubarMenu>
                     <MenubarMenu>
-                        <MenubarTrigger className='px-2 py-1'>Preview</MenubarTrigger>
+                        <MenubarTrigger>Preview</MenubarTrigger>
                         <MenubarContent>
                             <MenubarItem onClick={() => { try { window.ipcRenderer.invoke('window:open-pip') } catch { } }}>Open Picture in Picture Window</MenubarItem>
                             <MenubarSeparator/>
@@ -270,13 +270,13 @@ export default function AppWindowBar() {
 
                     </MenubarMenu>
                     <MenubarMenu>
-                        <MenubarTrigger className='px-2 py-1'>Settings</MenubarTrigger>
+                        <MenubarTrigger>Settings</MenubarTrigger>
                         <MenubarContent>
                             <MenubarItem onClick={() => setVideoConfigOpen(true)}>Video Configurations</MenubarItem>
                         </MenubarContent>
                     </MenubarMenu>
                     <MenubarMenu>
-                        <MenubarTrigger className='px-2 py-1'>Export / Import</MenubarTrigger>
+                        <MenubarTrigger>Export / Import</MenubarTrigger>
                         <MenubarContent>
                             <MenubarItem disabled={!selectedProjectId} onClick={() => window.ipcRenderer.invoke('window:open-export-project')}>Export Project Settings</MenubarItem>
                             <MenubarItem

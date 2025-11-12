@@ -1,10 +1,11 @@
 import { getObsClient } from './connectToOBSWebsocket'
 import { ipcMain } from 'electron'
 /**
- * Starts recording in OBS and optionally triggers channel hotkeys.
+ * Starts OBS preview recording and starts Source Record per selected channels.
  *
  * - If `preview` is true, calls OBS `StartRecord`.
- * - If `ch1`..`ch4` are true, triggers Ctrl+1..Ctrl+4 via obs-websocket.
+ * - For `ch1`..`ch4`, uses Source Record vendor `record_start` for
+ *   sources: "channel 1".."channel 4" (no hotkeys).
  *
  * Returns true if all requested actions succeeded; false otherwise.
  */
@@ -20,7 +21,7 @@ export async function startRecording(
 
 	let allOk = true
 
-	// Start recording if requested
+	// Start standard preview recording if requested
 	if (preview) {
 		try {
 			await obs.call('StartRecord')
@@ -29,25 +30,49 @@ export async function startRecording(
 		}
 	}
 
-	// Helper to trigger a Ctrl+<number> hotkey
-	async function triggerCtrlNumber(numberKey: 1 | 2 | 3 | 4): Promise<boolean> {
-		const keyId = `OBS_KEY_${numberKey}`
-		try {
-			await obs.call('TriggerHotkeyByKeySequence', {
-				keyId,
-				keyModifiers: { shift: false, control: true, alt: false, command: false },
-			})
-			return true
-		} catch {
-			return false
-		}
+	// Helper to start Source Record for a specific source name
+	async function startSourceRecord(sourceName: string): Promise<{ success: boolean; error?: string } | undefined> {
+		const res = await obs.call('CallVendorRequest', {
+			vendorName: 'source-record',
+			requestType: 'record_start',
+			requestData: { source: sourceName, stop_existing: true },
+		} as any)
+		return res?.responseData
 	}
 
-	// Trigger requested channel hotkeys sequentially
-	if (ch1) allOk = (await triggerCtrlNumber(1)) && allOk
-	if (ch2) allOk = (await triggerCtrlNumber(2)) && allOk
-	if (ch3) allOk = (await triggerCtrlNumber(3)) && allOk
-	if (ch4) allOk = (await triggerCtrlNumber(4)) && allOk
+	// Start requested channel sources sequentially
+	if (ch1) {
+		try {
+			const r = await startSourceRecord('channel 1')
+			allOk = (!!r?.success) && allOk
+		} catch {
+			allOk = false
+		}
+	}
+	if (ch2) {
+		try {
+			const r = await startSourceRecord('channel 2')
+			allOk = (!!r?.success) && allOk
+		} catch {
+			allOk = false
+		}
+	}
+	if (ch3) {
+		try {
+			const r = await startSourceRecord('channel 3')
+			allOk = (!!r?.success) && allOk
+		} catch {
+			allOk = false
+		}
+	}
+	if (ch4) {
+		try {
+			const r = await startSourceRecord('channel 4')
+			allOk = (!!r?.success) && allOk
+		} catch {
+			allOk = false
+		}
+	}
 
 	return allOk
 }
@@ -61,4 +86,4 @@ ipcMain.handle('obs:start-recording', async (_e, args: { preview: boolean, ch1: 
 	} catch {
 	  return false
 	}
-  })
+	})

@@ -3,6 +3,7 @@ import { Listbox } from "../ui/listbox";
 import { DraggableDialog } from "../ui/draggable-dialog";
 import VideoDeviceConfigurations from "./VideoDeviceConfigurations";
 import { MdSettings } from "react-icons/md";
+import { Button } from "../ui/button";
 
 const CHANNEL_ITEMS = [
   { value: "channel-1", label: "Channel 1" },
@@ -208,24 +209,65 @@ export default function ChannelViewList() {
     [applySelection]
   );
 
+  // Global hotkeys: 1-4 select single channel views
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      try {
+        // Ignore when typing in inputs or when modifiers are pressed
+        const tag = (e.target as HTMLElement)?.tagName?.toLowerCase?.() ?? '';
+        const isTyping = tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable === true;
+        if (isTyping) return;
+        if (e.altKey || e.ctrlKey || e.metaKey) return;
+        const map: Record<string, ChannelValue> = {
+          Digit1: "channel-1",
+          Numpad1: "channel-1",
+          Digit2: "channel-2",
+          Numpad2: "channel-2",
+          Digit3: "channel-3",
+          Numpad3: "channel-3",
+          Digit4: "channel-4",
+          Numpad4: "channel-4",
+          // Multi-view hotkeys
+          Digit5: "pip view",
+          Numpad5: "pip view",
+          Digit6: "1 + 1 view",
+          Numpad6: "1 + 1 view",
+          Digit7: "2 + 1 view",
+          Numpad7: "2 + 1 view",
+          Digit8: "2 + 2 view",
+          Numpad8: "2 + 2 view",
+        };
+        const value = map[e.code];
+        if (value) {
+          e.preventDefault();
+          handleChange(value);
+        }
+      } catch { }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [handleChange]);
+
   return (
     <div className="flex flex-col gap-2">
-      <button
-        title="Edit Node"
-        className="flex items-center justify-center gap-2 border border-white/10 h-[40px] bg-black/50 hover:bg-black/40 active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
-        onClick={() => setIsVideoConfigOpen(true)}>
-        <MdSettings className="h-4.5 w-4.5" />
-        <span className="font-semibold text-[14px]">Open Video Configurations</span>
-      </button>
-      <DraggableDialog open={isVideoConfigOpen} onOpenChange={setIsVideoConfigOpen} title="Video Configurations" width={800}>
-        <VideoDeviceConfigurations />
-      </DraggableDialog>
+      <div className="flex items-center justify-between">
+        <span className="text-slate-400 font-semibold">Video Channels</span>
+        <button
+          title="Video Configurations"
+          onClick={() => { setIsVideoConfigOpen(true); try { window.dispatchEvent(new Event('video-configs-opened')) } catch {} }}
+          className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[25px] w-[25px] hover:bg-white/5  disabled:opacity-30 disabled:pointer-events-none">
+          <MdSettings className="h-4 w-4 text-slate-400" />
+        </button> 
+        <DraggableDialog open={isVideoConfigOpen} onOpenChange={setIsVideoConfigOpen} title="Video Configurations" width={800} contentPadding="p-0">
+          <VideoDeviceConfigurations />
+        </DraggableDialog>
+      </div>
       <div className="flex flex-col gap-1">
-        <span className="text-white font-semibold">Single View</span>
+        <span className="text-slate-400">Single View</span>
         <Listbox items={SINGLE_VIEW_ITEMS} selectedValue={selectedValue ?? undefined} onChange={handleChange} />
       </div>
       <div className="flex flex-col gap-1">
-        <span className="text-white font-semibold">Multi View</span>
+        <span className="text-slate-400">Multi View</span>
         <Listbox items={MULTI_VIEW_ITEMS} selectedValue={selectedValue ?? undefined} onChange={handleChange} />
       </div>
     </div>

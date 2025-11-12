@@ -32,9 +32,10 @@ export async function getFileNameFormatting(): Promise<FileNameFormattingResult>
 	for (let i = 0; i < sources.length; i++) {
 		const sourceName = sources[i]
 		try {
+			const filterName = `Source Record (channel ${i + 1})`
 			const { filterSettings } = await obs.call('GetSourceFilter', {
 				sourceName,
-				filterName: 'source record',
+				filterName,
 			})
 			const value = filterSettings && typeof filterSettings.filename_formatting === 'string'
 				? filterSettings.filename_formatting

@@ -50,7 +50,7 @@ export default memo(function StopClipRecordingForm({ onClose }: Props) {
     }
     return (
         <div className="flex flex-col gap-4">
-            <div className="text-white/80">Are you sure you want to stop the clip?</div>
+            <div className="text-slate-400">Are you sure you want to stop the clip recording?</div>
             <div className="mt-2 flex justify-end gap-2">
                 <Button onClick={onClose}>Cancel</Button>
                 <Button onClick={handleStop}>Stop Clip</Button>

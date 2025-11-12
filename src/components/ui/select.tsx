@@ -35,8 +35,9 @@ function SelectTrigger({
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "border-black data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 flex w-fit items-center justify-between gap-2 border bg-[#252B34] hover:bg-[#4C525E] disabled:hover:bg-[#252B34] px-2 text-sm whitespace-nowrap outline-none h-8 disabled:opacity-30 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        "focus-visible:border-black focus-visible:ring-blue-300 focus-visible:ring-[1px] data-[state=open]:ring-blue-300 data-[state=open]:ring-[1px]",
+        "flex h-7.5 w-fit min-w-0 items-center justify-between gap-2 border border-white/10 bg-[#1E2129] px-2 py-1 text-[13px] text-slate-400 outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-muted-foreground whitespace-nowrap [&_svg:not([class*='text-'])]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2",
+        "focus-visible:border-white focus-visible:ring-blue-300 focus-visible:ring-[1px]",
+        "aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
         className
       )}
       {...props}
@@ -60,7 +61,7 @@ function SelectContent({
       <SelectPrimitive.Content
         data-slot="select-content"
         className={cn(
-          "bg-[#363D4A] relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-hidden border border-black",
+          "bg-[#1D2229] p-1 relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-hidden border border-2 border-white/10 rounded",
           className
         )}
         position={position}
@@ -89,7 +90,7 @@ function SelectLabel({
   return (
     <SelectPrimitive.Label
       data-slot="select-label"
-      className={cn("text-muted-foreground px-2 py-1.5 text-xs", className)}
+      className={cn("text-muted-foreground px-2 py-1.5", className)}
       {...props}
     />
   )
@@ -104,7 +105,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "focus:bg-[#4C525E] focus:text-white data-[highlighted]:bg-[#4C525E] data-[highlighted]:text-white [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "h-7 rounded focus:bg-black/20 text-slate-400 data-[highlighted]:bg-slate-700 [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 py-1.5 pr-8 pl-2 outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[inset]:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 ",
         className
       )}
       {...props}

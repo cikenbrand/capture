@@ -6,6 +6,8 @@ export type DraggableDialogProps = {
   onOpenChange: (next: boolean) => void
   title?: string
   width?: number
+  /** Tailwind padding classes for content area, e.g. "p-4", "px-6 py-3". Defaults to "p-4". */
+  contentPadding?: string
   /** When true, clicking outside or pressing Escape will not close the dialog, and the close button is hidden. */
   disableBackdropClose?: boolean
   /** When true, show a dimmed backdrop; when false, keep backdrop transparent. Defaults to true. */
@@ -13,7 +15,7 @@ export type DraggableDialogProps = {
   children?: React.ReactNode
 }
 
-export function DraggableDialog({ open, onOpenChange, title, width = 520, disableBackdropClose = false, useBackdrop = true, children }: DraggableDialogProps) {
+export function DraggableDialog({ open, onOpenChange, title, width = 520, contentPadding = "p-4", disableBackdropClose = false, useBackdrop = true, children }: DraggableDialogProps) {
   const panelRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 })
   const dragInfoRef = useRef<{ startX: number; startY: number; startLeft: number; startTop: number } | null>(null)
@@ -73,20 +75,20 @@ export function DraggableDialog({ open, onOpenChange, title, width = 520, disabl
       <div className={`absolute inset-0 ${useBackdrop ? 'bg-black/70' : ''} z-[7000]`} onClick={disableBackdropClose ? undefined : () => onOpenChange(false)} />
       <div
         ref={panelRef}
-        className="absolute w-[520px] max-w-[calc(100%-2rem)] border border-white/10 bg-[#1E1E1E] shadow-lg z-[7001]"
+        className="absolute w-[520px] max-w-[calc(100%-2rem)] border border-slate-700 bg-[#21262E] shadow-lg z-[7001] rounded overflow-hidden"
         style={{ left: pos.left, top: pos.top, width }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div
-          className="h-8 flex items-center px-3 bg-[#1D2229] rounded-t-sm border-b border-white/5 relative justify-center"
+          className="h-8 flex items-center px-3 bg-[#1A1E25] border-b border-slate-700 relative justify-center"
           onMouseDown={onHeaderMouseDown}
         >
-          <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none">{title}</div>
+          <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none text-slate-400">{title}</div>
           {!disableBackdropClose ? (
             <button className="absolute right-3 text-white/60 hover:text-white" onClick={() => onOpenChange(false)}>✕</button>
           ) : null}
         </div>
-        <div className="p-4 bg-[#1D2229]">
+        <div className={`${contentPadding} bg-[#1A1E25]`}>
           {children}
         </div>
       </div>

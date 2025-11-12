@@ -59,14 +59,39 @@ export default function EditDiveForm({ onClose }: Props) {
     }
   }
 
+  async function onDelete() {
+    if (!diveId) return
+    setError(null)
+    try {
+      setSubmitting(true)
+      const res = await window.ipcRenderer.invoke('db:deleteDive', diveId)
+      if (!res?.ok) {
+        setError(res?.error || 'Failed to delete dive')
+        return
+      }
+      try { await window.ipcRenderer.invoke('app:setSelectedDiveId', null) } catch {}
+      try {
+        const ev1 = new CustomEvent('selectedDiveChanged', { detail: null })
+        window.dispatchEvent(ev1)
+      } catch {}
+      try {
+        const ev2 = new CustomEvent('divesChanged')
+        window.dispatchEvent(ev2)
+      } catch {}
+      onClose()
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <span>Dive Name</span>
+        <span className="text-slate-400">Dive Name</span>
         <Input value={name} onChange={(e) => setName(e.target.value)} />
       </div>
       <div className="flex flex-col gap-1">
-        <span>Remarks</span>
+        <span className="text-slate-400">Remarks</span>
         <Input value={remarks} onChange={(e) => setRemarks(e.target.value)} />
       </div>
       {error ? <div className="text-red-400 text-sm">{error}</div> : null}

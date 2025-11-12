@@ -42,9 +42,9 @@ export default function ShowSelectedComponent() {
   }, [])
 
   return (
-    <div className="flex gap-2 items-center text-nowrap">
-      <span>Component :</span>
-      <Input className="h-6.5" readOnly disabled={!hasProject} value={name} placeholder="(none)" />
+    <div className="flex flex-col gap-1 text-nowrap">
+      <span className="text-slate-400">Selected Component</span>
+      <Input className="select-none pointer-events-none caret-transparent" readOnly disabled={!hasProject} value={name} placeholder="(none)" />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
-import { MdEdit } from "react-icons/md"
+import { MdEdit, MdLink, MdLinkOff } from "react-icons/md"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "../ui/button"
 
 export default function ChannelOverlaySelection() {
     type OverlayItem = {
@@ -234,20 +234,32 @@ export default function ChannelOverlaySelection() {
 
     return (
         <div className="flex flex-col gap-2">
-            <button
-                title="Overlay Editor"
-                className="flex items-center justify-center gap-2 border border-white/10 h-[40px] bg-black/50 hover:bg-black/40 active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none"
-                onClick={() => window.ipcRenderer.invoke('window:open-overlay-editor')}
-            >
-                <MdEdit className="h-4.5 w-4.5" />
-                <span className="font-semibold text-[14px]">Open Overlay Editor</span>
-            </button>
+            <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-semibold">Overlay</span>
+                <button
+                    title="Overlay Editor"
+                    onClick={() => window.ipcRenderer.invoke('window:open-overlay-editor')}
+                    className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[25px] w-[25px] hover:bg-white/5  disabled:opacity-30 disabled:pointer-events-none">
+                    <MdEdit className="h-4 w-4 text-slate-400" />
+                </button>
+            </div>
             <div className="flex flex-col gap-1">
 				<div className="flex items-center justify-between">
-					<span className="text-white font-semibold">Channel 1</span>
+					<span className="text-slate-400">Channel 1</span>
 					<div className="flex items-center justify-center gap-1.5">
-						<Checkbox disabled={!projectId} checked={!!group[1]} onCheckedChange={(v) => setGroup((g) => ({ ...g, 1: !!v }))} />
-						<span className="text-[14px] font-medium">Group</span>
+						<button
+							disabled={!projectId}
+							onClick={() => setGroup((g) => ({ ...g, 1: !g[1] }))}
+							aria-pressed={!!group[1]}
+							title={group[1] ? 'Unlink channel from group' : 'Link channel to group'}
+							className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
+						>
+							{group[1] ? (
+								<MdLink className="h-5 w-5 text-green-200" />
+							) : (
+								<MdLinkOff className="h-5 w-5 text-slate-400" />
+							)}
+						</button>
 					</div>
 				</div>
                 <Select disabled={!projectId} value={ch1OverlayId ?? 'none'} onValueChange={(val) => {
@@ -268,10 +280,21 @@ export default function ChannelOverlaySelection() {
             </div>
 			<div className="flex flex-col gap-1">
 				<div className="flex items-center justify-between">
-					<span className="text-white font-semibold">Channel 2</span>
+					<span className="text-slate-400">Channel 2</span>
 					<div className="flex items-center justify-center gap-1.5">
-						<Checkbox disabled={!projectId} checked={!!group[2]} onCheckedChange={(v) => setGroup((g) => ({ ...g, 2: !!v }))} />
-						<span className="text-[14px] font-medium">Group</span>
+						<button
+							disabled={!projectId}
+							onClick={() => setGroup((g) => ({ ...g, 2: !g[2] }))}
+							aria-pressed={!!group[2]}
+							title={group[2] ? 'Unlink channel from group' : 'Link channel to group'}
+							className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
+						>
+							{group[2] ? (
+								<MdLink className="h-5 w-5 text-green-200" />
+							) : (
+								<MdLinkOff className="h-5 w-5 text-slate-400" />
+							)}
+						</button>
 					</div>
 				</div>
 				<Select disabled={!projectId} value={ch2OverlayId ?? 'none'} onValueChange={(val) => {
@@ -292,10 +315,21 @@ export default function ChannelOverlaySelection() {
             </div>
 			<div className="flex flex-col gap-1">
 				<div className="flex items-center justify-between">
-					<span className="text-white font-semibold">Channel 3</span>
+					<span className="text-slate-400">Channel 3</span>
 					<div className="flex items-center justify-center gap-1.5">
-						<Checkbox disabled={!projectId} checked={!!group[3]} onCheckedChange={(v) => setGroup((g) => ({ ...g, 3: !!v }))} />
-						<span className="text-[14px] font-medium">Group</span>
+						<button
+							disabled={!projectId}
+							onClick={() => setGroup((g) => ({ ...g, 3: !g[3] }))}
+							aria-pressed={!!group[3]}
+							title={group[3] ? 'Unlink channel from group' : 'Link channel to group'}
+							className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
+						>
+							{group[3] ? (
+								<MdLink className="h-5 w-5 text-green-200" />
+							) : (
+								<MdLinkOff className="h-5 w-5 text-slate-400" />
+							)}
+						</button>
 					</div>
 				</div>
 				<Select disabled={!projectId} value={ch3OverlayId ?? 'none'} onValueChange={(val) => {
@@ -316,10 +350,21 @@ export default function ChannelOverlaySelection() {
             </div>
 			<div className="flex flex-col gap-1">
 				<div className="flex items-center justify-between">
-					<span className="text-white font-semibold">Channel 4</span>
+					<span className="text-slate-400">Channel 4</span>
 					<div className="flex items-center justify-center gap-1.5">
-						<Checkbox disabled={!projectId} checked={!!group[4]} onCheckedChange={(v) => setGroup((g) => ({ ...g, 4: !!v }))} />
-						<span className="text-[14px] font-medium">Group</span>
+						<button
+							disabled={!projectId}
+							onClick={() => setGroup((g) => ({ ...g, 4: !g[4] }))}
+							aria-pressed={!!group[4]}
+							title={group[4] ? 'Unlink channel from group' : 'Link channel to group'}
+							className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
+						>
+							{group[4] ? (
+								<MdLink className="h-5 w-5 text-green-200" />
+							) : (
+								<MdLinkOff className="h-5 w-5 text-slate-400" />
+							)}
+						</button>
 					</div>
 				</div>
 				<Select disabled={!projectId} value={ch4OverlayId ?? 'none'} onValueChange={(val) => {

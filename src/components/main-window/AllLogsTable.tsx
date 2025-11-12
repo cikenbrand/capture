@@ -69,8 +69,8 @@ export default function AllLogsTable() {
     }
 
     return (
-        <div className="w-full h-full p-1 bg-[#21262E]">
-            <div className="h-[200px] overflow-auto">
+        <div className="w-full h-full bg-[#21262E]">
+            <div className="h-[246px] overflow-auto logs-scroll">
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -96,7 +96,7 @@ export default function AllLogsTable() {
                         </TableRow>
                     ) : (
                         logs.map((log, idx) => (
-                            <TableRow key={log._id} className={idx === 0 ? 'bg-blue-300 text-black' : ''}>
+                            <TableRow key={log._id} className={idx === 0 ? 'bg-[#374F66] text-white' : ''}>
                                 <TableCell className="max-w-[100px] whitespace-nowrap overflow-hidden text-ellipsis">{log.date}</TableCell>
                                 <TableCell className="max-w-[90px] whitespace-nowrap overflow-hidden text-ellipsis">{log.time}</TableCell>
                                 <TableCell className="max-w-[160px] whitespace-nowrap overflow-hidden text-ellipsis">{log.event}</TableCell>

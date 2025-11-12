@@ -201,20 +201,20 @@ export default function TaskSelection() {
   const disabled = !projectId || loading || !tasks.length
 
   return (
-    <Select value={selectedTaskId ?? undefined} onValueChange={onChange} disabled={disabled}>
-      <SelectTrigger
-        className={`w-full ${isRecordingStarted ? 'cursor-not-allowed' : ''}`}
-        title={isRecordingStarted ? 'Session in progress - selection locked' : undefined}
-        onMouseDown={(e) => { if (isRecordingStarted) { e.preventDefault(); e.stopPropagation(); } }}
-        onKeyDown={(e) => { if (isRecordingStarted) { e.preventDefault(); e.stopPropagation(); } }}
-      >
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {tasks.map(t => (
-          <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      <Select value={selectedTaskId ?? undefined} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger
+          className={`w-full ${isRecordingStarted ? 'cursor-not-allowed' : ''}`}
+          title={isRecordingStarted ? 'Session in progress - selection locked' : undefined}
+          onMouseDown={(e) => { if (isRecordingStarted) { e.preventDefault(); e.stopPropagation(); } }}
+          onKeyDown={(e) => { if (isRecordingStarted) { e.preventDefault(); e.stopPropagation(); } }}
+        >
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {tasks.map(t => (
+            <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
   )
 }
