@@ -41,7 +41,7 @@ export default function ComDeviceSelection({ value, onChange }: Props) {
 
     return (
         <div className="flex flex-col gap-1">
-            <span>COM Device</span>
+            <span className="text-slate-400">COM Device</span>
             <Select value={value} onValueChange={onChange} disabled={!ports.length || loading}>
                 <SelectTrigger className="w-full">
                     <SelectValue placeholder={placeholder} />

@@ -325,8 +325,8 @@ export default function AppWindowBar() {
                     </MenubarMenu>
                 </Menubar>
             </div>
-            <div className="w-full flex items-center relative top-1">
-                <span>{selectedProjectName || ''}</span>
+            <div className="w-full flex items-center relative left-20">
+                <span className="text-slate-400">{selectedProjectName || ''}</span>
             </div>
             <div className='flex items-center gap-2 h-full'>
                 <button

@@ -50,12 +50,12 @@ export default function CreateProjectDetailsButton() {
     return (
         <button
             title="Project"
-            className="rounded-[7px] bg-[#1D2229] border border-2 border-white/10 flex items-center justify-center h-[28px] px-2 gap-2 rounded-[2px] text-white hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
+			className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[28px] w-[120px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none gap-2"
             onClick={onCreate}
             disabled={disabled}
         >
-            <FaFile className="h-3.5 w-3.5" />
-            <span className="font-medium">Project Details</span>
+            <FaFile className="h-3.5 w-3.5 text-slate-400" />
+			<span className="text-slate-400">Project Details</span>
         </button>
     )
 }

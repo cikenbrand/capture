@@ -74,15 +74,15 @@ export default function AllLogsTable() {
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="w-[100px]">Date</TableHead>
-                        <TableHead className="w-[90px]">Time</TableHead>
-                        <TableHead className="w-[160px]">Event</TableHead>
-                        <TableHead className="w-[180px]">Dive</TableHead>
-                        <TableHead className="w-[180px]">Task</TableHead>
-                        <TableHead className="w-[220px]">Components</TableHead>
-                        <TableHead className="w-[240px]">File Name</TableHead>
-                        <TableHead className="w-[160px]">Anomaly</TableHead>
-                        <TableHead className="w-[240px]">Data</TableHead>
+                        <TableHead className="w-[100px] text-slate-400">Date</TableHead>
+                        <TableHead className="w-[90px] text-slate-400">Time</TableHead>
+                        <TableHead className="w-[160px] text-slate-400">Event</TableHead>
+                        <TableHead className="w-[180px] text-slate-400">Dive</TableHead>
+                        <TableHead className="w-[180px] text-slate-400">Task</TableHead>
+                        <TableHead className="w-[220px] text-slate-400">Components</TableHead>
+                        <TableHead className="w-[240px] text-slate-400">File Name</TableHead>
+                        <TableHead className="w-[160px] text-slate-400">Anomaly</TableHead>
+                        <TableHead className="w-[240px] text-slate-400">Data</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody >
@@ -90,13 +90,9 @@ export default function AllLogsTable() {
                         <TableRow>
                             <TableCell colSpan={9}>Loading…</TableCell>
                         </TableRow>
-                    ) : logs.length === 0 ? (
-                        <TableRow>
-                            <TableCell colSpan={9}>No logs</TableCell>
-                        </TableRow>
                     ) : (
                         logs.map((log, idx) => (
-                            <TableRow key={log._id} className={idx === 0 ? 'bg-[#374F66] text-white' : ''}>
+                            <TableRow key={log._id} className={idx === 0 ? 'bg-[#374F66] text-white' : 'text-slate-400'}>
                                 <TableCell className="max-w-[100px] whitespace-nowrap overflow-hidden text-ellipsis">{log.date}</TableCell>
                                 <TableCell className="max-w-[90px] whitespace-nowrap overflow-hidden text-ellipsis">{log.time}</TableCell>
                                 <TableCell className="max-w-[160px] whitespace-nowrap overflow-hidden text-ellipsis">{log.event}</TableCell>

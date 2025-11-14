@@ -13,7 +13,7 @@ export default function FlowControlSelection ({ value, onChange }: Props) {
     ]
     return (
         <div className="flex flex-col gap-1">
-            <span>Flow Control</span>
+            <span className="text-slate-400">Flow Control</span>
             <Select value={value} onValueChange={onChange}>
                 <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select flow control" />

@@ -12,7 +12,7 @@ export default function StopBitsSelection ({ value, onChange }: Props) {
     ]
     return (
         <div className="flex flex-col gap-1">
-            <span>Stop Bits</span>
+            <span className="text-slate-400">Stop Bits</span>
             <Select value={value} onValueChange={onChange}>
                 <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select stop bits" />

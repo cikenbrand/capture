@@ -69,12 +69,13 @@ export default function FreeDrawToolButton() {
       data-draw-ui='true'
       title="Free Drawing Tool"
       className={clsx(
-        "rounded-[7px] bg-[#1D2229] border border-2 border-white/10 flex items-center justify-center h-[28px] px-2 gap-2 rounded-[2px] text-white disabled:opacity-30 disabled:pointer-events-none",
-        isActive ? "bg-[#374F66] text-white" : "hover:bg-white/5"
+        "rounded flex items-center justify-center h-[28px] w-[150px] disabled:opacity-30 disabled:pointer-events-none gap-2",
+        !isActive && "hover:bg-[#1D2229] hover:bg-white/5",
+        isActive && "bg-black/20"
       )}
     >
-      <FaPencilAlt className="h-3.5 w-3.5" />
-      <span className='font-medium'>Free Drawing Tool</span>
+      <FaPencilAlt className="h-3.5 w-3.5 text-slate-400" />
+      <span className='text-slate-400'>Free Drawing Tool</span>
     </button>
   )
 }

@@ -50,12 +50,12 @@ export default function CreateDiveButton() {
     return (
         <button
             title="Dive"
-            className="rounded-[7px] bg-[#1D2229] border border-2 border-white/10 flex items-center justify-center h-[28px] px-2 gap-2 rounded-[2px] text-white hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
+			className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[28px] w-[70px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none gap-2"
             onClick={onCreate}
             disabled={disabled}
         >
-            <FaPersonSwimming className="h-4.5 w-4.5" />
-            <span className="font-medium">Dive</span>
+            <FaPersonSwimming className="h-4.5 w-4.5 text-slate-400" />
+			<span className="text-slate-400">Dive</span>
         </button>
     )
 }

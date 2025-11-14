@@ -15,7 +15,7 @@ export default function ParitySelection ({ value, onChange }: Props) {
     ]
     return (
         <div className="flex flex-col gap-1">
-            <span>Parity</span>
+            <span className="text-slate-400">Parity</span>
             <Select value={value} onValueChange={onChange}>
                 <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select parity" />

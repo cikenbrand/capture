@@ -75,19 +75,19 @@ export default function RenameOverlayForm({ onClose }: Props) {
     return (
         <div className="flex flex-col gap-3">
             {!overlayId ? (
-                <div className="text-white/80">No overlay selected.</div>
+                <div className="text-slate-400">No overlay selected.</div>
             ) : null}
             <div className="flex flex-col gap-1">
-                <span>New Overlay Name</span>
+                <span className="text-slate-400">New Overlay Name</span>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
             </div>
-            {error ? <div className="text-red-400 text-sm">{error}</div> : null}
+            {error ? <div className="text-red-400">{error}</div> : null}
             <div className="mt-2 flex justify-end gap-2">
                 <Button onClick={onClose} disabled={submitting}>
                     Cancel
                 </Button>
                 <Button onClick={onRename} disabled={submitting || !overlayId || !name.trim()}>
-                    Rename
+                    Apply
                 </Button>
             </div>
         </div>

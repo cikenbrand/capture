@@ -1042,19 +1042,19 @@ export default function VideoDrawOverlay({ enabled, onRequestDisable }: Props) {
 				{menuPos && (
 					<div
 						ref={menuRef}
-						className="fixed bg-[#1f2937] text-white text-sm shadow-lg rounded py-1"
+						className="fixed bg-[#1f2937] shadow-lg rounded py-1"
 						style={{ left: menuPos.x, top: menuPos.y, zIndex: 6000, minWidth: 160 }}
 					>
 						{selectedRef.current ? (
 							<button
-								className="w-full text-left px-3 py-2 hover:bg-[#374151]"
+								className="w-full text-left px-3 py-1 hover:bg-[#374151] text-slate-400"
 								onClick={() => deleteSelectedDrawing()}
 							>
 								Delete item
 							</button>
 						) : null}
 						<button
-							className="w-full text-left px-3 py-2 hover:bg-[#374151]"
+							className="w-full text-left px-3 py-1 hover:bg-[#374151] text-slate-400"
 							onClick={() => clearAllDrawings()}
 						>
 							Clear all drawings

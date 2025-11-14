@@ -101,12 +101,12 @@ export function MultiSelectListbox({ items, selectedValues = [], onChange, class
             aria-selected={isSelected}
             aria-disabled={disabled}
             className={cn(
-              "relative flex w-full cursor-default items-center gap-2 py-1 pr-8 pl-2 text-sm select-none rounded-[3px] border border-transparent",
+              "relative flex w-full cursor-default items-center gap-2 py-1 pr-8 pl-2 text-sm select-none rounded-[3px] border border-transparent text-slate-400",
               !isSelected && "hover:bg-[#2A3644] hover:border-transparent",
               // When multiple are selected, use the selected color for the active row too
-              isMulti && isActive && !isSelected && "bg-[#374F66] text-white border-white/30",
-              !isMulti && isActive && !isSelected && "bg-[#2A3644] text-white",
-              isSelected && "bg-[#374F66] text-white border-white/30",
+              isMulti && isActive && !isSelected && "bg-[#374F66] text-slate-400",
+              !isMulti && isActive && !isSelected && "bg-[#2A3644] text-slate-400",
+              isSelected && "bg-[#374F66] text-slate-400",
               disabled && "opacity-50 pointer-events-none",
               itemClassName
             )}

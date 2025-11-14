@@ -52,11 +52,11 @@ export default function CreateProjectForm({ onClose }: Props) {
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-                <span>Project Name</span>
+                <span className="text-slate-400">Project Name</span>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1">
-                <span>Project Type</span>
+                <span className="text-slate-400">Project Type</span>
                 <Select value={projectType} onValueChange={(v) => setProjectType(v as any)}>
                     <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select type" />
@@ -68,19 +68,19 @@ export default function CreateProjectForm({ onClose }: Props) {
                 </Select>
             </div>
             <div className="flex flex-col gap-1">
-                <span>Client</span>
+                <span className="text-slate-400">Client</span>
                 <Input value={client} onChange={(e) => setClient(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1">
-                <span>Contractor</span>
+                <span className="text-slate-400">Contractor</span>
                 <Input value={contractor} onChange={(e) => setContractor(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1">
-                <span>Vessel</span>
+                <span className="text-slate-400">Vessel</span>
                 <Input value={vessel} onChange={(e) => setVessel(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1">
-                <span>Location</span>
+                <span className="text-slate-400">Location</span>
                 <Input value={location} onChange={(e) => setLocation(e.target.value)} />
             </div>
             {error ? <div className="text-red-400 text-sm">{error}</div> : null}

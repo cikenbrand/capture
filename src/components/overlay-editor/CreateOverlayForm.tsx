@@ -102,11 +102,11 @@ export default function CreateOverlayForm({ onClose }: Props) {
     return (
         <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-1">
-                <span>Overlay Name</span>
+                <span className="text-slate-400">Overlay Name</span>
                 <Input value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <div className="flex flex-col gap-1">
-                <span>Preset Reference</span>
+                <span className="text-slate-400">Preset Reference</span>
                 <Select
                     value={presetId}
                     onValueChange={(v) => setPresetId(v)}
@@ -122,7 +122,7 @@ export default function CreateOverlayForm({ onClose }: Props) {
                     </SelectContent>
                 </Select>
             </div>
-            {error ? <div className="text-red-400 text-sm">{error}</div> : null}
+            {error ? <div className="text-red-400">{error}</div> : null}
             <div className="mt-2 flex justify-end gap-2">
                 <Button onClick={onClose} disabled={submitting}>
                     Cancel

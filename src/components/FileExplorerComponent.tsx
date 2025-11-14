@@ -93,9 +93,9 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
     return (
         <div ref={rootRef} className="flex-1 flex flex-col min-h-0 relative" onClick={() => { if (ctxOpen) setCtxOpen(false) }}>
             <div className="px-3 py-2 border-b border-white/10 flex items-center justify-between bg-[#1F252E] gap-3">
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2">
                     <button
-                        className={`h-8 w-8 grid place-items-center rounded ${path.length ? 'hover:bg-white/10 text-white' : 'opacity-40 cursor-default text-white/70'}`}
+                        className={`h-8 w-8 grid place-items-center rounded text-slate-400 ${path.length ? 'hover:bg-white/10' : 'opacity-40 cursor-default'}`}
                         onClick={() => { if (path.length) { const next = path.slice(0, -1); setPath(next); try { onOpenPath?.(next) } catch {} } }}
                         title="Back"
                     >
@@ -104,7 +104,7 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                     {(["Root", ...path]).map((label, idx) => (
                         <div key={idx} className="flex items-center gap-1">
                             <button
-                                className={`px-2 py-1 rounded hover:bg-white/10 text-white/80 ${idx === path.length ? 'font-semibold text-white' : ''}`}
+                                className={`px-2 py-1 rounded hover:bg-white/10 ${idx === path.length ? 'text-blue-300' : 'text-slate-400'}`}
                                 onClick={() => {
                                     const next = idx === 0 ? [] : path.slice(0, idx)
                                     setPath(next)
@@ -114,7 +114,7 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                             >
                                 <span className="truncate max-w-[180px] inline-block align-middle">{label}</span>
                             </button>
-                            {idx < path.length && <span className="text-white/40">›</span>}
+                            {idx < path.length && <span className="text-slate-400">›</span>}
                         </div>
                     ))}
                 </div>
@@ -132,7 +132,7 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                 </div>
             </div>
             {view === 'details' && (
-                <div className="px-4 py-2 text-xs uppercase tracking-wider text-white/60 border-b border-white/10 flex items-center">
+                <div className="px-4 py-2 text-xs uppercase tracking-wider text-slate-400 border-b border-white/10 flex items-center">
                     <span className="flex-1">Name</span>
                     <span className="w-36 text-right">Type</span>
                     <span className="w-48 text-right">Date Modified</span>
@@ -141,7 +141,7 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
             <div className="flex-1 overflow-auto">
                 {hierarchy ? (
                     !currentEntries || currentEntries.length === 0 ? (
-                        <div className="p-4 text-white/60 text-sm">No items</div>
+                        <div className="p-4 text-slate-400">No items</div>
                     ) : view === 'details' ? (
                         <ul className="divide-y divide-white/5">
                             {currentEntries.map((it) => (
@@ -170,10 +170,10 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                 ) : (
                                     <AiFillFolder className="text-yellow-400" size={16} />
                                 )}
-                                        <span className="text-white text-sm truncate">{it.key}</span>
+                                        <span className="text-slate-400 truncate">{it.key}</span>
                                     </div>
-                                    <span className="w-36 text-right text-white/60 capitalize">{it.type || ''}</span>
-                                    <span className="w-48 text-right text-white/50"></span>
+                                    <span className="w-36 text-right text-slate-400 capitalize">{it.type || ''}</span>
+                                    <span className="w-48 text-right text-slate-400"></span>
                                 </li>
                             ))}
                         </ul>
@@ -244,13 +244,13 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                     ) : (
                                         <AiFillFolder className={`text-yellow-400 ${selectedId === it.key ? 'drop-shadow-[0_0_6px_rgba(255,255,0,0.3)]' : ''}`} size={48} />
                                     )}
-                                    <div className={`text-white text-xs text-center w-full truncate ${selectedId === it.key ? 'font-medium' : ''}`} title={it.key}>{it.key}</div>
+                                    <div className={`text-slate-400 text-center w-full truncate ${selectedId === it.key ? 'font-medium' : ''}`} title={it.key}>{it.key}</div>
                                 </div>
                             ))}
                         </div>
                     )
                 ) : !items.length ? (
-                    <div className="p-4 text-white/60 text-sm">No items</div>
+                    <div className="p-4 text-slate-400">No items</div>
                 ) : view === 'details' ? (
                     <ul className="divide-y divide-white/5">
                         {items.map((it) => (
@@ -273,9 +273,9 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                             >
                                 <div className="flex-1 flex items-center gap-2 min-w-0">
                                     <AiFillFolder className="text-yellow-400" size={16} />
-                                    <span className="text-white text-sm truncate">{it.name}</span>
+                                    <span className="text-slate-400 truncate">{it.name}</span>
                                 </div>
-                                <span className="w-48 text-right text-white/50">{it.dateModified ?? ''}</span>
+                                <span className="w-48 text-right text-slate-400">{it.dateModified ?? ''}</span>
                             </li>
                         ))}
                     </ul>
@@ -300,7 +300,7 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                                 aria-selected={selectedId === it.id}
                             >
                                 <AiFillFolder className="text-yellow-400" size={48} />
-                                <div className="text-white text-xs text-center w-full truncate" title={it.name}>{it.name}</div>
+                                <div className="text-slate-400 text-center w-full truncate" title={it.name}>{it.name}</div>
                             </div>
                         ))}
                     </div>
@@ -315,7 +315,7 @@ export default function FileExplorerComponent({ items, onSelect, hierarchy, onOp
                     onContextMenu={(e) => e.preventDefault()}
                 >
                     <button
-                        className="w-full text-left px-3 py-2 text-white/90 hover:bg-white/10"
+                        className="w-full text-left px-3 py-2 text-slate-400 hover:bg-white/10"
                         onClick={() => {
                             try { onSaveToLocal?.(ctxItem.name, ctxItem.isFolder, path) } catch {}
                             setCtxOpen(false)

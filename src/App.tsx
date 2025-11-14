@@ -572,9 +572,9 @@ function App() {
                         }
                       } catch { }
                     }}
-                    className="rounded-[7px] bg-[#1D2229] border border-2 border-white/10 flex items-center justify-center h-[28px] w-[170px] px-2 gap-2 hover:bg-white/5 rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none">
+                    className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[28px] w-[150px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none gap-2">
                     {isMicMuted ? <FaMicrophoneSlash className="h-4 w-4" /> : <FaMicrophone className="h-4 w-4" />}
-                    <span className="font-medium">{isMicMuted ? 'Unmute Microphone' : 'Mute Microphone'}</span>
+                    <span className="text-slate-400">{isMicMuted ? 'Unmute Microphone' : 'Mute Microphone'}</span>
                   </button>
                   <AudioMeterLive muted={isMicMuted} />
                 </div>

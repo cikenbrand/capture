@@ -365,7 +365,7 @@ export default function NodesTree() {
           />
         </div>
       ) : (
-        <div className="flex items-center justify-center h-full text-white/70 border border-black bg-[#21262E]">
+        <div className="flex items-center justify-center h-full text-slate-500 border border-white/10">
           No project selected
         </div>
       )}

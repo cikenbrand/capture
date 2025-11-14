@@ -764,7 +764,7 @@ export default function EditComponentForm({ onClose }: Props) {
                 {componentType === 'time' ? (
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-1">
-                            <span>Time Format</span>
+                            <span className="text-slate-400">Time Format</span>
                             <Select
                                 value={twentyFourHour ? '24' : '12'}
                                 onValueChange={handleTwentyFourHourChange}
@@ -779,7 +779,7 @@ export default function EditComponentForm({ onClose }: Props) {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <label className="flex items-center gap-2 text-sm text-white/80">
+                        <label className="flex items-center gap-2 text-sm text-slate-400">
                             <Checkbox
                                 checked={useUTC}
                                 onCheckedChange={(checked) => handleUseUTCChange(checked === true)}
@@ -792,7 +792,7 @@ export default function EditComponentForm({ onClose }: Props) {
 
                 {componentType === 'image' ? (
                     <div className="flex flex-col gap-2">
-                        <span>Image Selection</span>
+                        <span className="text-slate-400">Image Selection</span>
                         <div>
                             {imagesLoading ? (
                                 <div className="text-white/60 text-sm">Loading images…</div>
@@ -827,7 +827,7 @@ export default function EditComponentForm({ onClose }: Props) {
                             />
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span>Opacity</span>
+                            <span className="text-slate-400">Opacity</span>
                             <Input
                                 type="number"
                                 min={0}
@@ -851,7 +851,7 @@ export default function EditComponentForm({ onClose }: Props) {
                 {componentType === 'data' ? (
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-1">
-                            <span>Data Type</span>
+                            <span className="text-slate-400">Data Type</span>
                             <Select
                                 value={dataKey ?? 'undefined'}
                                 onValueChange={async (v) => {
@@ -889,7 +889,7 @@ export default function EditComponentForm({ onClose }: Props) {
                 {componentType === 'project' ? (
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-col gap-1">
-                            <span>Project Details</span>
+                            <span className="text-slate-400">Project Details</span>
                             <Select
                                 value={projectDetail}
                                 onValueChange={(v) => { const val = (v as any) as 'name' | 'client' | 'vessel' | 'location' | 'contractor'; setProjectDetail(val); void applyProjectDetailChange(val) }}
@@ -911,8 +911,8 @@ export default function EditComponentForm({ onClose }: Props) {
                 ) : null}
 
                 {componentType === 'node' ? (
-                    <div className="flex flex-col gap-1">
-                        <span>Node Level</span>
+                        <div className="flex flex-col gap-1">
+                            <span className="text-slate-400">Node Level</span>
                         <Input
                             type="number"
                             min={1}
@@ -928,7 +928,7 @@ export default function EditComponentForm({ onClose }: Props) {
                 {componentType !== 'image' ? (
                     <>
                         <div className="flex flex-col gap-1">
-                            <span>Font Size</span>
+                            <span className="text-slate-400">Font Size</span>
                             <Input
                                 type="number"
                                 min={1}
@@ -940,7 +940,7 @@ export default function EditComponentForm({ onClose }: Props) {
                             />
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span>Font Weight</span>
+                            <span className="text-slate-400">Font Weight</span>
                             <Select
                                 value={fontWeight}
                                 onValueChange={handleFontWeightChange}
@@ -959,7 +959,7 @@ export default function EditComponentForm({ onClose }: Props) {
                             </Select>
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span>Font Family</span>
+                            <span className="text-slate-400">Font Family</span>
                             <Select
                                 value={fontFamily}
                                 onValueChange={handleFontFamilyChange}
@@ -978,7 +978,7 @@ export default function EditComponentForm({ onClose }: Props) {
                             </Select>
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span>Horizontal Align</span>
+                            <span className="text-slate-400">Horizontal Align</span>
                             <Select
                                 value={horizontalAlign}
                                 onValueChange={handleHorizontalAlignChange}
@@ -997,7 +997,7 @@ export default function EditComponentForm({ onClose }: Props) {
                             </Select>
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span>Vertical Align</span>
+                            <span className="text-slate-400">Vertical Align</span>
                             <Select
                                 value={verticalAlign}
                                 onValueChange={handleVerticalAlignChange}
@@ -1016,7 +1016,7 @@ export default function EditComponentForm({ onClose }: Props) {
                             </Select>
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span>Letter Spacing</span>
+                            <span className="text-slate-400">Letter Spacing</span>
                             <Input
                                 type="number"
                                 step={0.1}
@@ -1027,7 +1027,7 @@ export default function EditComponentForm({ onClose }: Props) {
                             />
                         </div>
                         <div className="flex flex-col gap-1">
-                            <span>Font Color</span>
+                            <span className="text-slate-400">Font Color</span>
                             <input
                                 type="color"
                                 value={fontColor}
@@ -1037,7 +1037,7 @@ export default function EditComponentForm({ onClose }: Props) {
                             />
                         </div>
                         <div className="flex flex-col gap-1">
-                            <label className="flex gap-1 items-center">
+                            <label className="flex gap-1 items-center text-slate-400">
                                 <Checkbox
                                     checked={backgroundEnabled}
                                     onCheckedChange={(checked) => {

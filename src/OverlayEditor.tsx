@@ -6,7 +6,7 @@ import OverlayWindowBar from "./components/overlay-editor/OverlayWindowBar";
 import CreateOverlayForm from "./components/overlay-editor/CreateOverlayForm";
 import OverlayEditorCanvas, { STAGE_WIDTH, STAGE_HEIGHT } from "./components/ui/OverlayEditorCanvas";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
-import { MdAlignHorizontalCenter, MdAlignHorizontalLeft, MdAlignHorizontalRight, MdAlignVerticalBottom, MdAlignVerticalCenter, MdAlignVerticalTop, MdDelete, MdEdit } from "react-icons/md";
+import { MdAdd, MdAlignHorizontalCenter, MdAlignHorizontalLeft, MdAlignHorizontalRight, MdAlignVerticalBottom, MdAlignVerticalCenter, MdAlignVerticalTop, MdDelete, MdEdit } from "react-icons/md";
 import OverlayList from "./components/overlay-editor/OverlayList";
 import RenameOverlayForm from "./components/overlay-editor/RenameOverlayForm";
 import ComponentList from "./components/overlay-editor/ComponentList";
@@ -158,90 +158,35 @@ export default function OverlayEditor() {
     return (
         <div className='h-screen flex flex-col bg-[#1D2229]'>
             <OverlayWindowBar />
-            <div className="flex-1 flex p-2 gap-1">
-                <div className="flex-none flex flex-col gap-1 h-full w-[310px]">
+            <div className="flex-1 flex">
+                <div className="flex-none flex flex-col gap-1 h-full w-[310px] border-r border-slate-700">
                     <Tabs defaultValue="overlay" className="h-full">
                         <TabsList>
                             <TabsTrigger value="overlay">Overlay</TabsTrigger>
                         </TabsList>
                         <TabsContent value="overlay" className="flex flex-col gap-1">
-                            <div className="flex gap-1">
-                                <Button
-                                    title="Export Overlay"
-                                    disabled={!selectedOverlayId}
-                                    onClick={async () => {
-                                        try {
-                                            if (!selectedOverlayId) return
-                                            const dir = await window.ipcRenderer.invoke('dialog:selectDirectory')
-                                            if (!dir?.ok || !dir.data) return
-                                            let overlayName = 'overlay'
-                                            try {
-                                                const all = await window.ipcRenderer.invoke('db:getAllOverlay')
-                                                const match = all?.ok && Array.isArray(all.data) ? all.data.find((o: any) => String(o._id) === String(selectedOverlayId)) : null
-                                                overlayName = match?.name ? String(match.name) : 'overlay'
-                                            } catch {}
-                                            const safe = overlayName.replace(/[^a-zA-Z0-9._-]+/g, '_') || 'overlay'
-                                            const destination = `${dir.data}\\${safe}.json`
-                                            const res = await window.ipcRenderer.invoke('db:exportOverlay', { destPath: destination, overlayId: selectedOverlayId })
-                                            if (!res?.ok) {
-                                                console.warn('Export failed:', res?.error)
-                                            }
-                                        } catch {}
-                                    }}
-                                >
-                                    <FaFileExport className="h-4 w-4" />
-                                    <span>Export Overlay</span>
-                                </Button>
-                                <Button
-                                    title="Import Overlay"
-                                    onClick={async () => {
-                                        try {
-                                            // Ask main process to select a JSON file
-                                            const file = await window.ipcRenderer.invoke('dialog:openJsonFile')
-                                            if (!file?.ok) return
-                                            const filePath = String(file.data || '')
-                                            if (!filePath.toLowerCase().endsWith('.json')) {
-                                                toast.error('Please select a .json overlay file')
-                                                return
-                                            }
-                                            const res = await window.ipcRenderer.invoke('db:importOverlay', { sourcePath: filePath })
-                                            if (!res?.ok) {
-                                                toast.error(res?.error || 'Failed to import overlay')
-                                                return
-                                            }
-                                            toast.success('Overlay imported')
-                                            try { const ev = new CustomEvent('overlaysChanged', { detail: { id: res.data?.overlayId, action: 'created' } }); window.dispatchEvent(ev) } catch {}
-                                        } catch (err) {
-                                            toast.error('Failed to import overlay')
-                                        }
-                                    }}
-                                >
-                                    <FaFileImport className="h-4 w-4" />
-                                    <span>Import Overlay</span>
-                                </Button>
-                            </div>
                             <div className="flex flex-wrap gap-1">
-                                <Button 
-                                    onClick={() => setNewOverlayOpen(true)} 
-                                    title="New Overlay"
+                                <button
+                                    onClick={() => setNewOverlayOpen(true)}
+                                    title="Add Overlay"
+                                    className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[25px] w-[25px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
                                 >
-                                    <BiPlus className="h-6 w-6" />
-                                    <span>New Overlay</span>
-                                </Button>
-                                <Button 
-                                    onClick={() => setRenameOverlayOpen(true)} 
-                                    title="Rename Overlay" 
+                                    <MdAdd className="h-5 w-5 text-slate-400" />
+                                </button>
+                                <button
+                                    onClick={() => setRenameOverlayOpen(true)}
+                                    title="Rename Overlay"
+                                    className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[25px] w-[25px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
                                 >
-                                    <MdEdit className="h-4.5 w-4.5" />
-                                    <span>Rename Overlay</span>
-                                </Button>
-                                <Button
+                                    <MdEdit className="h-4 w-4 text-slate-400" />
+                                </button>
+                                <button
                                     title="Delete Overlay"
                                     onClick={() => setDeleteOverlayOpen(true)}
+                                    className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[25px] w-[25px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
                                 >
-                                    <MdDelete className="h-4.5 w-4.5" />
-                                    <span>Delete Overlay</span>
-                                </Button>
+                                    <MdDelete className="h-4 w-4 text-slate-400" />
+                                </button>
                             </div>
                             <OverlayList />
                         </TabsContent>
@@ -252,8 +197,8 @@ export default function OverlayEditor() {
                         <TabsList>
                             <TabsTrigger value="editor">Editor</TabsTrigger>
                         </TabsList>
-                        <TabsContent value="editor" className="flex flex-col gap-1 p-0">
-                            <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5">
+                        <TabsContent value="editor" className="flex flex-col p-0">
+                            <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5 border-b border-slate-500">
                                 <CreateCustomTextButton />
                                 <CreateImageButton />
                                 <CreateTimeButton />
@@ -263,6 +208,52 @@ export default function OverlayEditor() {
                                 <CreateNodeButton />
                                 <CreateTaskButton />
                                 <CreateProjectDetailsButton />
+                            </div>
+                            <div className="flex-none w-full h-[37px] bg-[#363D4A] flex items-center px-1 gap-1.5 border-b border-slate-700">
+                                <div className="flex gap-1">
+                                    <button
+                                        onClick={() => applyAlignment('left')}
+                                        title="Align Left"
+                                        className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[28px] w-[100px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none gap-2" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                        <MdAlignHorizontalLeft className="h-4.5 w-4.5 text-slate-400" />
+                                        <span className="text-slate-400">Align Left</span>
+                                    </button>
+                                    <button
+                                        onClick={() => applyAlignment('hcenter')}
+                                        title="Align Horizontal Center"
+                                        className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[28px] w-[175px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none gap-2" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                        <MdAlignHorizontalCenter className="h-4.5 w-4.5 text-slate-400" />
+                                        <span className="text-slate-400">Align Horizontal Center</span>
+                                    </button>
+                                    <button
+                                        onClick={() => applyAlignment('right')}
+                                        title="Align Right"
+                                        className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[28px] w-[105px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none gap-2" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                        <MdAlignHorizontalRight className="h-4.5 w-4.5 text-slate-400" />
+                                        <span className="text-slate-400">Align Right</span>
+                                    </button>
+                                    <button
+                                        onClick={() => applyAlignment('top')}
+                                        title="Align Top"
+                                        className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[28px] w-[95px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none gap-2" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                        <MdAlignVerticalTop className="h-4.5 w-4.5 text-slate-400" />
+                                        <span className="text-slate-400">Align Top</span>
+                                    </button>
+                                    <button
+                                        onClick={() => applyAlignment('vcenter')}
+                                        title="Align Vertical Center"
+                                        className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[28px] w-[160px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none gap-2" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                        <MdAlignVerticalCenter className="h-4.5 w-4.5 text-slate-400" />
+                                        <span className="text-slate-400">Align Vertical Center</span>
+                                    </button>
+                                    <button
+                                        onClick={() => applyAlignment('bottom')}
+                                        title="Align Bottom"
+                                        className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[28px] w-[115px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none gap-2" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
+                                        <MdAlignVerticalBottom className="h-4.5 w-4.5 text-slate-400" />
+                                        <span className="text-slate-400">Align Bottom</span>
+                                    </button>
+                                </div>
                             </div>
                             <div className="flex-1 bg-black">
                                 <OverlayEditorCanvas
@@ -343,21 +334,22 @@ export default function OverlayEditor() {
                         </TabsContent>
                     </Tabs>
                 </div>
-                <div className="flex-none h-full w-[300px]">
+                <div className="flex-none h-full w-[300px] border-l border-slate-700">
                     <Tabs defaultValue="properties" className="h-full">
                         <TabsList>
                             <TabsTrigger value="properties">Properties</TabsTrigger>
                         </TabsList>
                         <TabsContent value="properties" className="flex flex-col gap-1">
                             <div className="flex gap-1">
-                                <Button
+                                <button
                                     disabled={!selectedOverlayId || selectedComponentIds.length === 0}
                                     onClick={() => setEditComponentOpen(true)}
-                                    title="Edit Component">
-                                    <MdEdit className="h-4.5 w-4.5" />
-                                    <span>Edit Item</span>
-                                </Button>
-                                <Button
+                                    title="Edit Component"
+                                    className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[25px] w-[25px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
+                                >
+                                    <MdEdit className="h-4 w-4 text-slate-400" />
+                                </button>
+                                <button
                                     title="Delete Component(s)"
                                     disabled={!selectedOverlayId || selectedComponentIds.length === 0}
                                     onClick={async () => {
@@ -377,55 +369,9 @@ export default function OverlayEditor() {
                                             }
                                         } catch { }
                                     }}
+                                    className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[25px] w-[25px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
                                 >
-                                    <MdDelete className="h-4.5 w-4.5" />
-                                    <span>Delete Item</span>
-                                </Button>
-                            </div>
-                            <div className="flex gap-1">
-                                <button
-                                    onClick={() => applyAlignment('left')}
-                                    title="Align Left"
-                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
-                                    <MdAlignHorizontalLeft className="h-4.5 w-4.5" />
-                                    <span className="font-medium text-[10px]">Align Left</span>
-                                </button>
-                                <button
-                                    onClick={() => applyAlignment('hcenter')}
-                                    title="Align Horizontal Center"
-                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
-                                    <MdAlignHorizontalCenter className="h-4.5 w-4.5" />
-                                    <span className="font-medium text-[10px]">Align H Cntr</span>
-                                </button>
-                                <button
-                                    onClick={() => applyAlignment('right')}
-                                    title="Align Right"
-                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
-                                    <MdAlignHorizontalRight className="h-4.5 w-4.5" />
-                                    <span className="font-medium text-[10px]">Align Right</span>
-                                </button>
-                            </div>
-                            <div className="flex gap-1">
-                                <button
-                                    onClick={() => applyAlignment('top')}
-                                    title="Align Top"
-                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
-                                    <MdAlignVerticalTop className="h-4.5 w-4.5" />
-                                    <span className="font-medium text-[10px]">Align Top</span>
-                                </button>
-                                <button
-                                    onClick={() => applyAlignment('vcenter')}
-                                    title="Align Vertical Center"
-                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
-                                    <MdAlignVerticalCenter className="h-4.5 w-4.5" />
-                                    <span className="font-medium text-[10px]">Align V Cntr</span>
-                                </button>
-                                <button
-                                    onClick={() => applyAlignment('bottom')}
-                                    title="Align Bottom"
-                                    className="bg-black/20 rounded-[7px] flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-50 disabled:pointer-events-none" disabled={!selectedOverlayId || selectedComponentIds.length === 0}>
-                                    <MdAlignVerticalBottom className="h-4.5 w-4.5" />
-                                    <span className="font-medium text-[10px]">Align Bottom</span>
+                                    <MdDelete className="h-4 w-4 text-slate-400" />
                                 </button>
                             </div>
                             <ComponentList />
@@ -436,7 +382,7 @@ export default function OverlayEditor() {
             <DraggableDialog
                 open={newOverlayOpen}
                 onOpenChange={setNewOverlayOpen}
-                title="New Overlay"
+                title="Add Overlay"
             >
                 <CreateOverlayForm onClose={() => setNewOverlayOpen(false)} />
             </DraggableDialog>
@@ -496,8 +442,8 @@ function TextOverlayContent({ component }: { component: any }) {
     // Helper: live serial data polling for data components
     const [serialOpen, setSerialOpen] = useState(false)
     const [serialValue, setSerialValue] = useState<string>("")
-	// Helper: selected node preview for node components
-	const [selectedNodePreview, setSelectedNodePreview] = useState<{ name: string; level?: number } | null>(null)
+    // Helper: selected node preview for node components
+    const [selectedNodePreview, setSelectedNodePreview] = useState<{ name: string; level?: number } | null>(null)
     useEffect(() => {
         if (component.type !== 'data') return
         let cancelled = false
@@ -520,74 +466,74 @@ function TextOverlayContent({ component }: { component: any }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [component?.type, component?.dataKey])
 
-	// Keep node preview in sync with global selected node
-	useEffect(() => {
-		// Only relevant for node components
-		let cancelled = false
-		if (component.type !== 'node') { setSelectedNodePreview(null); return }
+    // Keep node preview in sync with global selected node
+    useEffect(() => {
+        // Only relevant for node components
+        let cancelled = false
+        if (component.type !== 'node') { setSelectedNodePreview(null); return }
 
-		const resolvePreviewFrom = async (nodeId: string | null) => {
-			if (!nodeId) { if (!cancelled) setSelectedNodePreview(null); return }
-			try {
-				// Build full path from root -> selected by following parentId chain
-				const path: { name?: string; level?: number; parentId?: string }[] = []
-				let guard = 0
-				let curId: string | undefined | null = nodeId
-				while (curId && guard++ < 100) {
-					const res = await window.ipcRenderer.invoke('db:getSelectedNodeDetails', curId)
-					if (!res?.ok || !res.data) break
-					path.push({ name: res.data.name, level: res.data.level, parentId: res.data.parentId })
-					curId = res.data.parentId
-				}
-				if (!path.length) { if (!cancelled) setSelectedNodePreview(null); return }
-				path.reverse() // now index 0 = topmost under project
-				const desiredLevel = typeof component.nodeLevel === 'number' ? component.nodeLevel : undefined
-				let chosenName: string | undefined
-				let chosenLevel: number | undefined
-				if (typeof desiredLevel === 'number' && desiredLevel >= 1) {
-					const index = desiredLevel - 1
-					if (index <= path.length - 1) {
-						const node = path[index]
-						chosenName = node?.name
-						chosenLevel = node?.level
-					} else {
-						// Missing deeper levels → fall back to overlay component name by clearing preview
-						if (!cancelled) { setSelectedNodePreview(null) }
-						return
-					}
-				} else {
-					const node = path[path.length - 1]
-					chosenName = node?.name
-					chosenLevel = node?.level
-				}
-				if (!cancelled) setSelectedNodePreview(chosenName ? { name: chosenName, level: chosenLevel } : null)
-			} catch {
-				if (!cancelled) setSelectedNodePreview(null)
-			}
-		}
+        const resolvePreviewFrom = async (nodeId: string | null) => {
+            if (!nodeId) { if (!cancelled) setSelectedNodePreview(null); return }
+            try {
+                // Build full path from root -> selected by following parentId chain
+                const path: { name?: string; level?: number; parentId?: string }[] = []
+                let guard = 0
+                let curId: string | undefined | null = nodeId
+                while (curId && guard++ < 100) {
+                    const res = await window.ipcRenderer.invoke('db:getSelectedNodeDetails', curId)
+                    if (!res?.ok || !res.data) break
+                    path.push({ name: res.data.name, level: res.data.level, parentId: res.data.parentId })
+                    curId = res.data.parentId
+                }
+                if (!path.length) { if (!cancelled) setSelectedNodePreview(null); return }
+                path.reverse() // now index 0 = topmost under project
+                const desiredLevel = typeof component.nodeLevel === 'number' ? component.nodeLevel : undefined
+                let chosenName: string | undefined
+                let chosenLevel: number | undefined
+                if (typeof desiredLevel === 'number' && desiredLevel >= 1) {
+                    const index = desiredLevel - 1
+                    if (index <= path.length - 1) {
+                        const node = path[index]
+                        chosenName = node?.name
+                        chosenLevel = node?.level
+                    } else {
+                        // Missing deeper levels → fall back to overlay component name by clearing preview
+                        if (!cancelled) { setSelectedNodePreview(null) }
+                        return
+                    }
+                } else {
+                    const node = path[path.length - 1]
+                    chosenName = node?.name
+                    chosenLevel = node?.level
+                }
+                if (!cancelled) setSelectedNodePreview(chosenName ? { name: chosenName, level: chosenLevel } : null)
+            } catch {
+                if (!cancelled) setSelectedNodePreview(null)
+            }
+        }
 
-		;(async () => {
-			try {
-				const sel = await window.ipcRenderer.invoke('app:getSelectedNodeId')
-				await resolvePreviewFrom(sel?.ok ? (sel.data ?? null) : null)
-			} catch { if (!cancelled) setSelectedNodePreview(null) }
-		})()
+            ; (async () => {
+                try {
+                    const sel = await window.ipcRenderer.invoke('app:getSelectedNodeId')
+                    await resolvePreviewFrom(sel?.ok ? (sel.data ?? null) : null)
+                } catch { if (!cancelled) setSelectedNodePreview(null) }
+            })()
 
-		const onSel = (e: any, arg?: any) => {
-			try {
-				const id = (typeof arg === 'string') ? arg : (typeof e?.detail === 'string' ? e.detail : null)
-				resolvePreviewFrom(id)
-			} catch { setSelectedNodePreview(null) }
-		}
-		window.addEventListener('selectedNodeChanged', onSel as any)
-		try { window.ipcRenderer.on('app:selectedNodeChanged', onSel as any) } catch {}
-		return () => {
-			cancelled = true
-			window.removeEventListener('selectedNodeChanged', onSel as any)
-			try { window.ipcRenderer.off('app:selectedNodeChanged', onSel as any) } catch {}
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [component?.type, component?.nodeLevel])
+        const onSel = (e: any, arg?: any) => {
+            try {
+                const id = (typeof arg === 'string') ? arg : (typeof e?.detail === 'string' ? e.detail : null)
+                resolvePreviewFrom(id)
+            } catch { setSelectedNodePreview(null) }
+        }
+        window.addEventListener('selectedNodeChanged', onSel as any)
+        try { window.ipcRenderer.on('app:selectedNodeChanged', onSel as any) } catch { }
+        return () => {
+            cancelled = true
+            window.removeEventListener('selectedNodeChanged', onSel as any)
+            try { window.ipcRenderer.off('app:selectedNodeChanged', onSel as any) } catch { }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [component?.type, component?.nodeLevel])
     if (component.type === 'time') {
         const value = useTime({ twentyFourHour: component.twentyFourHour ?? true, useUTC: component.useUTC ?? false })
         return (
@@ -609,13 +555,13 @@ function TextOverlayContent({ component }: { component: any }) {
         return <span style={style}>{component.customText || component.name}</span>
     }
     if (component.type === 'node') {
-		const fallbackName = component.customText || component.name
-		const text = selectedNodePreview?.name || fallbackName
-		return (
-			<span style={style} className="inline-flex items-center gap-1">
-				{text}
-			</span>
-		)
+        const fallbackName = component.customText || component.name
+        const text = selectedNodePreview?.name || fallbackName
+        return (
+            <span style={style} className="inline-flex items-center gap-1">
+                {text}
+            </span>
+        )
     }
     if (component.type === 'task') {
         return <span style={style}>{component.customText || component.name}</span>

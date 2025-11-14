@@ -15,8 +15,8 @@ function getDevUrl() {
 
 export function createMainWindow() {
   const win = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: 1920,
+    height: 1080,
     show: false,
     title: 'Deepstrim Capture',
     frame: false,
@@ -41,8 +41,8 @@ export function createMainWindow() {
 
 export function createOverlayEditorWindow() {
   const win = new BrowserWindow({
-    width: 1000,
-    height: 700,
+    width: 1920,
+    height: 1080,
     show: true,
     frame: false,
     backgroundColor: '#0f0f0f',
@@ -127,8 +127,8 @@ export function createPictureInPictureWindow() {
 
 export function createEventingWindow() {
   const win = new BrowserWindow({
-    width: 900,
-    height: 650,
+    width: 1920,
+    height: 1080,
     show: true,
     frame: false,
     backgroundColor: '#0f0f0f',
@@ -153,8 +153,8 @@ export function createEventingWindow() {
 
 export function createDataConfigurationsWindow() {
   const win = new BrowserWindow({
-    width: 900,
-    height: 650,
+    width: 1920,
+    height: 1080,
     show: true,
     frame: false,
     backgroundColor: '#0f0f0f',

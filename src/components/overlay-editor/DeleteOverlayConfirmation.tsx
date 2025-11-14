@@ -81,14 +81,14 @@ export default function DeleteOverlayConfirmation({ onClose }: Props) {
 
     return (
         <div className="flex flex-col gap-3">
-            <div className="text-white/80">
+            <div className="text-slate-400">
                 {overlayName ? (
-                    <span>Are you sure you want to delete "{overlayName}"?</span>
+                    <span>Are you sure you want to delete {overlayName}?</span>
                 ) : (
                     <span>Are you sure you want to delete this overlay?</span>
                 )}
             </div>
-            {error ? <div className="text-red-400 text-sm">{error}</div> : null}
+            {error ? <div className="text-red-400">{error}</div> : null}
             <div className="mt-2 flex justify-end gap-2">
                 <Button onClick={onClose} disabled={submitting}>Cancel</Button>
                 <Button onClick={onDelete} disabled={submitting || !overlayId}>Delete</Button>

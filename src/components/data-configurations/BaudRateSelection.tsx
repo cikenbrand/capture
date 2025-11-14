@@ -8,7 +8,7 @@ type Props = {
 export default function BaudRateSelection ({ value, onChange }: Props) {
     return (
         <div className="flex flex-col gap-1">
-        <span>Baud</span>
+        <span className="text-slate-400">Baud</span>
         <Select value={value} onValueChange={onChange}>
             <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select baud" />

@@ -50,16 +50,16 @@ export default function DataMapperTable () {
         <Table className="table-fixed">
             <TableHeader>
                 <TableRow className="border-b border-white/10">
-                    <TableHead className="w-[60px]">Field</TableHead>
-                    <TableHead className="w-[140px]">Received</TableHead>
-                    <TableHead className="w-[120px]">Type</TableHead>
-                    <TableHead className="">Name</TableHead>
+                    <TableHead className="w-[60px] text-slate-400">Field</TableHead>
+                    <TableHead className="w-[140px] text-slate-400">Received</TableHead>
+                    <TableHead className="w-[120px] text-slate-400">Type</TableHead>
+                    <TableHead className="text-slate-400">Name</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {(rows.length ? rows : Array.from({ length: 10 }).map(() => ({ key: null, value: '' })) ).map((row, idx) => (
                     <TableRow key={idx} className="border-b border-white/10">
-                        <TableCell className="text-white/80">{idx}</TableCell>
+                        <TableCell className="text-slate-400">{idx}</TableCell>
                         <TableCell>
                             {/* Received checkbox placeholder */}
                             <div className="flex items-center gap-2">

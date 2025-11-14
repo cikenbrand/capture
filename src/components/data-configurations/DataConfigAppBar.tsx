@@ -3,11 +3,11 @@ import { FaRegWindowRestore } from "react-icons/fa";
 
 export default function DataConfigAppBar() {
     return (
-        <div className='h-9 w-full drag flex items-center justify-between pl-2' >
+        <div className='h-9 w-full drag flex items-center justify-between pl-2 border-b border-slate-700' >
             <div className="h-5 w-5 overflow-hidden rounded">
                 <img src="/dc.png" className="object-contain" />
             </div>
-            <span className="font-semibold">Data Configurations</span>
+            <span className="text-slate-400 relative left-20">Data Configurations</span>
             <div className='flex items-center gap-2 h-full'>
                 <button
                     title="Minimize"

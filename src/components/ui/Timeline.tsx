@@ -292,10 +292,10 @@ export default function Timeline({ durationMs, valueMs, onChange, initialViewDur
 				onWheel={onWheel}
 			>
 				{/* Follow toggle button */}
-				<div className="absolute top-1 right-1 z-20">
+				<div className="absolute bottom-1 left-1 z-20">
 					<button
 						onClick={(e) => { e.stopPropagation(); setIsFollowEnabled((v) => !v) }}
-						className={`h-[18px] px-1 rounded text-[10px] border ${isFollowEnabled ? 'bg-sky-500/20 text-white border-white/20' : 'bg-black/40 text-white/60 border-white/10'} hover:bg-white/10`}
+						className={`h-[25px] w-[80px] px-1 rounded-full ${isFollowEnabled ? 'bg-sky-500/20 text-blue-400 border-white/20' : 'bg-sky-500/20 text-white/20 border-white/10'}`}
 						title={isFollowEnabled ? 'Disable follow' : 'Enable follow'}
 						aria-pressed={isFollowEnabled}
 					>
@@ -336,9 +336,9 @@ export default function Timeline({ durationMs, valueMs, onChange, initialViewDur
 				</motion.div>
 			</div>
 			{/* Current playhead time label */}
-			<div className="mt-[-20px] relative h-5">
+			<div className="mt-[-20px] right-4 relative h-5">
 				<motion.div
-					className="absolute -translate-x-1/2 px-1.5 py-0.5 rounded bg-black border border-white/10 text-[11px] text-white whitespace-nowrap"
+					className="absolute -translate-x-1/2 px-1.5 py-0.5 rounded bg-black border border-white/10 text-[11px] text-slate-400 whitespace-nowrap"
 					style={{ x: labelX }}
 				>
 					{formatHMS(currentMs)}
@@ -411,6 +411,16 @@ export function TimelineItem({ id, timeMs, startMs, endMs, color = "#22c55e", la
         const topY = useMotionValue(48); // default below ticks
         const minTop = 24; // keep under labels
         const maxTop = Math.max(minTop, (containerHeight ?? 112) - 32);
+        // Hide center label when item becomes too narrow (e.g., zoomed out far)
+        const [showCenterLabel, setShowCenterLabel] = useState(true);
+        useEffect(() => {
+            // initialize
+            try { setShowCenterLabel(widthX.get() >= 60); } catch {}
+            const unsub = widthX.on("change", (val) => {
+                setShowCenterLabel(val >= 60); // show only if at least 60px wide
+            });
+            return () => { try { unsub(); } catch {} };
+        }, [widthX]);
         // Register current lane top on mount/update
         useEffect(() => {
             if (setLaneTop) setLaneTop(effectiveId, topY.get());
@@ -492,9 +502,11 @@ export function TimelineItem({ id, timeMs, startMs, endMs, color = "#22c55e", la
 				/>
 
 				{/* Optional centered label */}
-				<div className="absolute inset-0 grid place-items-center text-[11px] text-white/80">
-					{label}
-				</div>
+				{label && showCenterLabel ? (
+					<div className="absolute inset-0 grid place-items-center text-[11px] text-white/80 overflow-hidden text-ellipsis whitespace-nowrap px-1">
+						{label}
+					</div>
+				) : null}
 			</motion.div>
 		);
 	}

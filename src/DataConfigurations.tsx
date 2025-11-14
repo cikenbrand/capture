@@ -16,6 +16,7 @@ import DataMapperTable from "./components/data-configurations/DataMapperTable";
 import { BiPlus } from "react-icons/bi";
 import { DraggableDialog } from "./components/ui/draggable-dialog";
 import CreateDataKeyForm from "./components/data-configurations/CreateDataKeyForm";
+import { MdAdd, MdDelete, MdEdit } from "react-icons/md";
 
 export default function DataConfigurations() {
     const [selectedDevice, setSelectedDevice] = React.useState<string | undefined>(undefined)
@@ -83,13 +84,13 @@ export default function DataConfigurations() {
     return (
         <div className='h-screen flex flex-col bg-[#1D2229]'>
             <DataConfigAppBar />
-            <div className="flex-1 flex p-2 gap-1">
-                <div className="flex-none flex flex-col gap-1 h-full w-[300px]">
+            <div className="flex-1 flex">
+                <div className="flex-none flex flex-col gap-1 h-full w-[300px] border-r border-slate-700">
                     <Tabs defaultValue="settings" className="h-full">
                         <TabsList>
                             <TabsTrigger value="settings">Settings</TabsTrigger>
                         </TabsList>
-                        <TabsContent value="settings" className="flex flex-col gap-2 h-full p-1">
+                        <TabsContent value="settings" className="flex flex-col gap-2 h-full">
                             <div className="grid grid-cols-1 gap-2">
                                 <ComDeviceSelection value={selectedDevice} onChange={setSelectedDevice} />
                                 <BaudRateSelection value={baudRate} onChange={setBaudRate} />
@@ -103,7 +104,7 @@ export default function DataConfigurations() {
                     </Tabs>
                 </div>
                 <div className="flex-1 flex flex-col">
-                    <div className="flex-1">
+                    <div className="flex-1 border-b border-slate-700">
                         <Tabs defaultValue="data-output" className="h-full">
                             <TabsList>
                                 <TabsTrigger value="data-output">Data Output</TabsTrigger>
@@ -111,23 +112,23 @@ export default function DataConfigurations() {
                             <TabsContent value="data-output" className="flex flex-col p-2 gap-2">
                                 <Textarea className="h-full w-full resize-none" value={liveText} onChange={() => { }} readOnly />
                                 <div className="flex flex-col gap-1">
-                                    <span>Separators</span>
+                                    <span className="text-slate-400">Separators</span>
                                     <RadioGroup className="flex flex-row gap-4" defaultValue=",">
                                         <label className="inline-flex items-center gap-2">
                                             <RadioGroupItem value="," />
-                                            <span>Comma (,)</span>
+                                            <span className="text-slate-400">Comma (,)</span>
                                         </label>
                                         <label className="inline-flex items-center gap-2">
                                             <RadioGroupItem value=";" />
-                                            <span>Semicolon (;)</span>
+                                            <span className="text-slate-400">Semicolon (;)</span>
                                         </label>
                                         <label className="inline-flex items-center gap-2">
                                             <RadioGroupItem value="|" />
-                                            <span>Pipe (|)</span>
+                                            <span className="text-slate-400">Pipe (|)</span>
                                         </label>
                                         <label className="inline-flex items-center gap-2">
                                             <RadioGroupItem value="\t" />
-                                            <span>Tab</span>
+                                            <span className="text-slate-400">Tab</span>
                                         </label>
                                     </RadioGroup>
                                 </div>
@@ -143,10 +144,21 @@ export default function DataConfigurations() {
                                 <div className="flex gap-2 items-center">
                                     <button
                                         title="Add Data Name"
-                                        className="flex items-center justify-center h-[28px] px-2 gap-1 hover:bg-[#4C525E] active:bg-[#202832] rounded-[2px] text-white active:text-[#71BCFC] disabled:opacity-30 disabled:pointer-events-none"
+                                        className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[25px] w-[25px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
                                         onClick={() => setIsCreateDataNameOpen(true)}>
-                                        <BiPlus className="h-5 w-5" />
-                                        <span className="font-medium">Create Data Name</span>
+                                        <MdAdd className="h-5 w-5 text-slate-400" />
+                                    </button>
+                                    <button
+                                        title="Edit Data Name"
+                                        className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[25px] w-[25px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
+                                        onClick={() => setIsCreateDataNameOpen(true)}>
+                                        <MdEdit className="h-4 w-4 text-slate-400" />
+                                    </button>
+                                    <button
+                                        title="Delete Data Name"
+                                        className="hover:bg-[#1D2229] rounded flex items-center justify-center h-[25px] w-[25px] hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none"
+                                        onClick={() => setIsCreateDataNameOpen(true)}>
+                                        <MdDelete className="h-4 w-4 text-slate-400" />
                                     </button>
                                 </div>
                                 <DataMapperTable />

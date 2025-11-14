@@ -112,7 +112,7 @@ export default function ComponentList() {
 
     if (error) {
         return (
-            <div className="h-full p-2 text-red-400 text-sm">
+            <div className="h-full p-2 text-red-400">
                 <div className="mb-2">{error}</div>
                 <button className="px-2 py-1 bg-[#4C525E] hover:bg-[#5b616d] text-white/90" onClick={() => loadForOverlay(overlayId)}>Retry</button>
             </div>

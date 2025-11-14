@@ -70,12 +70,13 @@ export default function CursorToolButton() {
             data-draw-ui='true'
             title="Select & Move Drawing Tool"
             className={clsx(
-                "rounded-[7px] bg-[#1D2229] border border-2 border-white/10 flex items-center justify-center h-[28px] px-2 gap-2 rounded-[2px] text-white disabled:opacity-30 disabled:pointer-events-none",
-                isActive ? "bg-[#374F66] text-white" : "hover:bg-white/5"
+                "rounded flex items-center justify-center h-[28px] w-[180px] disabled:opacity-30 disabled:pointer-events-none gap-2",
+                !isActive && "hover:bg-[#1D2229] hover:bg-white/5",
+                isActive && "bg-black/20"
             )}
         >
-            <FaMousePointer className="h-3.5 w-3.5" />
-            <span className='font-medium'>Select & Move Drawing</span>
+            <FaMousePointer className="h-3.5 w-3.5 text-slate-400" />
+            <span className='text-slate-400'>Select & Move Drawing</span>
         </button>
     )
 }

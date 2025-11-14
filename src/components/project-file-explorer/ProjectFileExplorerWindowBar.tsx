@@ -7,7 +7,7 @@ export default function ProjectFileExplorerWindowBar() {
             <div className="h-5 w-5 overflow-hidden rounded">
                 <img src="/dc.png" className="object-contain" />
             </div>
-            <span className="font-semibold">Project File Manager</span>
+            <span className="text-slate-400 relative left-20">Project File Manager</span>
             <div className='flex items-center gap-2 h-full'>
                 <button
                     title="Minimize"

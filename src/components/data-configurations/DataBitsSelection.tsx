@@ -8,7 +8,7 @@ type Props = {
 export default function DataBitsSelection ({ value, onChange }: Props) {
     return (
         <div className="flex flex-col gap-1">
-            <span>Data Bits</span>
+            <span className="text-slate-400">Data Bits</span>
             <Select value={value} onValueChange={onChange}>
                 <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select data bits" />
